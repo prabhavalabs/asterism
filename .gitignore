@@ -1,0 +1,50 @@
+# Go build and test artifacts
+/bin/
+*.exe
+*.exe~
+*.dll
+*.so
+*.dylib
+*.test
+*.out
+coverage.*
+
+# Frontend dependencies and build outputs
+web/node_modules/
+web/dist/
+web/.tanstack/
+web/.vite/
+*.tsbuildinfo
+playwright-report/
+test-results/
+
+# Local runtime state and databases
+*.db
+*.db-wal
+*.db-shm
+*.sqlite
+*.sqlite3
+*.sqlite3-wal
+*.sqlite3-shm
+data/
+tmp/
+asterism.local.toml
+
+# Secrets and local configuration
+.env
+.env.*
+!.env.example
+*.pem
+*.key
+*.p12
+credentials*.json
+
+# Operating system and editors
+.DS_Store
+._*
+Thumbs.db
+.idea/
+.vscode/
+*.swp
+*.swo
+*~
