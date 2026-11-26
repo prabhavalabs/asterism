@@ -193,6 +193,17 @@ admin_email = "admin@example.com"
 password_hash = "<output of: asterism hash-password>"   # Argon2id; never store the plain password
 ```
 
+The hub keeps its state (SQLite database, `secret.key`, `vapid.json`) in `server.data_dir`. The
+systemd unit sets `StateDirectory=asterism`, so point the hub at it:
+
+```toml
+[server]
+data_dir = "/var/lib/asterism"   # or ASTERISM_DATA_DIR; created 0700, files 0600
+```
+
+Back up the whole directory together: `secret.key` decrypts the stored channel secrets, and
+`vapid.json` identifies the hub to browsers subscribed to Web Push.
+
 ### 2. Enrol and install the agent
 
 Enrolment prints an `asta_` token once and the entry for `asterism.toml`; only its SHA-256
@@ -260,11 +271,50 @@ DOCKER_GID=$(getent group docker | cut -d: -f3) docker compose -f docker-compose
 Check a config with `asterism-agent validate --config /etc/asterism/agent.yaml`; the agent
 appears under **Settings → Agents** within a few seconds.
 
+## Alerts and notifications
+
+The hub evaluates built-in rules every 15 s in every collector mode: containers that exit
+unexpectedly, restart loops, failing health checks, OOM kills, container memory near its limit,
+host CPU and memory, disk usage per mount (warning 85%, critical 95%), offline agents, failed
+systemd units, and optional event forwarding. Alerts go pending, then firing after the rule's
+duration, and resolve when the condition clears; transitions also appear as `alert.firing` and
+`alert.resolved` events.
+
+Configure rules on **Alerts → Rules** and channels on **Settings → Notifications**: Slack,
+signed JSON webhooks, email over SMTP, browser push (Web Push), Discord and Telegram. Each
+channel has a minimum severity, project and rule filters, an hourly rate limit, a resolve
+toggle, a test button and a delivery log. Alerts of one project that fire within 30 s are sent
+together, still-firing alerts are re-sent every 4 h, and silences mute matching alerts for a
+while. Channel secrets are write-only, encrypted with AES-256-GCM, and never returned by the
+API or MCP.
+
+```toml
+[alerts]
+enabled = true                 # ASTERISM_ALERTS_ENABLED
+evaluation_interval = "15s"    # ASTERISM_ALERTS_EVALUATION_INTERVAL
+# allow_private_targets = false  # let webhooks reach LAN/loopback receivers
+```
+
+Webhook receivers get `asterism.notification.v1` JSON with an
+`X-Asterism-Signature: t=<unix>,v1=<hex HMAC-SHA256(secret, "<t>." + body)>` header when a
+signing secret is set. Browser push needs HTTPS (or `http://localhost` while developing).
+
 ## Ask it from Claude (MCP)
 
-Asterism ships an MCP server with 18 read-only tools: `overview`, projects, workloads,
-containers, ports, ingress, images, volumes, networks, `disk_usage`, events, `tail_logs`, `top`,
-`query_metrics` and `get_topology`. Environment variable values and secrets are never returned.
+Asterism ships an MCP server with 19 read-only tools. Environment variable values and secrets
+are never returned.
+
+| Tool | Answers |
+|---|---|
+| `overview` | Host vitals, project health, top memory users, recent warnings |
+| `list_projects`, `get_project` | Projects with category, health and cost; one project's workloads |
+| `list_workloads`, `get_workload` | Workloads by project or role; one workload with ports, edges and events |
+| `list_containers`, `get_container` | Containers with state, restarts and usage; full inspect detail |
+| `list_ports`, `list_ingress` | Open ports by exposure; reverse-proxy routes and upstreams |
+| `list_images`, `list_volumes`, `list_networks`, `disk_usage` | Docker resources and reclaimable space |
+| `list_events` | Lifecycle events, alerts and audited actions |
+| `list_alerts` | Firing and pending alerts (or recent history) from the alert rules |
+| `tail_logs`, `top`, `query_metrics`, `get_topology` | Logs, top consumers, metric statistics, the service graph |
 
 Create a read-only token on the hub and store it where `asterism mcp` looks for it:
 
@@ -347,6 +397,11 @@ reaches the terminal, and log lines arrive already redacted.
   over https, with a connect-time guard against private, loopback and link-local addresses,
   short timeouts, size caps and at most daily. Icons are served with a sandboxing CSP and
   rendered with `<img>` only; uploads need a browser admin session.
+- **Notification secrets are write-only.** Webhook URLs, SMTP passwords, signing secrets and
+  bot tokens are sealed with AES-256-GCM (`<data_dir>/secret.key`), shown only as "set", and
+  redacted from delivery errors. HTTP channels refuse private, loopback and link-local targets
+  (checked at connect time) and never follow redirects. Only an admin browser session can
+  change alert or channel settings, and every change is audited.
 - **No pprof in releases.** Profiling exists only in builds with `-tags pprof`.
 
 ## Agent footprint
@@ -366,10 +421,11 @@ Binary and image size are CI gates; the rest is measured with `make agent-footpr
 | Milestone | Scope | Status |
 |---|---|---|
 | M0–M2 | Contracts, embedded SPA, host and Docker inventory, projects, ports, ingress discovery, isometric portal, guarded container actions, server-side pagination, `asterism-agent` | Done |
-| M3 | MCP server (stdio + stateless Streamable HTTP, 18 read-only tools) | Done |
+| M3 | MCP server (stdio + stateless Streamable HTTP, 19 read-only tools) | Done |
 | M3 | CLI views (`status`, `top`, `ps`, `ports`, `ingress`, `logs`, `topo`, `events`) | Done |
-| M4 | SQLite history tiers, downsampling, range queries | Planned |
-| M5 | Observed TCP topology, alert rules, `diagnose` | Planned |
+| M4 | SQLite store (started: alert state, channels, silences); history tiers, downsampling, range queries | In progress |
+| M5 | Alert rules and notification channels | Done |
+| M5 | Observed TCP topology, `diagnose` | Planned |
 | M6 | Release packaging (GoReleaser), install docs, public launch | Planned |
 
 ## Development

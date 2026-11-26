@@ -27,6 +27,8 @@ ExecStart=/usr/local/bin/asterism serve --config /etc/asterism/asterism.toml
 Restart=always
 RestartSec=5s
 Environment=GOMEMLIMIT=192MiB
+# /var/lib/asterism for the SQLite store, secret.key, vapid.json and project
+# icons; set data_dir = "/var/lib/asterism" under [server] in asterism.toml.
 StateDirectory=asterism
 StateDirectoryMode=0700
 
