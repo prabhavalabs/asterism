@@ -57,6 +57,8 @@ type Options struct {
 	Hello    func() *v1.AgentHello
 	Commands CommandHandler
 	Logs     LogHandler
+	// Icons answers IconRequests (nil: the agent does not scan for icons).
+	Icons IconHandler
 	// OnHints receives clamped hub hints (wire it to Scheduler.SetHints).
 	OnHints func(state.Hints)
 	// Stats fills process-level fields (rss, cpu, collector errors) of the
@@ -557,6 +559,8 @@ func (c *Client) handleHub(ctx context.Context, cn conn, f *v1.HubFrame, hubVer 
 		return c.startLogs(ctx, cn, p.LogRequest, hubVer, gen, flush)
 	case *v1.HubFrame_LogCancel:
 		c.cancelLogs(p.LogCancel.GetRequestId())
+	case *v1.HubFrame_IconRequest:
+		return c.send(ctx, cn, []*v1.AgentFrame{c.frame(&v1.AgentFrame{Payload: &v1.AgentFrame_IconData{IconData: c.iconData(p.IconRequest)}})}, hubVer, gen, flush)
 	case *v1.HubFrame_HelloAck:
 		// Only valid during the handshake; ignore repeats.
 	}
@@ -574,6 +578,31 @@ func (c *Client) applyHints(h *v1.AgentHints, flush *time.Timer) {
 		c.opts.OnHints(c.hints)
 	}
 	c.hook("hints")
+}
+
+// ---------------------------------------------------------------------------
+// Icons
+// ---------------------------------------------------------------------------
+
+// IconHandler returns the bytes of a project icon the agent reported in
+// its inventory (ProjectIconRef.sha256).
+type IconHandler interface {
+	ReadIcon(sha256 string) ([]byte, error)
+}
+
+func (c *Client) iconData(req *v1.IconRequest) *v1.IconData {
+	out := &v1.IconData{RequestId: req.GetRequestId(), Sha256: req.GetSha256()}
+	if c.opts.Icons == nil {
+		out.Error = "project icons are disabled on this agent"
+		return out
+	}
+	data, err := c.opts.Icons.ReadIcon(req.GetSha256())
+	if err != nil {
+		out.Error = err.Error()
+		return out
+	}
+	out.Data = data
+	return out
 }
 
 // ---------------------------------------------------------------------------

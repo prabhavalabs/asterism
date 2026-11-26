@@ -82,6 +82,11 @@ type pendingLog struct {
 	ch   chan *asterismv1.LogChunk
 }
 
+type pendingIcon struct {
+	conn *conn
+	ch   chan *asterismv1.IconData
+}
+
 // hostState is one enrolled host's session. mu serialises every frame of the
 // host, so per-session state needs no further locking.
 type hostState struct {
@@ -123,13 +128,14 @@ type hostState struct {
 
 	pending map[string]*pendingCmd
 	logs    map[string]*pendingLog
+	icons   map[string]*pendingIcon
 }
 
 func newHostState(r *Registry, a Agent, primary bool) *hostState {
 	hs := &hostState{
 		reg: r, agent: a, primary: primary,
 		inv: state.NewInventory(), dec: state.NewDecoder(),
-		pending: map[string]*pendingCmd{}, logs: map[string]*pendingLog{},
+		pending: map[string]*pendingCmd{}, logs: map[string]*pendingLog{}, icons: map[string]*pendingIcon{},
 		tokens: r.opts.FrameBurst,
 	}
 	hs.view = newHostView(hs)
@@ -418,6 +424,12 @@ func (r *Registry) ingest(hs *hostState, c *conn, f *asterismv1.AgentFrame) ([]*
 		if pc, ok := hs.pending[res.GetRequestId()]; ok && pc.conn == c {
 			delete(hs.pending, res.GetRequestId())
 			pc.ch <- res
+		}
+	case *asterismv1.AgentFrame_IconData:
+		d := p.IconData
+		if pi, ok := hs.icons[d.GetRequestId()]; ok && pi.conn == c {
+			delete(hs.icons, d.GetRequestId())
+			pi.ch <- d
 		}
 	case *asterismv1.AgentFrame_LogChunk:
 		ch := p.LogChunk

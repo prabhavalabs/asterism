@@ -2,6 +2,8 @@ package agentingest
 
 import (
 	"context"
+	"crypto/sha256"
+	"encoding/hex"
 	"errors"
 	"fmt"
 	"slices"
@@ -12,6 +14,7 @@ import (
 
 	"github.com/prabhavalabs/asterism/internal/collect/dockercli"
 	asterismv1 "github.com/prabhavalabs/asterism/internal/gen/asterism/v1"
+	"github.com/prabhavalabs/asterism/internal/iconscan"
 )
 
 // CommandError is an agent-side action failure. ActionCode is a Connect code
@@ -255,5 +258,50 @@ func (r *Registry) fetchLogs(hs *hostState, workloadID string) []*asterismv1.Log
 		case <-timer.C:
 			return append(out, line(fmt.Sprintf("agent %s did not finish sending logs within %s", hs.agent.Name, r.opts.LogTimeout))...)
 		}
+	}
+}
+
+// fetchIcon asks the agent for the bytes of a reported project icon and
+// checks them against the digest.
+func (r *Registry) fetchIcon(ctx context.Context, hs *hostState, digest string) ([]byte, error) {
+	hs.mu.Lock()
+	c := hs.conn
+	if c == nil {
+		hs.mu.Unlock()
+		return nil, fmt.Errorf("agent %q is offline", hs.agent.Name)
+	}
+	reqID := randID(12)
+	pi := &pendingIcon{conn: c, ch: make(chan *asterismv1.IconData, 1)}
+	hs.icons[reqID] = pi
+	hs.mu.Unlock()
+	defer func() {
+		hs.mu.Lock()
+		delete(hs.icons, reqID)
+		hs.mu.Unlock()
+	}()
+	req := &asterismv1.HubFrame{Payload: &asterismv1.HubFrame_IconRequest{IconRequest: &asterismv1.IconRequest{RequestId: reqID, Sha256: digest}}}
+	if !c.trySend(req) {
+		return nil, fmt.Errorf("agent %q is busy", hs.agent.Name)
+	}
+	ctx, cancel := context.WithTimeout(ctx, r.opts.LogTimeout*2)
+	defer cancel()
+	select {
+	case d := <-pi.ch:
+		if e := d.GetError(); e != "" {
+			return nil, fmt.Errorf("agent %q: %s", hs.agent.Name, dockercli.Truncate(e, 200))
+		}
+		data := d.GetData()
+		if len(data) == 0 || len(data) > iconscan.MaxBytes {
+			return nil, fmt.Errorf("agent %q sent an icon of %d bytes", hs.agent.Name, len(data))
+		}
+		sum := sha256.Sum256(data)
+		if hex.EncodeToString(sum[:]) != digest {
+			return nil, fmt.Errorf("agent %q sent an icon that does not match its digest", hs.agent.Name)
+		}
+		return data, nil
+	case <-c.done:
+		return nil, fmt.Errorf("agent %q disconnected", hs.agent.Name)
+	case <-ctx.Done():
+		return nil, fmt.Errorf("agent %q did not send the icon in time", hs.agent.Name)
 	}
 }

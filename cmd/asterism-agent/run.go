@@ -73,6 +73,7 @@ type agent struct {
 	sched  *sched.Scheduler
 	up     *uplink.Client
 	gate   *actions.Gate
+	icons  *iconScanner
 	caps   []string
 	host   string
 	idHash string
@@ -102,9 +103,17 @@ func newAgent(ctx context.Context, cfg *config.Config, token string, logger *slo
 	if len(gate.Allowed()) == 0 && cfg.Actions.Enabled {
 		logger.Warn("actions.enabled is true but no action is allowed for any container; check actions.allow and actions.containers")
 	}
+	if !cfg.Sources.ProjectIcons.Enabled.Off() {
+		a.icons = newIconScanner(cfg, store, logger.With("component", "icons"))
+		a.caps = append(a.caps, "project_icons")
+	}
 	exec := buildExecutor(cfg)
 	svc := actions.NewService(gate, exec, store.FindContainer, logger.With("component", "actions"))
 	cpu := newCPUMeter()
+	var icons uplink.IconHandler
+	if a.icons != nil {
+		icons = a.icons
+	}
 	up, err := uplink.New(uplink.Options{
 		Config:   cfg,
 		Token:    token,
@@ -112,6 +121,7 @@ func newAgent(ctx context.Context, cfg *config.Config, token string, logger *slo
 		Hello:    a.hello,
 		Commands: svc,
 		Logs:     buildLogs(cfg),
+		Icons:    icons,
 		OnHints:  s.SetHints,
 		Stats: func(st *v1.AgentStats) {
 			st.RssBytes = residentBytes()
@@ -157,6 +167,9 @@ func (a *agent) run(ctx context.Context) error {
 	var wg sync.WaitGroup
 	wg.Go(func() { _ = a.sched.Run(ctx) })
 	wg.Go(func() { _ = a.up.Run(ctx) })
+	if a.icons != nil {
+		wg.Go(func() { a.icons.run(ctx) })
+	}
 	<-ctx.Done()
 	done := make(chan struct{})
 	go func() {

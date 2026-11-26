@@ -1,6 +1,7 @@
 package agentingest
 
 import (
+	"context"
 	"fmt"
 	"sort"
 	"strings"
@@ -13,7 +14,9 @@ import (
 	"github.com/prabhavalabs/asterism/internal/bus"
 	"github.com/prabhavalabs/asterism/internal/collect/assemble"
 	"github.com/prabhavalabs/asterism/internal/collect/dockercli"
+	"github.com/prabhavalabs/asterism/internal/collect/favicon"
 	asterismv1 "github.com/prabhavalabs/asterism/internal/gen/asterism/v1"
+	"github.com/prabhavalabs/asterism/internal/iconscan"
 )
 
 // Metric names the hub folds into host and container records. They are the
@@ -59,6 +62,8 @@ type HostView struct {
 	invVersion  uint64
 	live        map[string]*liveEntity
 	events      []*asterismv1.Event
+	// icons are favicon files the agent found, keyed by working directory.
+	icons map[string]*asterismv1.ProjectIconRef
 }
 
 func newHostView(hs *hostState) *HostView {
@@ -201,6 +206,13 @@ func (v *HostView) rebuild(inv *state.Inventory, now time.Time) {
 	v.containers = out.Containers
 	v.host = cloneMsg(inv.Host)
 	v.filesystems = cloneList(inv.Filesystems)
+	v.icons = make(map[string]*asterismv1.ProjectIconRef, len(inv.Icons))
+	for _, ic := range inv.Icons {
+		if len(v.icons) >= 256 || ic.GetWorkingDir() == "" || len(ic.GetSha256()) != 64 || ic.GetSizeBytes() > iconscan.MaxBytes {
+			continue
+		}
+		v.icons[ic.GetWorkingDir()] = cloneMsg(ic)
+	}
 	v.engine = cloneMsg(inv.Engine)
 	v.images = cloneList(inv.Images)
 	v.volumes = cloneList(inv.Volumes)
@@ -709,4 +721,20 @@ func orDefault(s, d string) string {
 		return d
 	}
 	return s
+}
+
+// DirIcon implements service.DirIconSource with the agent's directory scan.
+func (v *HostView) DirIcon(workingDir string) (favicon.DirRef, bool) {
+	v.mu.RLock()
+	defer v.mu.RUnlock()
+	ic, ok := v.icons[workingDir]
+	if !ok {
+		return favicon.DirRef{}, false
+	}
+	return favicon.DirRef{WorkingDir: workingDir, RelPath: ic.GetRelPath(), SHA256: ic.GetSha256(), Size: int(ic.GetSizeBytes())}, true
+}
+
+// ReadDirIcon fetches the icon bytes from the agent (IconRequest).
+func (v *HostView) ReadDirIcon(ctx context.Context, ref favicon.DirRef) ([]byte, error) {
+	return v.hs.reg.fetchIcon(ctx, v.hs, ref.SHA256)
 }

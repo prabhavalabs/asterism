@@ -119,6 +119,17 @@ type Sources struct {
 	Ports     Ports     `yaml:"ports"`
 	Routes    []Route   `yaml:"routes"`
 	Logs      Logs      `yaml:"logs"`
+	// ProjectIcons scans compose working directories for favicon files
+	// (a fixed list of web-asset folders, no symlinks, 256 KiB cap). Only
+	// a digest goes up with the inventory; the hub asks for the bytes once.
+	ProjectIcons ProjectIcons `yaml:"project_icons"`
+}
+
+// ProjectIcons configures the favicon scan of compose working directories.
+type ProjectIcons struct {
+	// Enabled: auto (default) and true scan; false never reads project
+	// directories.
+	Enabled Tri `yaml:"enabled"`
 }
 
 // Docker configures the Docker Engine API source.
