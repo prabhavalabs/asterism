@@ -42,6 +42,8 @@ func (h *Handler) Register(mux *http.ServeMux, wrap func(http.Handler) http.Hand
 	// State-changing RPCs require the Connect-Protocol-Version header as a CSRF guard
 	// (a cross-site form or simple request cannot set it); connect-web sends it.
 	mount(asterismv1connect.NewActionsServiceHandler(h, connect.WithRequireConnectProtocolHeader()))
+	// Project settings: browser sessions only, enforced in the service.
+	h.registerProjectSettings(mount)
 }
 
 func (h *Handler) GetOverview(ctx context.Context, _ *connect.Request[asterismv1.GetOverviewRequest]) (*connect.Response[asterismv1.GetOverviewResponse], error) {
