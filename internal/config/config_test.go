@@ -99,3 +99,54 @@ func TestNormalizePublicURL(t *testing.T) {
 		}
 	}
 }
+
+func TestFaviconFetchConfig(t *testing.T) {
+	path := t.TempDir() + "/asterism.toml"
+	body := "[projects]\nfavicon_fetch = true\n\n[projects.\"shop\"]\nicon = \"postgres\"\nfavicon_fetch = false\n\n[projects.\"blog\"]\ncolor = \"chart-1\"\n"
+	if err := os.WriteFile(path, []byte(body), 0o600); err != nil {
+		t.Fatal(err)
+	}
+	cfg, _, err := Load(path)
+	if err != nil {
+		t.Fatalf("Load: %v", err)
+	}
+	if _, ok := cfg.Projects["favicon_fetch"]; ok {
+		t.Fatal("favicon_fetch decoded as a project")
+	}
+	if !cfg.FaviconFetch || cfg.FaviconFetchFor("shop") || !cfg.FaviconFetchFor("blog") || !cfg.FaviconFetchFor("other") {
+		t.Fatalf("favicon fetch = %v shop=%v blog=%v", cfg.FaviconFetch, cfg.FaviconFetchFor("shop"), cfg.FaviconFetchFor("blog"))
+	}
+	if cfg.Projects["shop"].Icon != "postgres" {
+		t.Fatalf("shop = %+v", cfg.Projects["shop"])
+	}
+	t.Setenv("ASTERISM_FAVICON_FETCH", "false")
+	if cfg, _, _ = Load(path); cfg.FaviconFetch || cfg.FaviconFetchFor("blog") {
+		t.Fatal("env override ignored")
+	}
+
+	bad := t.TempDir() + "/bad.toml"
+	if err := os.WriteFile(bad, []byte("[projects.\"shop\"]\nicon = 3\n"), 0o600); err != nil {
+		t.Fatal(err)
+	}
+	if _, _, err := Load(bad); err == nil {
+		t.Fatal("non-string icon accepted")
+	}
+}
+
+func TestEnsureDataDir(t *testing.T) {
+	if Default().Server.DataDir != "data" {
+		t.Fatal("default data_dir")
+	}
+	dir := t.TempDir() + "/state/nested"
+	t.Setenv("ASTERISM_DATA_DIR", dir)
+	cfg := Default()
+	applyEnv(&cfg)
+	got, err := cfg.EnsureDataDir()
+	if err != nil || got != dir {
+		t.Fatalf("EnsureDataDir = %q, %v", got, err)
+	}
+	st, err := os.Stat(got)
+	if err != nil || !st.IsDir() || st.Mode().Perm() != 0o700 {
+		t.Fatalf("stat = %v, %v", st, err)
+	}
+}

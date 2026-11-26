@@ -20,7 +20,12 @@ type Config struct {
 	Actions ActionsConfig `toml:"actions"`
 	// Projects holds optional per-project display settings keyed by project name,
 	// e.g. [projects."shop"] icon = "postgres".
-	Projects map[string]ProjectConfig `toml:"projects"`
+	Projects ProjectConfigs `toml:"projects"`
+	// FaviconFetch is [projects] favicon_fetch (default true; env
+	// ASTERISM_FAVICON_FETCH): whether the hub may fetch favicons over https
+	// from hostnames routed to a project. It shares the [projects] table with
+	// the per-project entries, so it is decoded separately.
+	FaviconFetch bool `toml:"-"`
 	// Agents are the enrolled asterism-agent hosts ([[agents]]), used when
 	// collect.mode = "agent". Generate entries with `asterism agent token create`.
 	Agents []AgentConfig `toml:"agents"`
@@ -69,6 +74,71 @@ type ProjectConfig struct {
 	Icon string `toml:"icon"`
 	// Color is a design-token name such as "chart-3" or "role-db".
 	Color string `toml:"color"`
+	// FaviconFetch disables (false) favicon fetching from this project's
+	// public hostnames; nil follows [projects] favicon_fetch.
+	FaviconFetch *bool `toml:"favicon_fetch"`
+}
+
+// ProjectConfigs is the [projects] table: per-project sub-tables keyed by
+// project name, plus the scalar favicon_fetch switch (read into
+// Config.FaviconFetch).
+type ProjectConfigs map[string]ProjectConfig
+
+// reservedProjectKeys are scalar [projects] settings, not project names.
+var reservedProjectKeys = map[string]bool{"favicon_fetch": true}
+
+// UnmarshalTOML decodes the per-project sub-tables and skips the reserved
+// scalar keys.
+func (p *ProjectConfigs) UnmarshalTOML(v any) error {
+	table, ok := v.(map[string]any)
+	if !ok {
+		return fmt.Errorf("[projects] must be a table")
+	}
+	out := make(ProjectConfigs, len(table))
+	for name, raw := range table {
+		if reservedProjectKeys[name] {
+			continue
+		}
+		fields, ok := raw.(map[string]any)
+		if !ok {
+			return fmt.Errorf("[projects.%q] must be a table", name)
+		}
+		var pc ProjectConfig
+		for k, fv := range fields {
+			switch k {
+			case "icon", "color":
+				str, ok := fv.(string)
+				if !ok {
+					return fmt.Errorf("[projects.%q] %s must be a string", name, k)
+				}
+				if k == "icon" {
+					pc.Icon = str
+				} else {
+					pc.Color = str
+				}
+			case "favicon_fetch":
+				b, ok := fv.(bool)
+				if !ok {
+					return fmt.Errorf("[projects.%q] favicon_fetch must be true or false", name)
+				}
+				pc.FaviconFetch = &b
+			default:
+				return fmt.Errorf("[projects.%q] has unknown key %q (want icon, color or favicon_fetch)", name, k)
+			}
+		}
+		out[name] = pc
+	}
+	*p = out
+	return nil
+}
+
+// FaviconFetchFor reports whether favicons may be fetched from the public
+// hostnames of the named project.
+func (c Config) FaviconFetchFor(project string) bool {
+	if pc, ok := c.Projects[project]; ok && pc.FaviconFetch != nil {
+		return c.FaviconFetch && *pc.FaviconFetch
+	}
+	return c.FaviconFetch
 }
 
 type ServerConfig struct {
@@ -78,6 +148,28 @@ type ServerConfig struct {
 	// It makes link-preview tags (og:url, og:image) absolute; empty keeps them
 	// relative, which most preview crawlers ignore.
 	PublicURL string `toml:"public_url"`
+	// DataDir holds Asterism's own state (uploaded and cached project icons).
+	// Relative paths resolve against the working directory. Env
+	// ASTERISM_DATA_DIR; production uses /var/lib/asterism (systemd
+	// StateDirectory=asterism).
+	DataDir string `toml:"data_dir"`
+}
+
+// EnsureDataDir returns the absolute data directory, creating it with mode
+// 0700 when it does not exist.
+func (c Config) EnsureDataDir() (string, error) {
+	dir := c.Server.DataDir
+	if strings.TrimSpace(dir) == "" {
+		dir = "data"
+	}
+	abs, err := filepath.Abs(dir)
+	if err != nil {
+		return "", fmt.Errorf("resolve data_dir %q: %w", dir, err)
+	}
+	if err := os.MkdirAll(abs, 0o700); err != nil {
+		return "", fmt.Errorf("create data_dir %s: %w", abs, err)
+	}
+	return abs, nil
 }
 
 type CollectConfig struct {
@@ -139,6 +231,7 @@ func Default() Config {
 		Server: ServerConfig{
 			Listen:    "127.0.0.1:7700",
 			BehindTLS: false,
+			DataDir:   "data",
 		},
 		Collect: CollectConfig{
 			Mode:  "local",
@@ -151,6 +244,7 @@ func Default() Config {
 			AllowActions:              false,
 			DefaultStopTimeoutSeconds: 10,
 		},
+		FaviconFetch: true,
 	}
 }
 
@@ -173,6 +267,18 @@ func Load(path string) (Config, string, error) {
 		clean := filepath.Clean(resolvedPath)
 		if _, err := toml.DecodeFile(clean, &cfg); err != nil {
 			return Config{}, resolvedPath, fmt.Errorf("decode config %s: %w", clean, err)
+		}
+		// [projects] favicon_fetch lives next to the per-project tables.
+		var switches struct {
+			Projects struct {
+				FaviconFetch *bool `toml:"favicon_fetch"`
+			} `toml:"projects"`
+		}
+		if _, err := toml.DecodeFile(clean, &switches); err != nil {
+			return Config{}, resolvedPath, fmt.Errorf("decode config %s: %w", clean, err)
+		}
+		if switches.Projects.FaviconFetch != nil {
+			cfg.FaviconFetch = *switches.Projects.FaviconFetch
 		}
 	}
 
@@ -259,6 +365,14 @@ func applyEnv(cfg *Config) {
 	}
 	if v := strings.TrimSpace(os.Getenv("ASTERISM_PUBLIC_URL")); v != "" {
 		cfg.Server.PublicURL = v
+	}
+	if v := strings.TrimSpace(os.Getenv("ASTERISM_DATA_DIR")); v != "" {
+		cfg.Server.DataDir = v
+	}
+	if v := strings.TrimSpace(os.Getenv("ASTERISM_FAVICON_FETCH")); v != "" {
+		if b, err := strconv.ParseBool(v); err == nil {
+			cfg.FaviconFetch = b
+		}
 	}
 	if v := strings.TrimSpace(os.Getenv("ASTERISM_COLLECT_MODE")); v != "" {
 		cfg.Collect.Mode = strings.ToLower(v)

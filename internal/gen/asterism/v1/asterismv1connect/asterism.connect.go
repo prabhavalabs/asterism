@@ -35,6 +35,8 @@ const (
 	LiveServiceName = "asterism.v1.LiveService"
 	// DockerServiceName is the fully-qualified name of the DockerService service.
 	DockerServiceName = "asterism.v1.DockerService"
+	// ProjectSettingsServiceName is the fully-qualified name of the ProjectSettingsService service.
+	ProjectSettingsServiceName = "asterism.v1.ProjectSettingsService"
 	// ActionsServiceName is the fully-qualified name of the ActionsService service.
 	ActionsServiceName = "asterism.v1.ActionsService"
 )
@@ -101,6 +103,15 @@ const (
 	// DockerServiceGetDiskUsageProcedure is the fully-qualified name of the DockerService's
 	// GetDiskUsage RPC.
 	DockerServiceGetDiskUsageProcedure = "/asterism.v1.DockerService/GetDiskUsage"
+	// ProjectSettingsServiceSetProjectIconProcedure is the fully-qualified name of the
+	// ProjectSettingsService's SetProjectIcon RPC.
+	ProjectSettingsServiceSetProjectIconProcedure = "/asterism.v1.ProjectSettingsService/SetProjectIcon"
+	// ProjectSettingsServiceClearProjectIconProcedure is the fully-qualified name of the
+	// ProjectSettingsService's ClearProjectIcon RPC.
+	ProjectSettingsServiceClearProjectIconProcedure = "/asterism.v1.ProjectSettingsService/ClearProjectIcon"
+	// ProjectSettingsServiceRefreshProjectIconProcedure is the fully-qualified name of the
+	// ProjectSettingsService's RefreshProjectIcon RPC.
+	ProjectSettingsServiceRefreshProjectIconProcedure = "/asterism.v1.ProjectSettingsService/RefreshProjectIcon"
 	// ActionsServiceStartContainerProcedure is the fully-qualified name of the ActionsService's
 	// StartContainer RPC.
 	ActionsServiceStartContainerProcedure = "/asterism.v1.ActionsService/StartContainer"
@@ -918,6 +929,135 @@ func (UnimplementedDockerServiceHandler) ListNetworks(context.Context, *connect.
 
 func (UnimplementedDockerServiceHandler) GetDiskUsage(context.Context, *connect.Request[v1.GetDiskUsageRequest]) (*connect.Response[v1.GetDiskUsageResponse], error) {
 	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("asterism.v1.DockerService.GetDiskUsage is not implemented"))
+}
+
+// ProjectSettingsServiceClient is a client for the asterism.v1.ProjectSettingsService service.
+type ProjectSettingsServiceClient interface {
+	// Upload a custom icon (PNG, SVG, ICO, WebP or JPEG, at most 512 KiB).
+	SetProjectIcon(context.Context, *connect.Request[v1.SetProjectIconRequest]) (*connect.Response[v1.ProjectIconResponse], error)
+	// Remove the uploaded icon; the icon reverts to automatic resolution.
+	ClearProjectIcon(context.Context, *connect.Request[v1.ClearProjectIconRequest]) (*connect.Response[v1.ProjectIconResponse], error)
+	// Re-run favicon discovery now (directory scan, then public domain).
+	RefreshProjectIcon(context.Context, *connect.Request[v1.RefreshProjectIconRequest]) (*connect.Response[v1.ProjectIconResponse], error)
+}
+
+// NewProjectSettingsServiceClient constructs a client for the asterism.v1.ProjectSettingsService
+// service. By default, it uses the Connect protocol with the binary Protobuf Codec, asks for
+// gzipped responses, and sends uncompressed requests. To use the gRPC or gRPC-Web protocols, supply
+// the connect.WithGRPC() or connect.WithGRPCWeb() options.
+//
+// The URL supplied here should be the base URL for the Connect or gRPC server (for example,
+// http://api.acme.com or https://acme.com/grpc).
+func NewProjectSettingsServiceClient(httpClient connect.HTTPClient, baseURL string, opts ...connect.ClientOption) ProjectSettingsServiceClient {
+	baseURL = strings.TrimRight(baseURL, "/")
+	projectSettingsServiceMethods := v1.File_asterism_v1_asterism_proto.Services().ByName("ProjectSettingsService").Methods()
+	return &projectSettingsServiceClient{
+		setProjectIcon: connect.NewClient[v1.SetProjectIconRequest, v1.ProjectIconResponse](
+			httpClient,
+			baseURL+ProjectSettingsServiceSetProjectIconProcedure,
+			connect.WithSchema(projectSettingsServiceMethods.ByName("SetProjectIcon")),
+			connect.WithClientOptions(opts...),
+		),
+		clearProjectIcon: connect.NewClient[v1.ClearProjectIconRequest, v1.ProjectIconResponse](
+			httpClient,
+			baseURL+ProjectSettingsServiceClearProjectIconProcedure,
+			connect.WithSchema(projectSettingsServiceMethods.ByName("ClearProjectIcon")),
+			connect.WithClientOptions(opts...),
+		),
+		refreshProjectIcon: connect.NewClient[v1.RefreshProjectIconRequest, v1.ProjectIconResponse](
+			httpClient,
+			baseURL+ProjectSettingsServiceRefreshProjectIconProcedure,
+			connect.WithSchema(projectSettingsServiceMethods.ByName("RefreshProjectIcon")),
+			connect.WithClientOptions(opts...),
+		),
+	}
+}
+
+// projectSettingsServiceClient implements ProjectSettingsServiceClient.
+type projectSettingsServiceClient struct {
+	setProjectIcon     *connect.Client[v1.SetProjectIconRequest, v1.ProjectIconResponse]
+	clearProjectIcon   *connect.Client[v1.ClearProjectIconRequest, v1.ProjectIconResponse]
+	refreshProjectIcon *connect.Client[v1.RefreshProjectIconRequest, v1.ProjectIconResponse]
+}
+
+// SetProjectIcon calls asterism.v1.ProjectSettingsService.SetProjectIcon.
+func (c *projectSettingsServiceClient) SetProjectIcon(ctx context.Context, req *connect.Request[v1.SetProjectIconRequest]) (*connect.Response[v1.ProjectIconResponse], error) {
+	return c.setProjectIcon.CallUnary(ctx, req)
+}
+
+// ClearProjectIcon calls asterism.v1.ProjectSettingsService.ClearProjectIcon.
+func (c *projectSettingsServiceClient) ClearProjectIcon(ctx context.Context, req *connect.Request[v1.ClearProjectIconRequest]) (*connect.Response[v1.ProjectIconResponse], error) {
+	return c.clearProjectIcon.CallUnary(ctx, req)
+}
+
+// RefreshProjectIcon calls asterism.v1.ProjectSettingsService.RefreshProjectIcon.
+func (c *projectSettingsServiceClient) RefreshProjectIcon(ctx context.Context, req *connect.Request[v1.RefreshProjectIconRequest]) (*connect.Response[v1.ProjectIconResponse], error) {
+	return c.refreshProjectIcon.CallUnary(ctx, req)
+}
+
+// ProjectSettingsServiceHandler is an implementation of the asterism.v1.ProjectSettingsService
+// service.
+type ProjectSettingsServiceHandler interface {
+	// Upload a custom icon (PNG, SVG, ICO, WebP or JPEG, at most 512 KiB).
+	SetProjectIcon(context.Context, *connect.Request[v1.SetProjectIconRequest]) (*connect.Response[v1.ProjectIconResponse], error)
+	// Remove the uploaded icon; the icon reverts to automatic resolution.
+	ClearProjectIcon(context.Context, *connect.Request[v1.ClearProjectIconRequest]) (*connect.Response[v1.ProjectIconResponse], error)
+	// Re-run favicon discovery now (directory scan, then public domain).
+	RefreshProjectIcon(context.Context, *connect.Request[v1.RefreshProjectIconRequest]) (*connect.Response[v1.ProjectIconResponse], error)
+}
+
+// NewProjectSettingsServiceHandler builds an HTTP handler from the service implementation. It
+// returns the path on which to mount the handler and the handler itself.
+//
+// By default, handlers support the Connect, gRPC, and gRPC-Web protocols with the binary Protobuf
+// and JSON codecs. They also support gzip compression.
+func NewProjectSettingsServiceHandler(svc ProjectSettingsServiceHandler, opts ...connect.HandlerOption) (string, http.Handler) {
+	projectSettingsServiceMethods := v1.File_asterism_v1_asterism_proto.Services().ByName("ProjectSettingsService").Methods()
+	projectSettingsServiceSetProjectIconHandler := connect.NewUnaryHandler(
+		ProjectSettingsServiceSetProjectIconProcedure,
+		svc.SetProjectIcon,
+		connect.WithSchema(projectSettingsServiceMethods.ByName("SetProjectIcon")),
+		connect.WithHandlerOptions(opts...),
+	)
+	projectSettingsServiceClearProjectIconHandler := connect.NewUnaryHandler(
+		ProjectSettingsServiceClearProjectIconProcedure,
+		svc.ClearProjectIcon,
+		connect.WithSchema(projectSettingsServiceMethods.ByName("ClearProjectIcon")),
+		connect.WithHandlerOptions(opts...),
+	)
+	projectSettingsServiceRefreshProjectIconHandler := connect.NewUnaryHandler(
+		ProjectSettingsServiceRefreshProjectIconProcedure,
+		svc.RefreshProjectIcon,
+		connect.WithSchema(projectSettingsServiceMethods.ByName("RefreshProjectIcon")),
+		connect.WithHandlerOptions(opts...),
+	)
+	return "/asterism.v1.ProjectSettingsService/", http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		switch r.URL.Path {
+		case ProjectSettingsServiceSetProjectIconProcedure:
+			projectSettingsServiceSetProjectIconHandler.ServeHTTP(w, r)
+		case ProjectSettingsServiceClearProjectIconProcedure:
+			projectSettingsServiceClearProjectIconHandler.ServeHTTP(w, r)
+		case ProjectSettingsServiceRefreshProjectIconProcedure:
+			projectSettingsServiceRefreshProjectIconHandler.ServeHTTP(w, r)
+		default:
+			http.NotFound(w, r)
+		}
+	})
+}
+
+// UnimplementedProjectSettingsServiceHandler returns CodeUnimplemented from all methods.
+type UnimplementedProjectSettingsServiceHandler struct{}
+
+func (UnimplementedProjectSettingsServiceHandler) SetProjectIcon(context.Context, *connect.Request[v1.SetProjectIconRequest]) (*connect.Response[v1.ProjectIconResponse], error) {
+	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("asterism.v1.ProjectSettingsService.SetProjectIcon is not implemented"))
+}
+
+func (UnimplementedProjectSettingsServiceHandler) ClearProjectIcon(context.Context, *connect.Request[v1.ClearProjectIconRequest]) (*connect.Response[v1.ProjectIconResponse], error) {
+	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("asterism.v1.ProjectSettingsService.ClearProjectIcon is not implemented"))
+}
+
+func (UnimplementedProjectSettingsServiceHandler) RefreshProjectIcon(context.Context, *connect.Request[v1.RefreshProjectIconRequest]) (*connect.Response[v1.ProjectIconResponse], error) {
+	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("asterism.v1.ProjectSettingsService.RefreshProjectIcon is not implemented"))
 }
 
 // ActionsServiceClient is a client for the asterism.v1.ActionsService service.

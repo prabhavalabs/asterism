@@ -27,6 +27,7 @@ type inventory struct {
 	routes      []*v1.IngressRoute
 	rules       []*v1.ProjectRule
 	filesystems []*v1.FilesystemUsage
+	icons       []*v1.ProjectIconRef
 
 	pending pendingDelta
 	changed chan struct{}
@@ -36,6 +37,7 @@ type pendingDelta struct {
 	upsertC, removedC                                                           map[string]struct{}
 	upsertW, removedW                                                           map[string]struct{}
 	host, engine, images, volumes, networks, disk, listeners, routes, rules, fs bool
+	icons                                                                       bool
 }
 
 func (p *pendingDelta) reset() {
@@ -48,7 +50,7 @@ func (p *pendingDelta) reset() {
 func (p *pendingDelta) empty() bool {
 	return len(p.upsertC)+len(p.removedC)+len(p.upsertW)+len(p.removedW) == 0 &&
 		!p.host && !p.engine && !p.images && !p.volumes && !p.networks && !p.disk &&
-		!p.listeners && !p.routes && !p.rules && !p.fs
+		!p.listeners && !p.routes && !p.rules && !p.fs && !p.icons
 }
 
 func (inv *inventory) init() {
@@ -211,6 +213,29 @@ func (s *Store) ReplaceFilesystems(f []*v1.FilesystemUsage) {
 	}
 }
 
+// ReplaceProjectIcons replaces the favicon files found in project
+// directories (sorted by working directory).
+func (s *Store) ReplaceProjectIcons(icons []*v1.ProjectIconRef) {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	if replaceList(&s.inv.icons, icons) {
+		s.inv.pending.icons = true
+		s.inv.bump()
+	}
+}
+
+// ProjectIcon returns the reported icon file with the given digest.
+func (s *Store) ProjectIcon(sha256 string) (*v1.ProjectIconRef, bool) {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	for _, ic := range s.inv.icons {
+		if ic.GetSha256() == sha256 {
+			return proto.Clone(ic).(*v1.ProjectIconRef), true
+		}
+	}
+	return nil, false
+}
+
 // SetHostInfo replaces the static host facts.
 func (s *Store) SetHostInfo(h *v1.HostInfo) {
 	if h == nil {
@@ -343,6 +368,9 @@ func (s *Store) TakeInventory(known uint64, force bool) (*v1.InventorySnapshot, 
 	if p.fs {
 		r.Filesystems, r.FilesystemsSet, has = cloneList(inv.filesystems), true, true
 	}
+	if p.icons {
+		r.ProjectIcons, r.ProjectIconsSet, has = cloneList(inv.icons), true, true
+	}
 	if has {
 		d.Replace = r
 	}
@@ -372,6 +400,7 @@ func (s *Store) snapshotLocked() *v1.InventorySnapshot {
 		Routes:       cloneList(inv.routes),
 		ProjectRules: cloneList(inv.rules),
 		Filesystems:  cloneList(inv.filesystems),
+		ProjectIcons: cloneList(inv.icons),
 	}
 	if inv.host != nil {
 		snap.Host = proto.Clone(inv.host).(*v1.HostInfo)

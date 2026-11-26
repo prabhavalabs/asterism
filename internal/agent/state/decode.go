@@ -176,6 +176,7 @@ type Inventory struct {
 	Routes      []*v1.IngressRoute
 	Rules       []*v1.ProjectRule
 	Filesystems []*v1.FilesystemUsage
+	Icons       []*v1.ProjectIconRef
 }
 
 // NewInventory returns an empty inventory at version 0.
@@ -196,6 +197,7 @@ func (inv *Inventory) ApplySnapshot(s *v1.InventorySnapshot) {
 	}
 	inv.Images, inv.Volumes, inv.Networks = s.GetImages(), s.GetVolumes(), s.GetNetworks()
 	inv.Listeners, inv.Routes, inv.Rules, inv.Filesystems = s.GetListeners(), s.GetRoutes(), s.GetProjectRules(), s.GetFilesystems()
+	inv.Icons = s.GetProjectIcons()
 }
 
 // ApplyDelta applies d, or returns ErrVersionMismatch without changes.
@@ -246,6 +248,9 @@ func (inv *Inventory) ApplyDelta(d *v1.InventoryDelta) error {
 		if r.GetFilesystemsSet() {
 			inv.Filesystems = r.GetFilesystems()
 		}
+		if r.GetProjectIconsSet() {
+			inv.Icons = r.GetProjectIcons()
+		}
 	}
 	inv.Version = d.GetVersion()
 	return nil
@@ -257,6 +262,7 @@ func (inv *Inventory) Snapshot() *v1.InventorySnapshot {
 		Version: inv.Version, Host: inv.Host, Engine: inv.Engine, DiskUsage: inv.DiskUsage,
 		Images: inv.Images, Volumes: inv.Volumes, Networks: inv.Networks,
 		Listeners: inv.Listeners, Routes: inv.Routes, ProjectRules: inv.Rules, Filesystems: inv.Filesystems,
+		ProjectIcons: inv.Icons,
 	}
 	for _, k := range sortedMapKeys(inv.Containers) {
 		s.Containers = append(s.Containers, inv.Containers[k])

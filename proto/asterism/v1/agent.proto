@@ -62,6 +62,7 @@ message AgentFrame {
     LogChunk log_chunk = 15;
     CommandResult command_result = 16;
     AgentHeartbeat heartbeat = 17;
+    IconData icon_data = 18;
   }
 }
 
@@ -129,6 +130,7 @@ message InventorySnapshot {
   repeated IngressRoute routes = 11;
   repeated ProjectRule project_rules = 12;
   repeated FilesystemUsage filesystems = 13;
+  repeated ProjectIconRef project_icons = 14;
 }
 
 message InventoryDelta {
@@ -166,6 +168,30 @@ message ReplaceSet {
   bool project_rules_set = 15;
   repeated FilesystemUsage filesystems = 16;
   bool filesystems_set = 17;
+  repeated ProjectIconRef project_icons = 18;
+  bool project_icons_set = 19;
+}
+
+// A favicon candidate the agent found in a compose working directory. Only
+// the digest travels with the inventory; the hub fetches the bytes once per
+// digest with an IconRequest and caches them.
+message ProjectIconRef {
+  // Compose working directory the file was found under.
+  string working_dir = 1;
+  // Path relative to working_dir, e.g. "public/favicon.svg".
+  string rel_path = 2;
+  // Hex SHA-256 of the file.
+  string sha256 = 3;
+  uint32 size_bytes = 4;
+}
+
+// The bytes for one ProjectIconRef (answer to IconRequest).
+message IconData {
+  string request_id = 1;
+  string sha256 = 2;
+  bytes data = 3;
+  // Set when the file could not be read or changed since it was scanned.
+  string error = 4;
 }
 
 // A project resolved on the agent from agent.yaml "projects:".
@@ -249,7 +275,14 @@ message HubFrame {
     LogCancel log_cancel = 6;
     CommandRequest command = 7;
     Heartbeat ping = 8;
+    IconRequest icon_request = 9;
   }
+}
+
+// Asks the agent for the bytes of a ProjectIconRef it reported.
+message IconRequest {
+  string request_id = 1;
+  string sha256 = 2;
 }
 
 message HelloAck {

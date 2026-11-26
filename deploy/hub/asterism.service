@@ -8,6 +8,10 @@
 #   useradd --system --no-create-home --shell /usr/sbin/nologin asterism
 #   install -d -m 0750 -o root -g asterism /etc/asterism
 #   install -m 0640 -o root -g asterism asterism.toml /etc/asterism/asterism.toml
+#
+# StateDirectory creates /var/lib/asterism (0700, owned by the service user)
+# for uploaded and cached project icons; set data_dir = "/var/lib/asterism"
+# under [server] in asterism.toml (or ASTERISM_DATA_DIR).
 #   systemctl daemon-reload && systemctl enable --now asterism
 [Unit]
 Description=Asterism hub (VPS observatory API and web UI)
@@ -23,6 +27,8 @@ ExecStart=/usr/local/bin/asterism serve --config /etc/asterism/asterism.toml
 Restart=always
 RestartSec=5s
 Environment=GOMEMLIMIT=192MiB
+StateDirectory=asterism
+StateDirectoryMode=0700
 
 MemoryHigh=192M
 MemoryMax=256M

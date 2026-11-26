@@ -418,3 +418,29 @@ func TestUnreachableHubIsNoFallbackReason(t *testing.T) {
 		t.Error("Unimplemented must trigger the unary fallback")
 	}
 }
+
+type mapIcons map[string][]byte
+
+func (m mapIcons) ReadIcon(digest string) ([]byte, error) {
+	if b, ok := m[digest]; ok {
+		return b, nil
+	}
+	return nil, errors.New("unknown icon digest")
+}
+
+func TestIconRequest(t *testing.T) {
+	hub := newFakeHub(t)
+	srv := hub.serve(true)
+	a := startAgent(t, testConfig(srv.URL), nil, func(o *Options) { o.Icons = mapIcons{"abc": []byte("<svg/>")} })
+	a.await("connected:bidi")
+	hub.toAgnt <- &v1.HubFrame{Payload: &v1.HubFrame_IconRequest{IconRequest: &v1.IconRequest{RequestId: "i1", Sha256: "abc"}}}
+	d := hub.next(func(f *v1.AgentFrame) bool { return f.GetIconData() != nil }).GetIconData()
+	if d.GetRequestId() != "i1" || string(d.GetData()) != "<svg/>" || d.GetError() != "" {
+		t.Fatalf("icon data %v", d)
+	}
+	hub.toAgnt <- &v1.HubFrame{Payload: &v1.HubFrame_IconRequest{IconRequest: &v1.IconRequest{RequestId: "i2", Sha256: "nope"}}}
+	d = hub.next(func(f *v1.AgentFrame) bool { return f.GetIconData() != nil }).GetIconData()
+	if d.GetRequestId() != "i2" || len(d.GetData()) != 0 || d.GetError() == "" {
+		t.Fatalf("icon error %v", d)
+	}
+}

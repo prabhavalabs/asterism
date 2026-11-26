@@ -9,6 +9,7 @@ import (
 	"google.golang.org/protobuf/proto"
 
 	"github.com/prabhavalabs/asterism/internal/bus"
+	"github.com/prabhavalabs/asterism/internal/collect/favicon"
 	asterismv1 "github.com/prabhavalabs/asterism/internal/gen/asterism/v1"
 	"github.com/prabhavalabs/asterism/internal/store/ring"
 )
@@ -276,5 +277,29 @@ func TestShowcaseScale(t *testing.T) {
 				eventIDs[e.Id] = true
 			}
 		})
+	}
+}
+
+func TestDemoIconsAreValidAndDeterministic(t *testing.T) {
+	p := &Provider{}
+	for _, dir := range []string{"/srv/apps/nova-core", "/srv/apps/analytics-hub"} {
+		ref, ok := p.DirIcon(dir)
+		if !ok {
+			t.Fatalf("no demo icon for %s", dir)
+		}
+		data, err := p.ReadDirIcon(context.Background(), ref)
+		if err != nil {
+			t.Fatal(err)
+		}
+		if _, err := favicon.Validate(data, "", favicon.MaxFaviconBytes); err != nil {
+			t.Fatalf("%s: %v", dir, err)
+		}
+		again, _ := p.DirIcon(dir)
+		if again.SHA256 != ref.SHA256 || !ref.Generated {
+			t.Fatalf("%s: not deterministic", dir)
+		}
+	}
+	if _, ok := p.DirIcon("/srv/staging/lab"); ok {
+		t.Fatal("staging-lab should keep its monogram")
 	}
 }

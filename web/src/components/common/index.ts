@@ -57,6 +57,7 @@ export {
   type ProjectIconProps,
   type TechIconProps,
 } from "./ProjectIcon";
+export { iconSourceLabel } from "./iconSource";
 export { TECH, techMeta, monogramFor, type IconColorToken, type TechCategory, type TechMeta } from "./tech";
 export { DataPagination, type DataPaginationProps } from "./DataPagination";
 export {

@@ -410,6 +410,7 @@ heap; the Docker events stream is the only other collector goroutine.
 | processes / pm2 | `/proc/*/{stat,cmdline,exe}` against match rules; pm2 `pids/*.pid` only | 30 s | `Workload{kind: PROCESS, id: proc:<name>}` with redacted cmdlines |
 | proxies | nginx (with includes), Caddy admin API or Caddyfile, HAProxy, cloudflared `ingress:`, manual `routes:` | 30 s when mtime or hash changes | `IngressRoute` with upstream addresses; the hub resolves targets |
 | self | `/proc/self/stat`, `runtime/metrics` | heartbeat (10 s) | `AgentStats` |
+| project_icons | compose working directories under `host.root`: a fixed list of web-asset folders, no symlinks, 256 KiB cap (`internal/iconscan`) | 15 min | `ProjectIconRef` digests in inventory; bytes only on `IconRequest` (≤ 20 reads/min) |
 
 Rates are computed on the agent from counter deltas. A series not set during a successful tick
 is retired; a failed tick keeps its series. Hub hints (`AgentHints`) shorten intervals while a
@@ -439,6 +440,14 @@ agent upgrade (D24).
 - Query path: the service selects the appropriate tier from the requested range/step and
   stitches the hot ring buffer onto the recent edge.
 - Budget: < 200 MB on disk for 50 containers × ~12 metrics × 30 days.
+- **Data directory.** `[server] data_dir` (env `ASTERISM_DATA_DIR`, default `data`, production
+  `/var/lib/asterism` via systemd `StateDirectory=asterism`) holds Asterism's own files;
+  `Config.EnsureDataDir` resolves it and creates it with mode 0700. Project icons live under
+  `<data_dir>/icons/uploaded/` and `<data_dir>/icons/favicon/` (`internal/store/iconstore`): an
+  image file and a JSON metadata file per project, named by a SHA-256 of the project name
+  (never the name), written atomically (temp file + rename, mode 0600) and checked against
+  their digest when served. A favicon entry without an image is the negative cache. The M4
+  SQLite database will live in the same directory.
 
 ---
 
@@ -489,6 +498,11 @@ service DockerService {                                             // read-only
   rpc ListNetworks(ListNetworksRequest) returns (ListNetworksResponse);
   rpc GetDiskUsage(GetDiskUsageRequest) returns (GetDiskUsageResponse);   // docker system df
 }
+service ProjectSettingsService {                                    // Asterism's own data; session only, audited
+  rpc SetProjectIcon(SetProjectIconRequest) returns (ProjectIconResponse);
+  rpc ClearProjectIcon(ClearProjectIconRequest) returns (ProjectIconResponse);
+  rpc RefreshProjectIcon(RefreshProjectIconRequest) returns (ProjectIconResponse);
+}
 service ActionsService {                                            // mutating, opt-in, audited
   rpc StartContainer(StartContainerRequest) returns (ContainerActionResponse);
   rpc StopContainer(StopContainerRequest) returns (ContainerActionResponse);
@@ -502,6 +516,13 @@ service ActionsService {                                            // mutating,
 (container, image, volume, network) with full inspect detail, while `InventoryService` models
 the classified topology (projects, workloads, ports, ingress). Both share entity IDs
 (`ctr:<name>`), so the UI links a `Workload` to its `Container` directly.
+
+`ProjectSettingsService` changes only Asterism's data directory, never the host, so it is **not**
+gated by `[actions] allow_actions` and needs no `actions` scope. Instead every RPC requires a
+browser admin session: API tokens (read or actions) get `PermissionDenied`. It requires the
+`Connect-Protocol-Version` header (CSRF), caps requests at 1 MiB, and records every attempt as
+an `audit.project.icon_set|icon_clear|icon_refresh` event with an `ActionAudit` (state before
+and after are icon kinds).
 
 ### 8.3 Live stream (`LiveService.Subscribe`)
 - Topics: `metrics:host`, `metrics:proj:<name>`, `metrics:ctr:*`, `graph`, `ports`, `events`,
@@ -597,6 +618,28 @@ resolved `ProjectIcon`; clients only render it. Precedence:
    caches), then container count, then memory.
 4. A one- or two-letter monogram on a palette colour chosen by an FNV hash of the name.
 
+Images sit on top of that resolution (`internal/service/projecticons.go`), so the full order is
+**UPLOADED > CONFIGURED > LABEL > FAVICON > DETECTED > MONOGRAM**; the tech slug and monogram
+stay in the message as the client's fallback when an image fails to load.
+- **Uploaded:** `ProjectSettingsService.SetProjectIcon` (PNG, SVG, ICO, WebP or JPEG, at most
+  512 KiB); `ClearProjectIcon` reverts to automatic; `RefreshProjectIcon` re-runs discovery.
+- **Favicon discovery** runs in the background (first pass 20 s after start, then every
+  10 min, at most six domain fetches per pass) and never blocks collectors. It tries the
+  project's compose directory first (the hub's own scan in `local` mode, the agent's scan in
+  `agent` mode, generated images in `showcase`; none in `ssh` mode), then the public hostnames
+  routed to the project's workloads (from ingress upstreams; the proxy project does not inherit
+  them). Domain results and misses are cached for 24 h; a failed refetch keeps the old image.
+  `[projects] favicon_fetch` (env `ASTERISM_FAVICON_FETCH`, default true) and per-project
+  `[projects."<name>"] favicon_fetch = false` switch domain fetching off; showcase never fetches.
+- **Validation:** every image is sniffed (never trusted by extension or declared type),
+  raster dimensions are decoded (1–4096 px), and SVG must be well-formed XML with an `<svg>`
+  root and no DTD.
+- **Serving:** `ProjectIcon.image_url` is `/api/project-icons/<key>?v=<etag>`, behind the same
+  session or read-token check as the API, with `ETag`, `Cache-Control: private, max-age=86400`,
+  `X-Content-Type-Options: nosniff` and `Content-Security-Policy: default-src 'none';
+  style-src 'unsafe-inline'; sandbox`. The web UI renders icons with `<img>` only. MCP project
+  views report `icon_kind` and `icon_source`, never image bytes or URLs.
+
 Colours are design-token names only (`chart-1`…`chart-5`, `role-proxy|app|db|cache|worker`,
 `primary`); anything else is ignored, so configuration can never inject CSS. Unknown slugs fall
 through to the next source. `Workload.tech` and `Container.tech` carry the same detection per
@@ -607,8 +650,9 @@ loaded chunk (`web/src/components/common/techGlyphs.ts`) and falls back to a cat
 **Capabilities.** `GetOverviewResponse.capabilities`, `ListContainersResponse.capabilities`, and
 `GetContainerResponse.capabilities` carry `actions_enabled`, `can_perform_actions` (enabled and
 caller has the scope), `actions_disabled_reason`, `container_actions`, `scopes`,
-`docker_available`, and `source_mode`. Clients render action buttons only when
-`can_perform_actions` is true.
+`docker_available`, `source_mode` and `can_edit_projects` (browser admin session with an icon
+store). Clients render action buttons only when `can_perform_actions` is true and project
+settings controls only when `can_edit_projects` is true.
 
 ### 8.7 Pagination, search, ordering, and facets
 Every list is paged, searched, filtered, and sorted **on the server**, so a page is always
@@ -681,9 +725,9 @@ service AgentAdminService {                  // read scope (session or API token
 ```
 
 - **Frames.** `AgentFrame` carries `AgentHello`, `AgentMetrics`, `InventorySnapshot`,
-  `InventoryDelta`, `AgentEvents`, `LogChunk`, `CommandResult` or `AgentHeartbeat`;
-  `HubFrame` carries `HelloAck`, `Ack`, `AgentHints`, `ResyncRequest`, log requests,
-  `CommandRequest` and pings. Bidi and unary share the same messages and hub session code.
+  `InventoryDelta`, `AgentEvents`, `LogChunk`, `CommandResult`, `AgentHeartbeat` or
+  `IconData`; `HubFrame` carries `HelloAck`, `Ack`, `AgentHints`, `ResyncRequest`, log
+  requests, `CommandRequest`, `IconRequest` and pings. Bidi and unary share the same messages and hub session code.
 - **Hello.** The hub answers with the inventory version it already holds for that agent
   session, so an agent that survived a hub restart sends only a delta; otherwise it sends a
   snapshot. The hub measures clock offset at Hello and rewrites timestamps when the skew
@@ -721,6 +765,13 @@ service AgentAdminService {                  // read scope (session or API token
   hold at most 5,000 series; refused frames count as `frames_rejected`.
 - **Logs** are on demand: the hub asks for the last 200 lines over the session with a 5 s
   timeout; follow is not wired yet.
+- **Project icons** keep frames small: inventory carries only `ProjectIconRef{working_dir,
+  rel_path, sha256, size_bytes}` (replaced as a set, like routes). When a digest is new to the
+  hub's favicon cache it sends one `IconRequest`; the agent re-reads the file, re-checks the
+  digest and answers with `IconData` (≤ 256 KiB, 20 reads/min). The hub verifies the digest,
+  size and image type before caching. `sources.project_icons.enabled: false` stops the agent
+  from reading project directories; the hardened unit (`ProtectHome=read-only`) still lets it
+  read `/srv`, `/opt` and similar, and unreadable directories are skipped.
 - **Actions** need both gates (§13). `Capabilities.container_actions` is the intersection of
   the hub's actions and the agent's advertised `allowed_actions`; when none can run,
   `actions_disabled_reason` says why (agent offline, per-agent gate off, empty allow-list),
@@ -1050,6 +1101,15 @@ A monitor with access to `docker.sock` is effectively root. Treat it accordingly
   `/system/df` and `/_ping`; the five container `POST` actions only when actions are on). The
   agent's own Docker client compiles in only those endpoints, so even with a raw socket it
   cannot call `exec` or `create`.
+- **Favicon fetching (SSRF).** Only hostnames discovered from ingress routes to the project
+  are contacted (no wildcards, IP literals or local-only suffixes), over https only, with no
+  HTTP proxy, a dialer `Control` hook that refuses loopback, private, link-local, CGNAT,
+  NAT64/6to4 and other non-public addresses at connect time (so DNS rebinding cannot reach
+  the host network), 3 s dial / 8 s request timeouts, 512 KiB HTML and 256 KiB image caps, at
+  most three https redirects and the generic User-Agent `Asterism-favicon/1.0`.
+- **Icon images** are untrusted content: sniffed and decoded before storage, served from a
+  hashed key with a sandboxing CSP and `nosniff`, and rendered with `<img>` only, so an SVG can
+  never run script in the Asterism origin.
 - **Supply chain:** `govulncheck` and `pnpm audit` in CI, pinned GitHub Actions, signed
   releases (`cosign`), SBOM.
 
@@ -1278,7 +1338,7 @@ GoReleaser, demo media, public release.
 | D15 | shadcn lyra look on the stone base (square corners, superseded by D20; 1px rings, Outfit + Oxanium, Hugeicons) re-tuned to Asterism blue/green, kept on Radix primitives; sidebar collapses to an icon rail with tooltips | Owner's preferred preset; Radix keeps the existing component APIs and avoids a Base UI migration; the rail keeps navigation one click away on narrow desktops | Base UI becomes the shadcn default for every component we use, or the rail hides information users need |
 | D16 | Separate `DockerService` (read-only) and `ActionsService` (mutating) next to `InventoryService`; SSH bridge uses one batched `docker inspect` per 30 s poll with an env-names-only template, cgroup v2/netns byte counters for rates, and a slower resources/`system df` loop | Keeps read and write surfaces separately mountable and auditable; one inspect call keeps SSH overhead flat; env values never leave the host; exact counters give usable bps | A local `docker.sock` collector replaces the CLI-over-SSH path, or Docker events streaming makes polling unnecessary |
 | D17 | Scope model `read`/`actions`: admin session gets `actions` only when `allow_actions = true`; static SHA-256-hashed bearer tokens in config; every action attempt audited as an `Event` with `ActionAudit`, held in a bounded in-memory log until M4 | Minimal, testable authorization that matches §13 without waiting for the SQLite store; refusals are visible in the Events page | M4 lands persistent `audit_log` and token storage, or multi-user accounts are needed |
-| D18 | Project icons resolved server-side (config → `asterism.icon` label → dominant image technology → monogram) and sent as `Project.icon` with token-only colours; per-image `tech` slugs on `Workload`/`Container`; brand glyphs from `simple-icons` in a lazy chunk | One detection table in Go keeps web, CLI, and MCP consistent; token-only colours keep configuration from injecting styles; lazy glyphs keep the initial bundle under budget | Users want uploaded custom images, or the catalogue grows large enough to need a data file |
+| D18 | Project icons resolved server-side (config → `asterism.icon` label → dominant image technology → monogram) and sent as `Project.icon` with token-only colours; per-image `tech` slugs on `Workload`/`Container`; brand glyphs from `simple-icons` in a lazy chunk | One detection table in Go keeps web, CLI, and MCP consistent; token-only colours keep configuration from injecting styles; lazy glyphs keep the initial bundle under budget | Superseded in part by D33 (uploaded and favicon images on top of this resolution); revisit if the catalogue grows large enough to need a data file |
 | D19 | Container management UI as a `/containers` page with a `/containers/$id` detail route (not a sheet), reusing UPlotChart/LiveStore and the logs RPC | Detail needs six live charts plus config sections and must be linkable from projects, ports, events, and the topology inspector | The workload inspector and container detail converge into one surface |
 | D20 | Slightly rounded corners from one `--radius` (8px) through semantic radius tokens (card 8, tile 6, control 8/6, button 10/9, chip 6, bar 4), replacing the square lyra corners; sidebar regrouped into Overview / Workloads / Network / Host / Administration with deep links to URL-driven tabs and sections and a new full-window `/topology` route | Owner wanted a softer finish with buttons a touch rounder than cards, and a fuller, clearly categorised sidebar whose entries all lead to working views; URL-driven tabs make those links, back/forward and breadcrumbs consistent without new pages or bundle cost | The sidebar outgrows a 900px window (move secondary entries into collapsible groups), or a design refresh changes the corner language |
 | D21 | Server-side pagination for every list: `PageRequest`/`PageInfo` (default 25, clamp 10–200, 1-based, past-the-end empty), `query`, AIP-132 `order_by` with per-resource allow-lists and an id tie-break, facet counts that ignore the page and their own filter, and a `before_ts_ms` cursor for logs; an omitted `page` returns the first 200 items | Lists must stay correct and bounded as a VPS accumulates hundreds of images, volumes, and events; doing it in `internal/service` keeps web, CLI, and MCP consistent; numbered pages suit tables, while a timestamp cursor suits append-only logs; the 200-item fallback keeps existing non-table callers working | A list routinely exceeds a few thousand items (move to opaque page tokens over the M4 SQLite store), or clients need live insertion without page drift |
@@ -1292,3 +1352,5 @@ GoReleaser, demo media, public release.
 | D29 | One shared, program-aware redaction rule set for arguments and text (§8.6), applied on the agent and again on the hub, with shell strings tokenized rather than split on whitespace | Short flags (`redis-cli -a`, `mysql -p`, `curl -u`, `sshpass -p`) and env args (`-e KEY=VALUE`) leaked through name-only rules; program context keeps `-p` as a port for `docker run`, `ssh` and `psql` | A credential form escapes the golden tables, or false positives hide information operators need |
 | D30 | MCP tools are adapters over the ConnectRPC surface: in the hub the backend is `api.Handler`; `asterism mcp` uses ConnectRPC clients against the running hub with a read token instead of running collectors in-process. `/mcp` accepts bearer tokens only. Results are a one-line summary plus compact JSON (units in names, RFC 3339 times) and the same value as structured content | One code path for UI, API and MCP; no second set of collectors competing for Docker and `/proc`; cookie-free MCP removes CSRF risk; clients that ignore `structuredContent` still get the data | A client needs MCP while the hub is down, or per-connection MCP state becomes necessary |
 | D31 | CLI views are API clients only: no in-process collector fallback when the daemon is stopped; `top` refreshes by polling `GetOverview` + `ListWorkloads` and `logs -f` by polling `TailLogs`, both at 1 s; the shared `internal/apiclient` serves the CLI and `asterism mcp` | A fallback would duplicate the hub's collector wiring in the CLI and could disagree with the daemon; polling reuses existing RPCs and needs no new streaming contract | Users routinely run one-shot views on hosts without a running daemon, or a server-streaming logs RPC lands |
+| D32 | `[server] data_dir` (default `data`, production `/var/lib/asterism` via `StateDirectory`) for Asterism's own files, starting with project icons as hashed-name files written atomically | Icons need persistence before the M4 SQLite store; files keep images out of the database and are trivially inspectable; hashed names keep project names out of paths | The M4 store lands and small blobs fit better in SQLite |
+| D33 | Real project icons: admin upload > config > label > favicon > detected > monogram; favicons from the compose directory (agent-side scan, digest in inventory, bytes on demand) then the project's public hostnames (SSRF-guarded https, daily, negative-cached); settings RPCs are session-only and audited but not gated by `allow_actions` | Brand icons make projects recognisable at a glance; directory files work without public DNS; on-demand bytes keep agent frames small; uploads change only Asterism's data, not the host, so the host-mutation gate does not apply, but they still need a human admin and an audit trail | Users want per-user icon permissions, or favicon fetches cause noticeable outbound traffic |

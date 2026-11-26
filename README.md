@@ -36,7 +36,9 @@ memory and CPU, which ports are really public, and how traffic reaches it.
 
 - **Projects, not containers.** Compose projects, systemd units and processes are grouped into
   projects with categories (production, staging, internal, tools), roles (proxy, app, worker,
-  database, cache), health scores and memory cost as a share of the VPS.
+  database, cache), health scores and memory cost as a share of the VPS. Each project gets a
+  real icon: an uploaded image, a favicon from its compose directory or public domain, or a
+  detected technology glyph.
 - **A map you can read.** A 2.5D isometric architecture map and a 2D constellation layout,
   for the whole host and per project, with ingress, service, database and cache links.
 - **Ingress and port visibility.** Nginx, Caddy, HAProxy, Traefik labels and Cloudflare Tunnel
@@ -184,6 +186,7 @@ Set `[collect] mode` in `asterism.toml`; the hub is the same binary in every mod
 listen = "127.0.0.1:7700"
 behind_tls = true
 public_url = "https://monitor.example.com"   # makes link-preview tags absolute
+data_dir = "/var/lib/asterism"               # uploaded and cached project icons (StateDirectory)
 
 [auth]
 admin_email = "admin@example.com"
@@ -340,6 +343,10 @@ reaches the terminal, and log lines arrive already redacted.
 - **Ingest-only tokens.** An agent token can push data for its own host and nothing else.
 - **Hardened web session.** Argon2id password hashes, `HttpOnly` + `SameSite=Strict` cookies,
   `Secure` behind TLS.
+- **Contained favicon fetching.** Favicons are fetched only from hostnames routed to a project,
+  over https, with a connect-time guard against private, loopback and link-local addresses,
+  short timeouts, size caps and at most daily. Icons are served with a sandboxing CSP and
+  rendered with `<img>` only; uploads need a browser admin session.
 - **No pprof in releases.** Profiling exists only in builds with `-tags pprof`.
 
 ## Agent footprint

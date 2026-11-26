@@ -8,6 +8,7 @@ import {
   LiveService,
   LogsService,
   MetricsService,
+  ProjectSettingsService,
   TopologyService,
 } from "@/gen/asterism/v1/asterism_pb";
 
@@ -28,6 +29,7 @@ export const logsClient = createClient(LogsService, transport);
 export const liveClient = createClient(LiveService, transport);
 export const dockerClient = createClient(DockerService, transport);
 export const actionsClient = createClient(ActionsService, transport);
+export const projectSettingsClient = createClient(ProjectSettingsService, transport);
 
 export interface AuthSession {
   authenticated: boolean;

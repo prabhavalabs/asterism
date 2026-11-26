@@ -89,6 +89,7 @@ func (o *Observatory) Capabilities(p auth.Principal) *asterismv1.Capabilities {
 		Scopes:          p.ScopeNames(),
 		DockerAvailable: o.docker != nil,
 		SourceMode:      o.mode,
+		CanEditProjects: canEditProjects(p) && o.icons != nil,
 	}
 	if o.actuator != nil {
 		c.ContainerActions = slices.Clone(o.actuator.SupportedContainerActions())

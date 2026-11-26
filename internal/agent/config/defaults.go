@@ -90,6 +90,7 @@ func Default() *Config {
 				MaxFollow: Duration(10 * time.Minute),
 				RateLimit: 64 << 10,
 			},
+			ProjectIcons: ProjectIcons{Enabled: TriAuto},
 		},
 		Projects:  []Project{},
 		Redaction: Redaction{ExtraSecretKeys: []string{}, DropLabels: []string{}},

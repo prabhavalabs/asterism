@@ -52,6 +52,8 @@ type Observatory struct {
 	events *eventlog.Log
 	// display holds configured project icons keyed by project name.
 	display map[string]ProjectDisplay
+	// icons stores uploaded and discovered project images (nil = off).
+	icons *iconManager
 
 	// liveViewers counts open LiveService subscriptions; onViewers is told
 	// whenever it changes (agent mode turns it into sampling hints).
@@ -274,6 +276,7 @@ func (o *Observatory) decorateProject(proj *asterismv1.Project, containers []ico
 		d.Color = cp.Labels[LabelColor]
 	}
 	cp.Icon = ResolveProjectIcon(cp.Name, d, sources)
+	o.decorateIcon(cp)
 	return cp
 }
 

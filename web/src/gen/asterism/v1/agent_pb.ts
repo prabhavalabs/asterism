@@ -12,7 +12,7 @@ import type { Message } from "@bufbuild/protobuf";
  * Describes the file asterism/v1/agent.proto.
  */
 export const file_asterism_v1_agent: GenFile = /*@__PURE__*/
-  fileDesc("Chdhc3RlcmlzbS92MS9hZ2VudC5wcm90bxILYXN0ZXJpc20udjEisgMKCkFnZW50RnJhbWUSCwoDc2VxGAEgASgEEhIKCnNlbnRfYXRfbXMYAiABKAMSKAoFaGVsbG8YCiABKAsyFy5hc3RlcmlzbS52MS5BZ2VudEhlbGxvSAASLAoHbWV0cmljcxgLIAEoCzIZLmFzdGVyaXNtLnYxLkFnZW50TWV0cmljc0gAEjIKCHNuYXBzaG90GAwgASgLMh4uYXN0ZXJpc20udjEuSW52ZW50b3J5U25hcHNob3RIABIsCgVkZWx0YRgNIAEoCzIbLmFzdGVyaXNtLnYxLkludmVudG9yeURlbHRhSAASKgoGZXZlbnRzGA4gASgLMhguYXN0ZXJpc20udjEuQWdlbnRFdmVudHNIABIqCglsb2dfY2h1bmsYDyABKAsyFS5hc3RlcmlzbS52MS5Mb2dDaHVua0gAEjQKDmNvbW1hbmRfcmVzdWx0GBAgASgLMhouYXN0ZXJpc20udjEuQ29tbWFuZFJlc3VsdEgAEjAKCWhlYXJ0YmVhdBgRIAEoCzIbLmFzdGVyaXNtLnYxLkFnZW50SGVhcnRiZWF0SABCCQoHcGF5bG9hZCKDAwoKQWdlbnRIZWxsbxIYChBwcm90b2NvbF92ZXJzaW9uGAEgASgNEhUKDWFnZW50X3ZlcnNpb24YAiABKAkSEgoKc2Vzc2lvbl9pZBgDIAEoCRIRCglob3N0X25hbWUYBCABKAkSFwoPbWFjaGluZV9pZF9oYXNoGAUgASgJEiMKBGhvc3QYBiABKAsyFS5hc3RlcmlzbS52MS5Ib3N0SW5mbxIUCgxjYXBhYmlsaXRpZXMYByADKAkSEwoLY29uZmlnX2hhc2gYCCABKAkSMwoGbGFiZWxzGAkgAygLMiMuYXN0ZXJpc20udjEuQWdlbnRIZWxsby5MYWJlbHNFbnRyeRIZChFpbnZlbnRvcnlfdmVyc2lvbhgKIAEoBBI1Cg9hbGxvd2VkX2FjdGlvbnMYCyADKA4yHC5hc3RlcmlzbS52MS5Db250YWluZXJBY3Rpb24aLQoLTGFiZWxzRW50cnkSCwoDa2V5GAEgASgJEg0KBXZhbHVlGAIgASgJOgI4ASKeAQoMQWdlbnRNZXRyaWNzEiYKBGRpY3QYASADKAsyGC5hc3RlcmlzbS52MS5TZXJpZXNFbnRyeRITCgtkaWN0X2dyb3VwcxgCIAMoDRImCgRyb3dzGAMgAygLMhguYXN0ZXJpc20udjEuTWV0cmljQmF0Y2gSEgoKcm93X2dyb3VwcxgEIAMoDRIVCg1rZXlmcmFtZV9yb3dzGAUgAygNIrwEChFJbnZlbnRvcnlTbmFwc2hvdBIPCgd2ZXJzaW9uGAEgASgEEiMKBGhvc3QYAiABKAsyFS5hc3RlcmlzbS52MS5Ib3N0SW5mbxIpCgZlbmdpbmUYAyABKAsyGS5hc3RlcmlzbS52MS5Eb2NrZXJFbmdpbmUSKgoKY29udGFpbmVycxgEIAMoCzIWLmFzdGVyaXNtLnYxLkNvbnRhaW5lchIoCgZpbWFnZXMYBSADKAsyGC5hc3RlcmlzbS52MS5Eb2NrZXJJbWFnZRIqCgd2b2x1bWVzGAYgAygLMhkuYXN0ZXJpc20udjEuRG9ja2VyVm9sdW1lEiwKCG5ldHdvcmtzGAcgAygLMhouYXN0ZXJpc20udjEuRG9ja2VyTmV0d29yaxIwCgpkaXNrX3VzYWdlGAggASgLMhwuYXN0ZXJpc20udjEuRG9ja2VyRGlza1VzYWdlEigKCXdvcmtsb2FkcxgJIAMoCzIVLmFzdGVyaXNtLnYxLldvcmtsb2FkEisKCWxpc3RlbmVycxgKIAMoCzIYLmFzdGVyaXNtLnYxLlBvcnRCaW5kaW5nEikKBnJvdXRlcxgLIAMoCzIZLmFzdGVyaXNtLnYxLkluZ3Jlc3NSb3V0ZRIvCg1wcm9qZWN0X3J1bGVzGAwgAygLMhguYXN0ZXJpc20udjEuUHJvamVjdFJ1bGUSMQoLZmlsZXN5c3RlbXMYDSADKAsyHC5hc3RlcmlzbS52MS5GaWxlc3lzdGVtVXNhZ2UiggIKDkludmVudG9yeURlbHRhEhQKDGJhc2VfdmVyc2lvbhgBIAEoBBIPCgd2ZXJzaW9uGAIgASgEEjEKEXVwc2VydF9jb250YWluZXJzGAMgAygLMhYuYXN0ZXJpc20udjEuQ29udGFpbmVyEh0KFXJlbW92ZWRfY29udGFpbmVyX2lkcxgEIAMoCRIvChB1cHNlcnRfd29ya2xvYWRzGAUgAygLMhUuYXN0ZXJpc20udjEuV29ya2xvYWQSHAoUcmVtb3ZlZF93b3JrbG9hZF9pZHMYBiADKAkSKAoHcmVwbGFjZRgHIAEoCzIXLmFzdGVyaXNtLnYxLlJlcGxhY2VTZXQi7AQKClJlcGxhY2VTZXQSIwoEaG9zdBgBIAEoCzIVLmFzdGVyaXNtLnYxLkhvc3RJbmZvEikKBmVuZ2luZRgCIAEoCzIZLmFzdGVyaXNtLnYxLkRvY2tlckVuZ2luZRIoCgZpbWFnZXMYAyADKAsyGC5hc3RlcmlzbS52MS5Eb2NrZXJJbWFnZRISCgppbWFnZXNfc2V0GAQgASgIEioKB3ZvbHVtZXMYBSADKAsyGS5hc3RlcmlzbS52MS5Eb2NrZXJWb2x1bWUSEwoLdm9sdW1lc19zZXQYBiABKAgSLAoIbmV0d29ya3MYByADKAsyGi5hc3RlcmlzbS52MS5Eb2NrZXJOZXR3b3JrEhQKDG5ldHdvcmtzX3NldBgIIAEoCBIwCgpkaXNrX3VzYWdlGAkgASgLMhwuYXN0ZXJpc20udjEuRG9ja2VyRGlza1VzYWdlEisKCWxpc3RlbmVycxgKIAMoCzIYLmFzdGVyaXNtLnYxLlBvcnRCaW5kaW5nEhUKDWxpc3RlbmVyc19zZXQYCyABKAgSKQoGcm91dGVzGAwgAygLMhkuYXN0ZXJpc20udjEuSW5ncmVzc1JvdXRlEhIKCnJvdXRlc19zZXQYDSABKAgSLwoNcHJvamVjdF9ydWxlcxgOIAMoCzIYLmFzdGVyaXNtLnYxLlByb2plY3RSdWxlEhkKEXByb2plY3RfcnVsZXNfc2V0GA8gASgIEjEKC2ZpbGVzeXN0ZW1zGBAgAygLMhwuYXN0ZXJpc20udjEuRmlsZXN5c3RlbVVzYWdlEhcKD2ZpbGVzeXN0ZW1zX3NldBgRIAEoCCJeCgtQcm9qZWN0UnVsZRIMCgRuYW1lGAEgASgJEhAKCGNhdGVnb3J5GAIgASgJEgwKBGljb24YAyABKAkSDQoFY29sb3IYBCABKAkSEgoKbWVtYmVyX2lkcxgFIAMoCSJZCg9GaWxlc3lzdGVtVXNhZ2USDQoFbW91bnQYASABKAkSDgoGZnN0eXBlGAIgASgJEhMKC3RvdGFsX2J5dGVzGAMgASgEEhIKCnVzZWRfYnl0ZXMYBCABKAQiMQoLQWdlbnRFdmVudHMSIgoGZXZlbnRzGAEgAygLMhIuYXN0ZXJpc20udjEuRXZlbnQiXwoITG9nQ2h1bmsSEgoKcmVxdWVzdF9pZBgBIAEoCRIjCgVsaW5lcxgCIAMoCzIULmFzdGVyaXNtLnYxLkxvZ0xpbmUSCwoDZW9mGAMgASgIEg0KBWVycm9yGAQgASgJIp4BCg1Db21tYW5kUmVzdWx0EhIKCnJlcXVlc3RfaWQYASABKAkSCgoCb2sYAiABKAgSDAoEY29kZRgDIAEoCRINCgVlcnJvchgEIAEoCRIpCgljb250YWluZXIYBSABKAsyFi5hc3RlcmlzbS52MS5Db250YWluZXISEwoLZHVyYXRpb25fbXMYBiABKAQSEAoIYXVkaXRfaWQYByABKAkiOAoOQWdlbnRIZWFydGJlYXQSJgoFc3RhdHMYASABKAsyFy5hc3RlcmlzbS52MS5BZ2VudFN0YXRzIusCCgpBZ2VudFN0YXRzEhEKCXJzc19ieXRlcxgBIAEoBBIQCghjcHVfdXRpbBgCIAEoARITCgtmcmFtZXNfc2VudBgDIAEoBBIWCg5mcmFtZXNfZHJvcHBlZBgEIAEoBBISCgpieXRlc19zZW50GAUgASgEEhQKDGJ1ZmZlcl9ieXRlcxgGIAEoBBISCgpyZWNvbm5lY3RzGAcgASgNEkYKEGNvbGxlY3Rvcl9lcnJvcnMYCCADKAsyLC5hc3RlcmlzbS52MS5BZ2VudFN0YXRzLkNvbGxlY3RvckVycm9yc0VudHJ5Eg4KBnNlcmllcxgJIAEoDRISCgpnb3JvdXRpbmVzGAogASgNEhYKDmV2ZW50c19kcm9wcGVkGAsgASgEEhEKCXRyYW5zcG9ydBgMIAEoCRo2ChRDb2xsZWN0b3JFcnJvcnNFbnRyeRILCgNrZXkYASABKAkSDQoFdmFsdWUYAiABKA06AjgBIvACCghIdWJGcmFtZRIqCgloZWxsb19hY2sYASABKAsyFS5hc3RlcmlzbS52MS5IZWxsb0Fja0gAEh8KA2FjaxgCIAEoCzIQLmFzdGVyaXNtLnYxLkFja0gAEigKBWhpbnRzGAMgASgLMhcuYXN0ZXJpc20udjEuQWdlbnRIaW50c0gAEiwKBnJlc3luYxgEIAEoCzIaLmFzdGVyaXNtLnYxLlJlc3luY1JlcXVlc3RIABIuCgtsb2dfcmVxdWVzdBgFIAEoCzIXLmFzdGVyaXNtLnYxLkxvZ1JlcXVlc3RIABIsCgpsb2dfY2FuY2VsGAYgASgLMhYuYXN0ZXJpc20udjEuTG9nQ2FuY2VsSAASLgoHY29tbWFuZBgHIAEoCzIbLmFzdGVyaXNtLnYxLkNvbW1hbmRSZXF1ZXN0SAASJgoEcGluZxgIIAEoCzIWLmFzdGVyaXNtLnYxLkhlYXJ0YmVhdEgAQgkKB3BheWxvYWQioQEKCEhlbGxvQWNrEg8KB2hvc3RfaWQYASABKAkSEwoLaHViX3ZlcnNpb24YAiABKAkSFgoOc2VydmVyX3RpbWVfbXMYAyABKAMSHwoXa25vd25faW52ZW50b3J5X3ZlcnNpb24YBCABKAQSDgoGcmVzeW5jGAUgASgIEiYKBWhpbnRzGAYgASgLMhcuYXN0ZXJpc20udjEuQWdlbnRIaW50cyIXCgNBY2sSEAoIdXB0b19zZXEYASABKAQikAEKCkFnZW50SGludHMSFAoMbGl2ZV92aWV3ZXJzGAEgASgIEhgKEGhvc3RfaW50ZXJ2YWxfbXMYAiABKA0SHQoVY29udGFpbmVyX2ludGVydmFsX21zGAMgASgNEhgKEGZvY3VzX2VudGl0eV9pZHMYBCADKAkSGQoRZmx1c2hfaW50ZXJ2YWxfbXMYBSABKA0iHwoNUmVzeW5jUmVxdWVzdBIOCgZyZWFzb24YASABKAkiiAEKCkxvZ1JlcXVlc3QSEgoKcmVxdWVzdF9pZBgBIAEoCRITCgt3b3JrbG9hZF9pZBgCIAEoCRIMCgR0YWlsGAMgASgNEhAKCHNpbmNlX21zGAQgASgDEg4KBmZvbGxvdxgFIAEoCBITCgttYXhfc2Vjb25kcxgGIAEoDRIMCgRncmVwGAcgASgJIh8KCUxvZ0NhbmNlbBISCgpyZXF1ZXN0X2lkGAEgASgJIqUBCg5Db21tYW5kUmVxdWVzdBISCgpyZXF1ZXN0X2lkGAEgASgJEiwKBmFjdGlvbhgCIAEoDjIcLmFzdGVyaXNtLnYxLkNvbnRhaW5lckFjdGlvbhIUCgxjb250YWluZXJfaWQYAyABKAkSFwoPdGltZW91dF9zZWNvbmRzGAQgASgNEhMKC2RlYWRsaW5lX21zGAUgASgDEg0KBWFjdG9yGAYgASgJIkoKC1B1c2hSZXF1ZXN0EhIKCnNlc3Npb25faWQYASABKAkSJwoGZnJhbWVzGAIgAygLMhcuYXN0ZXJpc20udjEuQWdlbnRGcmFtZSJICgxQdXNoUmVzcG9uc2USEQoJYWNrZWRfc2VxGAEgASgEEiUKBmZyYW1lcxgCIAMoCzIVLmFzdGVyaXNtLnYxLkh1YkZyYW1lIiUKD0NvbW1hbmRzUmVxdWVzdBISCgpzZXNzaW9uX2lkGAEgASgJIhMKEUxpc3RBZ2VudHNSZXF1ZXN0IlcKEkxpc3RBZ2VudHNSZXNwb25zZRIoCgZhZ2VudHMYASADKAsyGC5hc3RlcmlzbS52MS5BZ2VudFN0YXR1cxIXCg9wcmltYXJ5X2hvc3RfaWQYAiABKAki1gMKC0FnZW50U3RhdHVzEg8KB2hvc3RfaWQYASABKAkSDAoEbmFtZRgCIAEoCRINCgVzdGF0ZRgDIAEoCRIUCgxsYXN0X3NlZW5fbXMYBCABKAMSGgoSY29ubmVjdGVkX3NpbmNlX21zGAUgASgDEhUKDWFnZW50X3ZlcnNpb24YBiABKAkSEQoJdHJhbnNwb3J0GAcgASgJEhMKC3JlbW90ZV9hZGRyGAggASgJEg4KBmxhZ19tcxgJIAEoAxIVCg1jbG9ja19za2V3X21zGAogASgDEiYKBXN0YXRzGAsgASgLMhcuYXN0ZXJpc20udjEuQWdlbnRTdGF0cxIUCgxjYXBhYmlsaXRpZXMYDCADKAkSEwoLY29uZmlnX2hhc2gYDSABKAkSEgoKbGFzdF9lcnJvchgOIAEoCRIXCg9hY3Rpb25zX2VuYWJsZWQYDyABKAgSFgoOYnl0ZXNfcmVjZWl2ZWQYECABKAQSGQoRaW52ZW50b3J5X3ZlcnNpb24YESABKAQSFwoPZnJhbWVzX3JlamVjdGVkGBIgASgEEjUKD2FsbG93ZWRfYWN0aW9ucxgTIAMoDjIcLmFzdGVyaXNtLnYxLkNvbnRhaW5lckFjdGlvbjLMAQoMQWdlbnRTZXJ2aWNlEjwKBlN0cmVhbRIXLmFzdGVyaXNtLnYxLkFnZW50RnJhbWUaFS5hc3RlcmlzbS52MS5IdWJGcmFtZSgBMAESOwoEUHVzaBIYLmFzdGVyaXNtLnYxLlB1c2hSZXF1ZXN0GhkuYXN0ZXJpc20udjEuUHVzaFJlc3BvbnNlEkEKCENvbW1hbmRzEhwuYXN0ZXJpc20udjEuQ29tbWFuZHNSZXF1ZXN0GhUuYXN0ZXJpc20udjEuSHViRnJhbWUwATJiChFBZ2VudEFkbWluU2VydmljZRJNCgpMaXN0QWdlbnRzEh4uYXN0ZXJpc20udjEuTGlzdEFnZW50c1JlcXVlc3QaHy5hc3RlcmlzbS52MS5MaXN0QWdlbnRzUmVzcG9uc2VCsAEKD2NvbS5hc3RlcmlzbS52MUIKQWdlbnRQcm90b1ABWkRnaXRodWIuY29tL3ByYWJoYXZhbGFicy9hc3RlcmlzbS9pbnRlcm5hbC9nZW4vYXN0ZXJpc20vdjE7YXN0ZXJpc212MaICA0FYWKoCC0FzdGVyaXNtLlYxygILQXN0ZXJpc21cVjHiAhdBc3RlcmlzbVxWMVxHUEJNZXRhZGF0YeoCDEFzdGVyaXNtOjpWMWIGcHJvdG8z", [file_asterism_v1_asterism]);
+  fileDesc("Chdhc3RlcmlzbS92MS9hZ2VudC5wcm90bxILYXN0ZXJpc20udjEi3gMKCkFnZW50RnJhbWUSCwoDc2VxGAEgASgEEhIKCnNlbnRfYXRfbXMYAiABKAMSKAoFaGVsbG8YCiABKAsyFy5hc3RlcmlzbS52MS5BZ2VudEhlbGxvSAASLAoHbWV0cmljcxgLIAEoCzIZLmFzdGVyaXNtLnYxLkFnZW50TWV0cmljc0gAEjIKCHNuYXBzaG90GAwgASgLMh4uYXN0ZXJpc20udjEuSW52ZW50b3J5U25hcHNob3RIABIsCgVkZWx0YRgNIAEoCzIbLmFzdGVyaXNtLnYxLkludmVudG9yeURlbHRhSAASKgoGZXZlbnRzGA4gASgLMhguYXN0ZXJpc20udjEuQWdlbnRFdmVudHNIABIqCglsb2dfY2h1bmsYDyABKAsyFS5hc3RlcmlzbS52MS5Mb2dDaHVua0gAEjQKDmNvbW1hbmRfcmVzdWx0GBAgASgLMhouYXN0ZXJpc20udjEuQ29tbWFuZFJlc3VsdEgAEjAKCWhlYXJ0YmVhdBgRIAEoCzIbLmFzdGVyaXNtLnYxLkFnZW50SGVhcnRiZWF0SAASKgoJaWNvbl9kYXRhGBIgASgLMhUuYXN0ZXJpc20udjEuSWNvbkRhdGFIAEIJCgdwYXlsb2FkIoMDCgpBZ2VudEhlbGxvEhgKEHByb3RvY29sX3ZlcnNpb24YASABKA0SFQoNYWdlbnRfdmVyc2lvbhgCIAEoCRISCgpzZXNzaW9uX2lkGAMgASgJEhEKCWhvc3RfbmFtZRgEIAEoCRIXCg9tYWNoaW5lX2lkX2hhc2gYBSABKAkSIwoEaG9zdBgGIAEoCzIVLmFzdGVyaXNtLnYxLkhvc3RJbmZvEhQKDGNhcGFiaWxpdGllcxgHIAMoCRITCgtjb25maWdfaGFzaBgIIAEoCRIzCgZsYWJlbHMYCSADKAsyIy5hc3RlcmlzbS52MS5BZ2VudEhlbGxvLkxhYmVsc0VudHJ5EhkKEWludmVudG9yeV92ZXJzaW9uGAogASgEEjUKD2FsbG93ZWRfYWN0aW9ucxgLIAMoDjIcLmFzdGVyaXNtLnYxLkNvbnRhaW5lckFjdGlvbhotCgtMYWJlbHNFbnRyeRILCgNrZXkYASABKAkSDQoFdmFsdWUYAiABKAk6AjgBIp4BCgxBZ2VudE1ldHJpY3MSJgoEZGljdBgBIAMoCzIYLmFzdGVyaXNtLnYxLlNlcmllc0VudHJ5EhMKC2RpY3RfZ3JvdXBzGAIgAygNEiYKBHJvd3MYAyADKAsyGC5hc3RlcmlzbS52MS5NZXRyaWNCYXRjaBISCgpyb3dfZ3JvdXBzGAQgAygNEhUKDWtleWZyYW1lX3Jvd3MYBSADKA0i8AQKEUludmVudG9yeVNuYXBzaG90Eg8KB3ZlcnNpb24YASABKAQSIwoEaG9zdBgCIAEoCzIVLmFzdGVyaXNtLnYxLkhvc3RJbmZvEikKBmVuZ2luZRgDIAEoCzIZLmFzdGVyaXNtLnYxLkRvY2tlckVuZ2luZRIqCgpjb250YWluZXJzGAQgAygLMhYuYXN0ZXJpc20udjEuQ29udGFpbmVyEigKBmltYWdlcxgFIAMoCzIYLmFzdGVyaXNtLnYxLkRvY2tlckltYWdlEioKB3ZvbHVtZXMYBiADKAsyGS5hc3RlcmlzbS52MS5Eb2NrZXJWb2x1bWUSLAoIbmV0d29ya3MYByADKAsyGi5hc3RlcmlzbS52MS5Eb2NrZXJOZXR3b3JrEjAKCmRpc2tfdXNhZ2UYCCABKAsyHC5hc3RlcmlzbS52MS5Eb2NrZXJEaXNrVXNhZ2USKAoJd29ya2xvYWRzGAkgAygLMhUuYXN0ZXJpc20udjEuV29ya2xvYWQSKwoJbGlzdGVuZXJzGAogAygLMhguYXN0ZXJpc20udjEuUG9ydEJpbmRpbmcSKQoGcm91dGVzGAsgAygLMhkuYXN0ZXJpc20udjEuSW5ncmVzc1JvdXRlEi8KDXByb2plY3RfcnVsZXMYDCADKAsyGC5hc3RlcmlzbS52MS5Qcm9qZWN0UnVsZRIxCgtmaWxlc3lzdGVtcxgNIAMoCzIcLmFzdGVyaXNtLnYxLkZpbGVzeXN0ZW1Vc2FnZRIyCg1wcm9qZWN0X2ljb25zGA4gAygLMhsuYXN0ZXJpc20udjEuUHJvamVjdEljb25SZWYiggIKDkludmVudG9yeURlbHRhEhQKDGJhc2VfdmVyc2lvbhgBIAEoBBIPCgd2ZXJzaW9uGAIgASgEEjEKEXVwc2VydF9jb250YWluZXJzGAMgAygLMhYuYXN0ZXJpc20udjEuQ29udGFpbmVyEh0KFXJlbW92ZWRfY29udGFpbmVyX2lkcxgEIAMoCRIvChB1cHNlcnRfd29ya2xvYWRzGAUgAygLMhUuYXN0ZXJpc20udjEuV29ya2xvYWQSHAoUcmVtb3ZlZF93b3JrbG9hZF9pZHMYBiADKAkSKAoHcmVwbGFjZRgHIAEoCzIXLmFzdGVyaXNtLnYxLlJlcGxhY2VTZXQiuwUKClJlcGxhY2VTZXQSIwoEaG9zdBgBIAEoCzIVLmFzdGVyaXNtLnYxLkhvc3RJbmZvEikKBmVuZ2luZRgCIAEoCzIZLmFzdGVyaXNtLnYxLkRvY2tlckVuZ2luZRIoCgZpbWFnZXMYAyADKAsyGC5hc3RlcmlzbS52MS5Eb2NrZXJJbWFnZRISCgppbWFnZXNfc2V0GAQgASgIEioKB3ZvbHVtZXMYBSADKAsyGS5hc3RlcmlzbS52MS5Eb2NrZXJWb2x1bWUSEwoLdm9sdW1lc19zZXQYBiABKAgSLAoIbmV0d29ya3MYByADKAsyGi5hc3RlcmlzbS52MS5Eb2NrZXJOZXR3b3JrEhQKDG5ldHdvcmtzX3NldBgIIAEoCBIwCgpkaXNrX3VzYWdlGAkgASgLMhwuYXN0ZXJpc20udjEuRG9ja2VyRGlza1VzYWdlEisKCWxpc3RlbmVycxgKIAMoCzIYLmFzdGVyaXNtLnYxLlBvcnRCaW5kaW5nEhUKDWxpc3RlbmVyc19zZXQYCyABKAgSKQoGcm91dGVzGAwgAygLMhkuYXN0ZXJpc20udjEuSW5ncmVzc1JvdXRlEhIKCnJvdXRlc19zZXQYDSABKAgSLwoNcHJvamVjdF9ydWxlcxgOIAMoCzIYLmFzdGVyaXNtLnYxLlByb2plY3RSdWxlEhkKEXByb2plY3RfcnVsZXNfc2V0GA8gASgIEjEKC2ZpbGVzeXN0ZW1zGBAgAygLMhwuYXN0ZXJpc20udjEuRmlsZXN5c3RlbVVzYWdlEhcKD2ZpbGVzeXN0ZW1zX3NldBgRIAEoCBIyCg1wcm9qZWN0X2ljb25zGBIgAygLMhsuYXN0ZXJpc20udjEuUHJvamVjdEljb25SZWYSGQoRcHJvamVjdF9pY29uc19zZXQYEyABKAgiWwoOUHJvamVjdEljb25SZWYSEwoLd29ya2luZ19kaXIYASABKAkSEAoIcmVsX3BhdGgYAiABKAkSDgoGc2hhMjU2GAMgASgJEhIKCnNpemVfYnl0ZXMYBCABKA0iSwoISWNvbkRhdGESEgoKcmVxdWVzdF9pZBgBIAEoCRIOCgZzaGEyNTYYAiABKAkSDAoEZGF0YRgDIAEoDBINCgVlcnJvchgEIAEoCSJeCgtQcm9qZWN0UnVsZRIMCgRuYW1lGAEgASgJEhAKCGNhdGVnb3J5GAIgASgJEgwKBGljb24YAyABKAkSDQoFY29sb3IYBCABKAkSEgoKbWVtYmVyX2lkcxgFIAMoCSJZCg9GaWxlc3lzdGVtVXNhZ2USDQoFbW91bnQYASABKAkSDgoGZnN0eXBlGAIgASgJEhMKC3RvdGFsX2J5dGVzGAMgASgEEhIKCnVzZWRfYnl0ZXMYBCABKAQiMQoLQWdlbnRFdmVudHMSIgoGZXZlbnRzGAEgAygLMhIuYXN0ZXJpc20udjEuRXZlbnQiXwoITG9nQ2h1bmsSEgoKcmVxdWVzdF9pZBgBIAEoCRIjCgVsaW5lcxgCIAMoCzIULmFzdGVyaXNtLnYxLkxvZ0xpbmUSCwoDZW9mGAMgASgIEg0KBWVycm9yGAQgASgJIp4BCg1Db21tYW5kUmVzdWx0EhIKCnJlcXVlc3RfaWQYASABKAkSCgoCb2sYAiABKAgSDAoEY29kZRgDIAEoCRINCgVlcnJvchgEIAEoCRIpCgljb250YWluZXIYBSABKAsyFi5hc3RlcmlzbS52MS5Db250YWluZXISEwoLZHVyYXRpb25fbXMYBiABKAQSEAoIYXVkaXRfaWQYByABKAkiOAoOQWdlbnRIZWFydGJlYXQSJgoFc3RhdHMYASABKAsyFy5hc3RlcmlzbS52MS5BZ2VudFN0YXRzIusCCgpBZ2VudFN0YXRzEhEKCXJzc19ieXRlcxgBIAEoBBIQCghjcHVfdXRpbBgCIAEoARITCgtmcmFtZXNfc2VudBgDIAEoBBIWCg5mcmFtZXNfZHJvcHBlZBgEIAEoBBISCgpieXRlc19zZW50GAUgASgEEhQKDGJ1ZmZlcl9ieXRlcxgGIAEoBBISCgpyZWNvbm5lY3RzGAcgASgNEkYKEGNvbGxlY3Rvcl9lcnJvcnMYCCADKAsyLC5hc3RlcmlzbS52MS5BZ2VudFN0YXRzLkNvbGxlY3RvckVycm9yc0VudHJ5Eg4KBnNlcmllcxgJIAEoDRISCgpnb3JvdXRpbmVzGAogASgNEhYKDmV2ZW50c19kcm9wcGVkGAsgASgEEhEKCXRyYW5zcG9ydBgMIAEoCRo2ChRDb2xsZWN0b3JFcnJvcnNFbnRyeRILCgNrZXkYASABKAkSDQoFdmFsdWUYAiABKA06AjgBIqIDCghIdWJGcmFtZRIqCgloZWxsb19hY2sYASABKAsyFS5hc3RlcmlzbS52MS5IZWxsb0Fja0gAEh8KA2FjaxgCIAEoCzIQLmFzdGVyaXNtLnYxLkFja0gAEigKBWhpbnRzGAMgASgLMhcuYXN0ZXJpc20udjEuQWdlbnRIaW50c0gAEiwKBnJlc3luYxgEIAEoCzIaLmFzdGVyaXNtLnYxLlJlc3luY1JlcXVlc3RIABIuCgtsb2dfcmVxdWVzdBgFIAEoCzIXLmFzdGVyaXNtLnYxLkxvZ1JlcXVlc3RIABIsCgpsb2dfY2FuY2VsGAYgASgLMhYuYXN0ZXJpc20udjEuTG9nQ2FuY2VsSAASLgoHY29tbWFuZBgHIAEoCzIbLmFzdGVyaXNtLnYxLkNvbW1hbmRSZXF1ZXN0SAASJgoEcGluZxgIIAEoCzIWLmFzdGVyaXNtLnYxLkhlYXJ0YmVhdEgAEjAKDGljb25fcmVxdWVzdBgJIAEoCzIYLmFzdGVyaXNtLnYxLkljb25SZXF1ZXN0SABCCQoHcGF5bG9hZCIxCgtJY29uUmVxdWVzdBISCgpyZXF1ZXN0X2lkGAEgASgJEg4KBnNoYTI1NhgCIAEoCSKhAQoISGVsbG9BY2sSDwoHaG9zdF9pZBgBIAEoCRITCgtodWJfdmVyc2lvbhgCIAEoCRIWCg5zZXJ2ZXJfdGltZV9tcxgDIAEoAxIfChdrbm93bl9pbnZlbnRvcnlfdmVyc2lvbhgEIAEoBBIOCgZyZXN5bmMYBSABKAgSJgoFaGludHMYBiABKAsyFy5hc3RlcmlzbS52MS5BZ2VudEhpbnRzIhcKA0FjaxIQCgh1cHRvX3NlcRgBIAEoBCKQAQoKQWdlbnRIaW50cxIUCgxsaXZlX3ZpZXdlcnMYASABKAgSGAoQaG9zdF9pbnRlcnZhbF9tcxgCIAEoDRIdChVjb250YWluZXJfaW50ZXJ2YWxfbXMYAyABKA0SGAoQZm9jdXNfZW50aXR5X2lkcxgEIAMoCRIZChFmbHVzaF9pbnRlcnZhbF9tcxgFIAEoDSIfCg1SZXN5bmNSZXF1ZXN0Eg4KBnJlYXNvbhgBIAEoCSKIAQoKTG9nUmVxdWVzdBISCgpyZXF1ZXN0X2lkGAEgASgJEhMKC3dvcmtsb2FkX2lkGAIgASgJEgwKBHRhaWwYAyABKA0SEAoIc2luY2VfbXMYBCABKAMSDgoGZm9sbG93GAUgASgIEhMKC21heF9zZWNvbmRzGAYgASgNEgwKBGdyZXAYByABKAkiHwoJTG9nQ2FuY2VsEhIKCnJlcXVlc3RfaWQYASABKAkipQEKDkNvbW1hbmRSZXF1ZXN0EhIKCnJlcXVlc3RfaWQYASABKAkSLAoGYWN0aW9uGAIgASgOMhwuYXN0ZXJpc20udjEuQ29udGFpbmVyQWN0aW9uEhQKDGNvbnRhaW5lcl9pZBgDIAEoCRIXCg90aW1lb3V0X3NlY29uZHMYBCABKA0SEwoLZGVhZGxpbmVfbXMYBSABKAMSDQoFYWN0b3IYBiABKAkiSgoLUHVzaFJlcXVlc3QSEgoKc2Vzc2lvbl9pZBgBIAEoCRInCgZmcmFtZXMYAiADKAsyFy5hc3RlcmlzbS52MS5BZ2VudEZyYW1lIkgKDFB1c2hSZXNwb25zZRIRCglhY2tlZF9zZXEYASABKAQSJQoGZnJhbWVzGAIgAygLMhUuYXN0ZXJpc20udjEuSHViRnJhbWUiJQoPQ29tbWFuZHNSZXF1ZXN0EhIKCnNlc3Npb25faWQYASABKAkiEwoRTGlzdEFnZW50c1JlcXVlc3QiVwoSTGlzdEFnZW50c1Jlc3BvbnNlEigKBmFnZW50cxgBIAMoCzIYLmFzdGVyaXNtLnYxLkFnZW50U3RhdHVzEhcKD3ByaW1hcnlfaG9zdF9pZBgCIAEoCSLWAwoLQWdlbnRTdGF0dXMSDwoHaG9zdF9pZBgBIAEoCRIMCgRuYW1lGAIgASgJEg0KBXN0YXRlGAMgASgJEhQKDGxhc3Rfc2Vlbl9tcxgEIAEoAxIaChJjb25uZWN0ZWRfc2luY2VfbXMYBSABKAMSFQoNYWdlbnRfdmVyc2lvbhgGIAEoCRIRCgl0cmFuc3BvcnQYByABKAkSEwoLcmVtb3RlX2FkZHIYCCABKAkSDgoGbGFnX21zGAkgASgDEhUKDWNsb2NrX3NrZXdfbXMYCiABKAMSJgoFc3RhdHMYCyABKAsyFy5hc3RlcmlzbS52MS5BZ2VudFN0YXRzEhQKDGNhcGFiaWxpdGllcxgMIAMoCRITCgtjb25maWdfaGFzaBgNIAEoCRISCgpsYXN0X2Vycm9yGA4gASgJEhcKD2FjdGlvbnNfZW5hYmxlZBgPIAEoCBIWCg5ieXRlc19yZWNlaXZlZBgQIAEoBBIZChFpbnZlbnRvcnlfdmVyc2lvbhgRIAEoBBIXCg9mcmFtZXNfcmVqZWN0ZWQYEiABKAQSNQoPYWxsb3dlZF9hY3Rpb25zGBMgAygOMhwuYXN0ZXJpc20udjEuQ29udGFpbmVyQWN0aW9uMswBCgxBZ2VudFNlcnZpY2USPAoGU3RyZWFtEhcuYXN0ZXJpc20udjEuQWdlbnRGcmFtZRoVLmFzdGVyaXNtLnYxLkh1YkZyYW1lKAEwARI7CgRQdXNoEhguYXN0ZXJpc20udjEuUHVzaFJlcXVlc3QaGS5hc3RlcmlzbS52MS5QdXNoUmVzcG9uc2USQQoIQ29tbWFuZHMSHC5hc3RlcmlzbS52MS5Db21tYW5kc1JlcXVlc3QaFS5hc3RlcmlzbS52MS5IdWJGcmFtZTABMmIKEUFnZW50QWRtaW5TZXJ2aWNlEk0KCkxpc3RBZ2VudHMSHi5hc3RlcmlzbS52MS5MaXN0QWdlbnRzUmVxdWVzdBofLmFzdGVyaXNtLnYxLkxpc3RBZ2VudHNSZXNwb25zZUKwAQoPY29tLmFzdGVyaXNtLnYxQgpBZ2VudFByb3RvUAFaRGdpdGh1Yi5jb20vcHJhYmhhdmFsYWJzL2FzdGVyaXNtL2ludGVybmFsL2dlbi9hc3RlcmlzbS92MTthc3RlcmlzbXYxogIDQVhYqgILQXN0ZXJpc20uVjHKAgtBc3RlcmlzbVxWMeICF0FzdGVyaXNtXFYxXEdQQk1ldGFkYXRh6gIMQXN0ZXJpc206OlYxYgZwcm90bzM", [file_asterism_v1_asterism]);
 
 /**
  * @generated from message asterism.v1.AgentFrame
@@ -83,6 +83,12 @@ export type AgentFrame = Message<"asterism.v1.AgentFrame"> & {
      */
     value: AgentHeartbeat;
     case: "heartbeat";
+  } | {
+    /**
+     * @generated from field: asterism.v1.IconData icon_data = 18;
+     */
+    value: IconData;
+    case: "iconData";
   } | { case: undefined; value?: undefined };
 };
 
@@ -307,6 +313,11 @@ export type InventorySnapshot = Message<"asterism.v1.InventorySnapshot"> & {
    * @generated from field: repeated asterism.v1.FilesystemUsage filesystems = 13;
    */
   filesystems: FilesystemUsage[];
+
+  /**
+   * @generated from field: repeated asterism.v1.ProjectIconRef project_icons = 14;
+   */
+  projectIcons: ProjectIconRef[];
 };
 
 /**
@@ -462,6 +473,16 @@ export type ReplaceSet = Message<"asterism.v1.ReplaceSet"> & {
    * @generated from field: bool filesystems_set = 17;
    */
   filesystemsSet: boolean;
+
+  /**
+   * @generated from field: repeated asterism.v1.ProjectIconRef project_icons = 18;
+   */
+  projectIcons: ProjectIconRef[];
+
+  /**
+   * @generated from field: bool project_icons_set = 19;
+   */
+  projectIconsSet: boolean;
 };
 
 /**
@@ -470,6 +491,84 @@ export type ReplaceSet = Message<"asterism.v1.ReplaceSet"> & {
  */
 export const ReplaceSetSchema: GenMessage<ReplaceSet> = /*@__PURE__*/
   messageDesc(file_asterism_v1_agent, 5);
+
+/**
+ * A favicon candidate the agent found in a compose working directory. Only
+ * the digest travels with the inventory; the hub fetches the bytes once per
+ * digest with an IconRequest and caches them.
+ *
+ * @generated from message asterism.v1.ProjectIconRef
+ */
+export type ProjectIconRef = Message<"asterism.v1.ProjectIconRef"> & {
+  /**
+   * Compose working directory the file was found under.
+   *
+   * @generated from field: string working_dir = 1;
+   */
+  workingDir: string;
+
+  /**
+   * Path relative to working_dir, e.g. "public/favicon.svg".
+   *
+   * @generated from field: string rel_path = 2;
+   */
+  relPath: string;
+
+  /**
+   * Hex SHA-256 of the file.
+   *
+   * @generated from field: string sha256 = 3;
+   */
+  sha256: string;
+
+  /**
+   * @generated from field: uint32 size_bytes = 4;
+   */
+  sizeBytes: number;
+};
+
+/**
+ * Describes the message asterism.v1.ProjectIconRef.
+ * Use `create(ProjectIconRefSchema)` to create a new message.
+ */
+export const ProjectIconRefSchema: GenMessage<ProjectIconRef> = /*@__PURE__*/
+  messageDesc(file_asterism_v1_agent, 6);
+
+/**
+ * The bytes for one ProjectIconRef (answer to IconRequest).
+ *
+ * @generated from message asterism.v1.IconData
+ */
+export type IconData = Message<"asterism.v1.IconData"> & {
+  /**
+   * @generated from field: string request_id = 1;
+   */
+  requestId: string;
+
+  /**
+   * @generated from field: string sha256 = 2;
+   */
+  sha256: string;
+
+  /**
+   * @generated from field: bytes data = 3;
+   */
+  data: Uint8Array;
+
+  /**
+   * Set when the file could not be read or changed since it was scanned.
+   *
+   * @generated from field: string error = 4;
+   */
+  error: string;
+};
+
+/**
+ * Describes the message asterism.v1.IconData.
+ * Use `create(IconDataSchema)` to create a new message.
+ */
+export const IconDataSchema: GenMessage<IconData> = /*@__PURE__*/
+  messageDesc(file_asterism_v1_agent, 7);
 
 /**
  * A project resolved on the agent from agent.yaml "projects:".
@@ -514,7 +613,7 @@ export type ProjectRule = Message<"asterism.v1.ProjectRule"> & {
  * Use `create(ProjectRuleSchema)` to create a new message.
  */
 export const ProjectRuleSchema: GenMessage<ProjectRule> = /*@__PURE__*/
-  messageDesc(file_asterism_v1_agent, 6);
+  messageDesc(file_asterism_v1_agent, 8);
 
 /**
  * @generated from message asterism.v1.FilesystemUsage
@@ -546,7 +645,7 @@ export type FilesystemUsage = Message<"asterism.v1.FilesystemUsage"> & {
  * Use `create(FilesystemUsageSchema)` to create a new message.
  */
 export const FilesystemUsageSchema: GenMessage<FilesystemUsage> = /*@__PURE__*/
-  messageDesc(file_asterism_v1_agent, 7);
+  messageDesc(file_asterism_v1_agent, 9);
 
 /**
  * Non-Docker events only (unit.failed, process.exit, agent.*); the hub
@@ -566,7 +665,7 @@ export type AgentEvents = Message<"asterism.v1.AgentEvents"> & {
  * Use `create(AgentEventsSchema)` to create a new message.
  */
 export const AgentEventsSchema: GenMessage<AgentEvents> = /*@__PURE__*/
-  messageDesc(file_asterism_v1_agent, 8);
+  messageDesc(file_asterism_v1_agent, 10);
 
 /**
  * @generated from message asterism.v1.LogChunk
@@ -598,7 +697,7 @@ export type LogChunk = Message<"asterism.v1.LogChunk"> & {
  * Use `create(LogChunkSchema)` to create a new message.
  */
 export const LogChunkSchema: GenMessage<LogChunk> = /*@__PURE__*/
-  messageDesc(file_asterism_v1_agent, 9);
+  messageDesc(file_asterism_v1_agent, 11);
 
 /**
  * @generated from message asterism.v1.CommandResult
@@ -652,7 +751,7 @@ export type CommandResult = Message<"asterism.v1.CommandResult"> & {
  * Use `create(CommandResultSchema)` to create a new message.
  */
 export const CommandResultSchema: GenMessage<CommandResult> = /*@__PURE__*/
-  messageDesc(file_asterism_v1_agent, 10);
+  messageDesc(file_asterism_v1_agent, 12);
 
 /**
  * @generated from message asterism.v1.AgentHeartbeat
@@ -669,7 +768,7 @@ export type AgentHeartbeat = Message<"asterism.v1.AgentHeartbeat"> & {
  * Use `create(AgentHeartbeatSchema)` to create a new message.
  */
 export const AgentHeartbeatSchema: GenMessage<AgentHeartbeat> = /*@__PURE__*/
-  messageDesc(file_asterism_v1_agent, 11);
+  messageDesc(file_asterism_v1_agent, 13);
 
 /**
  * @generated from message asterism.v1.AgentStats
@@ -745,7 +844,7 @@ export type AgentStats = Message<"asterism.v1.AgentStats"> & {
  * Use `create(AgentStatsSchema)` to create a new message.
  */
 export const AgentStatsSchema: GenMessage<AgentStats> = /*@__PURE__*/
-  messageDesc(file_asterism_v1_agent, 12);
+  messageDesc(file_asterism_v1_agent, 14);
 
 /**
  * @generated from message asterism.v1.HubFrame
@@ -802,6 +901,12 @@ export type HubFrame = Message<"asterism.v1.HubFrame"> & {
      */
     value: Heartbeat;
     case: "ping";
+  } | {
+    /**
+     * @generated from field: asterism.v1.IconRequest icon_request = 9;
+     */
+    value: IconRequest;
+    case: "iconRequest";
   } | { case: undefined; value?: undefined };
 };
 
@@ -810,7 +915,31 @@ export type HubFrame = Message<"asterism.v1.HubFrame"> & {
  * Use `create(HubFrameSchema)` to create a new message.
  */
 export const HubFrameSchema: GenMessage<HubFrame> = /*@__PURE__*/
-  messageDesc(file_asterism_v1_agent, 13);
+  messageDesc(file_asterism_v1_agent, 15);
+
+/**
+ * Asks the agent for the bytes of a ProjectIconRef it reported.
+ *
+ * @generated from message asterism.v1.IconRequest
+ */
+export type IconRequest = Message<"asterism.v1.IconRequest"> & {
+  /**
+   * @generated from field: string request_id = 1;
+   */
+  requestId: string;
+
+  /**
+   * @generated from field: string sha256 = 2;
+   */
+  sha256: string;
+};
+
+/**
+ * Describes the message asterism.v1.IconRequest.
+ * Use `create(IconRequestSchema)` to create a new message.
+ */
+export const IconRequestSchema: GenMessage<IconRequest> = /*@__PURE__*/
+  messageDesc(file_asterism_v1_agent, 16);
 
 /**
  * @generated from message asterism.v1.HelloAck
@@ -857,7 +986,7 @@ export type HelloAck = Message<"asterism.v1.HelloAck"> & {
  * Use `create(HelloAckSchema)` to create a new message.
  */
 export const HelloAckSchema: GenMessage<HelloAck> = /*@__PURE__*/
-  messageDesc(file_asterism_v1_agent, 14);
+  messageDesc(file_asterism_v1_agent, 17);
 
 /**
  * @generated from message asterism.v1.Ack
@@ -874,7 +1003,7 @@ export type Ack = Message<"asterism.v1.Ack"> & {
  * Use `create(AckSchema)` to create a new message.
  */
 export const AckSchema: GenMessage<Ack> = /*@__PURE__*/
-  messageDesc(file_asterism_v1_agent, 15);
+  messageDesc(file_asterism_v1_agent, 18);
 
 /**
  * Sampling hints derived from live subscribers. The agent clamps every
@@ -914,7 +1043,7 @@ export type AgentHints = Message<"asterism.v1.AgentHints"> & {
  * Use `create(AgentHintsSchema)` to create a new message.
  */
 export const AgentHintsSchema: GenMessage<AgentHints> = /*@__PURE__*/
-  messageDesc(file_asterism_v1_agent, 16);
+  messageDesc(file_asterism_v1_agent, 19);
 
 /**
  * @generated from message asterism.v1.ResyncRequest
@@ -931,7 +1060,7 @@ export type ResyncRequest = Message<"asterism.v1.ResyncRequest"> & {
  * Use `create(ResyncRequestSchema)` to create a new message.
  */
 export const ResyncRequestSchema: GenMessage<ResyncRequest> = /*@__PURE__*/
-  messageDesc(file_asterism_v1_agent, 17);
+  messageDesc(file_asterism_v1_agent, 20);
 
 /**
  * @generated from message asterism.v1.LogRequest
@@ -982,7 +1111,7 @@ export type LogRequest = Message<"asterism.v1.LogRequest"> & {
  * Use `create(LogRequestSchema)` to create a new message.
  */
 export const LogRequestSchema: GenMessage<LogRequest> = /*@__PURE__*/
-  messageDesc(file_asterism_v1_agent, 18);
+  messageDesc(file_asterism_v1_agent, 21);
 
 /**
  * @generated from message asterism.v1.LogCancel
@@ -999,7 +1128,7 @@ export type LogCancel = Message<"asterism.v1.LogCancel"> & {
  * Use `create(LogCancelSchema)` to create a new message.
  */
 export const LogCancelSchema: GenMessage<LogCancel> = /*@__PURE__*/
-  messageDesc(file_asterism_v1_agent, 19);
+  messageDesc(file_asterism_v1_agent, 22);
 
 /**
  * @generated from message asterism.v1.CommandRequest
@@ -1047,7 +1176,7 @@ export type CommandRequest = Message<"asterism.v1.CommandRequest"> & {
  * Use `create(CommandRequestSchema)` to create a new message.
  */
 export const CommandRequestSchema: GenMessage<CommandRequest> = /*@__PURE__*/
-  messageDesc(file_asterism_v1_agent, 20);
+  messageDesc(file_asterism_v1_agent, 23);
 
 /**
  * @generated from message asterism.v1.PushRequest
@@ -1069,7 +1198,7 @@ export type PushRequest = Message<"asterism.v1.PushRequest"> & {
  * Use `create(PushRequestSchema)` to create a new message.
  */
 export const PushRequestSchema: GenMessage<PushRequest> = /*@__PURE__*/
-  messageDesc(file_asterism_v1_agent, 21);
+  messageDesc(file_asterism_v1_agent, 24);
 
 /**
  * @generated from message asterism.v1.PushResponse
@@ -1093,7 +1222,7 @@ export type PushResponse = Message<"asterism.v1.PushResponse"> & {
  * Use `create(PushResponseSchema)` to create a new message.
  */
 export const PushResponseSchema: GenMessage<PushResponse> = /*@__PURE__*/
-  messageDesc(file_asterism_v1_agent, 22);
+  messageDesc(file_asterism_v1_agent, 25);
 
 /**
  * @generated from message asterism.v1.CommandsRequest
@@ -1110,7 +1239,7 @@ export type CommandsRequest = Message<"asterism.v1.CommandsRequest"> & {
  * Use `create(CommandsRequestSchema)` to create a new message.
  */
 export const CommandsRequestSchema: GenMessage<CommandsRequest> = /*@__PURE__*/
-  messageDesc(file_asterism_v1_agent, 23);
+  messageDesc(file_asterism_v1_agent, 26);
 
 /**
  * @generated from message asterism.v1.ListAgentsRequest
@@ -1123,7 +1252,7 @@ export type ListAgentsRequest = Message<"asterism.v1.ListAgentsRequest"> & {
  * Use `create(ListAgentsRequestSchema)` to create a new message.
  */
 export const ListAgentsRequestSchema: GenMessage<ListAgentsRequest> = /*@__PURE__*/
-  messageDesc(file_asterism_v1_agent, 24);
+  messageDesc(file_asterism_v1_agent, 27);
 
 /**
  * @generated from message asterism.v1.ListAgentsResponse
@@ -1145,7 +1274,7 @@ export type ListAgentsResponse = Message<"asterism.v1.ListAgentsResponse"> & {
  * Use `create(ListAgentsResponseSchema)` to create a new message.
  */
 export const ListAgentsResponseSchema: GenMessage<ListAgentsResponse> = /*@__PURE__*/
-  messageDesc(file_asterism_v1_agent, 25);
+  messageDesc(file_asterism_v1_agent, 28);
 
 /**
  * @generated from message asterism.v1.AgentStatus
@@ -1262,7 +1391,7 @@ export type AgentStatus = Message<"asterism.v1.AgentStatus"> & {
  * Use `create(AgentStatusSchema)` to create a new message.
  */
 export const AgentStatusSchema: GenMessage<AgentStatus> = /*@__PURE__*/
-  messageDesc(file_asterism_v1_agent, 26);
+  messageDesc(file_asterism_v1_agent, 29);
 
 /**
  * @generated from service asterism.v1.AgentService

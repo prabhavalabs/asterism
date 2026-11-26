@@ -307,6 +307,13 @@ func inventoryProperty(t *testing.T, seed uint64) {
 				ls = append(ls, &v1.PortBinding{Id: fmt.Sprint(i), HostPort: uint32(80 + i)})
 			}
 			st.ReplaceListeners(ls)
+			if rng.IntN(2) == 0 {
+				var ics []*v1.ProjectIconRef
+				for i := range rng.IntN(3) {
+					ics = append(ics, &v1.ProjectIconRef{WorkingDir: fmt.Sprintf("/srv/p%d", i), RelPath: "favicon.ico", Sha256: fmt.Sprint(rng.IntN(4))})
+				}
+				st.ReplaceProjectIcons(ics)
+			}
 		case 6:
 			st.ReplaceDockerResources(DockerResources{
 				Engine:    &v1.DockerEngine{Available: true, Containers: uint32(rng.IntN(3))},

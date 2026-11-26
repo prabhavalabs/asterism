@@ -12,12 +12,14 @@ import (
 	"github.com/prabhavalabs/asterism/internal/auth"
 	"github.com/prabhavalabs/asterism/internal/bus"
 	"github.com/prabhavalabs/asterism/internal/collect/agentingest"
+	"github.com/prabhavalabs/asterism/internal/collect/favicon"
 	hostcollect "github.com/prabhavalabs/asterism/internal/collect/host"
 	"github.com/prabhavalabs/asterism/internal/collect/showcase"
 	"github.com/prabhavalabs/asterism/internal/collect/sshbridge"
 	"github.com/prabhavalabs/asterism/internal/config"
 	mcpserver "github.com/prabhavalabs/asterism/internal/mcp"
 	"github.com/prabhavalabs/asterism/internal/service"
+	"github.com/prabhavalabs/asterism/internal/store/iconstore"
 	"github.com/prabhavalabs/asterism/internal/store/ring"
 	"github.com/prabhavalabs/asterism/internal/web"
 )
@@ -83,6 +85,7 @@ func newHub(cfg config.Config, logger *slog.Logger, authMgr *auth.Manager) (*hub
 	var invProv service.InventoryProvider
 	var dockerProv service.DockerProvider
 	var actuator service.ContainerActuator
+	var dirIcons service.DirIconSource
 
 	switch cfg.Collect.Mode {
 	case "ssh":
@@ -96,6 +99,7 @@ func newHub(cfg config.Config, logger *slog.Logger, authMgr *auth.Manager) (*hub
 		hc := hostcollect.New(logger, msgBus, cfg.Collect.Mode, "")
 		sc := showcase.NewWithOptions(msgBus, ringStore, showcase.Options{Fleet: cfg.Collect.ShowcaseFleet})
 		hostProv, invProv, dockerProv, actuator = showcase.WithDemoIdentity(hc), sc, sc, sc
+		dirIcons = sc
 		h.runners = append(h.runners, named("host collector", hc.Run), named("showcase provider", sc.Run))
 	case "agent":
 		agents := make([]agentingest.Agent, 0, len(cfg.Agents))
@@ -119,10 +123,12 @@ func newHub(cfg config.Config, logger *slog.Logger, authMgr *auth.Manager) (*hub
 		h.agents = reg
 		pv := reg.Primary()
 		hostProv, invProv, dockerProv, actuator = pv, pv, pv, pv
+		dirIcons = pv
 		h.runners = append(h.runners, named("agent registry", reg.Run))
 	default:
 		hc := hostcollect.New(logger, msgBus, cfg.Collect.Mode, "")
 		hostProv = hc
+		dirIcons = favicon.NewLocalDirs()
 		h.runners = append(h.runners, named("host collector", hc.Run))
 	}
 
@@ -133,6 +139,10 @@ func newHub(cfg config.Config, logger *slog.Logger, authMgr *auth.Manager) (*hub
 		display[name] = service.ProjectDisplay{Icon: pc.Icon, Color: pc.Color}
 	}
 	svc.ConfigureProjects(display)
+	if icons, ok := iconOptions(cfg, logger, dirIcons); ok {
+		svc.ConfigureIcons(icons)
+		h.runners = append(h.runners, named("icon discovery", svc.RunIconDiscovery))
+	}
 	if dockerProv != nil {
 		svc.ConfigureDocker(dockerProv, actuator, service.ActionPolicy{
 			Enabled:        cfg.Actions.AllowActions,
@@ -167,6 +177,29 @@ func newHub(cfg config.Config, logger *slog.Logger, authMgr *auth.Manager) (*hub
 	mux.Handle("/", web.Handler(cfg.Server.PublicURL))
 	h.handler = mux
 	return h, nil
+}
+
+// iconOptions opens the icon store under data_dir. A data directory that
+// cannot be created disables custom icons with a warning instead of
+// stopping the hub.
+func iconOptions(cfg config.Config, logger *slog.Logger, dirs service.DirIconSource) (service.IconOptions, bool) {
+	dataDir, err := cfg.EnsureDataDir()
+	if err != nil {
+		logger.Warn("project icons disabled: data directory unavailable", "err", err)
+		return service.IconOptions{}, false
+	}
+	st, err := iconstore.Open(dataDir)
+	if err != nil {
+		logger.Warn("project icons disabled: icon store unavailable", "err", err)
+		return service.IconOptions{}, false
+	}
+	opts := service.IconOptions{Store: st, Dirs: dirs, FetchAllowed: cfg.FaviconFetchFor}
+	// Showcase hostnames are fictional: never touch the network there.
+	if cfg.FaviconFetch && cfg.Collect.Mode != "showcase" {
+		opts.Fetcher = favicon.NewFetcher()
+	}
+	logger.Info("project icons enabled", "data_dir", dataDir, "favicon_fetch", opts.Fetcher != nil)
+	return opts, true
 }
 
 // run starts every background loop; they stop when ctx ends.
