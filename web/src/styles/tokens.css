@@ -1,0 +1,755 @@
+/*
+ * Asterism design tokens and Tailwind v4 theme.
+ *
+ * 1. Raw tokens (OKLCH palette, status, chart, isometric, sizing, motion) on
+ *    :root (light) and .dark. Neutrals follow the shadcn "stone" base and
+ *    the lyra style (1px rings, flat surfaces) with slightly rounded
+ *    corners from one --radius knob; the accent is Asterism blue and the
+ *    data palette runs blue -> teal -> green.
+ * 2. shadcn variable contract + sidebar variables derived from them.
+ * 3. @theme exposes everything as utilities: colours, fonts (sans Outfit,
+ *    heading Oxanium, mono Geist Mono), the named type scale
+ *    (text-display ... text-mono), shadows (shadow-card/pop/focus), control
+ *    heights (h-control, h-control-sm, h-pill), the radius scale plus
+ *    semantic corners (rounded-card, rounded-tile, rounded-control,
+ *    rounded-button, rounded-chip, rounded-bar ...), easings and durations.
+ *
+ * Components never use colour literals: every colour lives here.
+ */
+
+@import "tailwindcss";
+@import "tw-animate-css";
+@import "@xyflow/react/dist/style.css";
+@import "uplot/dist/uPlot.min.css";
+
+@custom-variant dark (&:where(.dark, .dark *));
+
+/* Hover styles only where a real pointer can hover; taps never leave them stuck. */
+@custom-variant hover {
+  @media (hover: hover) and (pointer: fine) {
+    &:hover {
+      @slot;
+    }
+  }
+}
+
+/* Radix state variants used by the primitives. */
+@custom-variant data-open {
+  &:where([data-state="open"]),
+  &:where([data-open]:not([data-open="false"])) {
+    @slot;
+  }
+}
+
+@custom-variant data-closed {
+  &:where([data-state="closed"]),
+  &:where([data-closed]:not([data-closed="false"])) {
+    @slot;
+  }
+}
+
+@custom-variant data-checked {
+  &:where([data-state="checked"]),
+  &:where([data-checked]:not([data-checked="false"])) {
+    @slot;
+  }
+}
+
+@custom-variant data-active {
+  &:where([data-state="active"]),
+  &:where([data-active]:not([data-active="false"])) {
+    @slot;
+  }
+}
+
+@custom-variant data-disabled {
+  &:where([data-disabled="true"]),
+  &:where([data-disabled]:not([data-disabled="false"])) {
+    @slot;
+  }
+}
+
+@custom-variant data-horizontal {
+  &:where([data-orientation="horizontal"]) {
+    @slot;
+  }
+}
+
+@custom-variant data-vertical {
+  &:where([data-orientation="vertical"]) {
+    @slot;
+  }
+}
+
+/* ------------------------------------------------------------------------ */
+/* Sizing and motion (theme independent)                                     */
+/* ------------------------------------------------------------------------ */
+
+:root {
+  /* Logo gradient (docs/brand); the same in both themes. */
+  --brand-1: #8fb0ff;
+  --brand-2: #4d7dff;
+  --brand-3: #1fb6cf;
+  --brand-4: #3fe0a4;
+
+  /* Every control that shares a row takes its height from these. */
+  --control-h: 32px;
+  --control-h-sm: 28px;
+  --pill-h: 22px;
+  --sidebar-item-h: 32px;
+  --topbar-h: 48px;
+
+  /* One knob for every corner: the scale and semantic radii below derive from it. */
+  --radius: 8px;
+
+  --ease-out-quint: cubic-bezier(0.23, 1, 0.32, 1);
+  --ease-in-out-quart: cubic-bezier(0.77, 0, 0.175, 1);
+  --ease-drawer: cubic-bezier(0.32, 0.72, 0, 1);
+
+  --duration-press: 140ms;
+  --duration-menu-in: 160ms;
+  --duration-menu-out: 100ms;
+  --duration-tabs: 220ms;
+  --duration-color: 150ms;
+}
+
+/* Touch screens: interactive controls grow to 40px. Pills are not interactive. */
+@media (pointer: coarse) {
+  :root {
+    --control-h: 40px;
+    --control-h-sm: 36px;
+    --sidebar-item-h: 40px;
+  }
+}
+
+/* ------------------------------------------------------------------------ */
+/* Light theme                                                               */
+/* ------------------------------------------------------------------------ */
+
+:root {
+  color-scheme: light;
+
+  /* Stone neutrals (shadcn "stone" base), white cards on a warm off-white page */
+  --background: oklch(0.982 0.0015 80);
+  --foreground: oklch(0.147 0.004 49.25);
+  --foreground-2: oklch(0.374 0.01 67.558);
+  --foreground-4: oklch(0.56 0.012 58);
+  --card: oklch(1 0 0);
+  --card-foreground: oklch(0.147 0.004 49.25);
+  --surface-subtle: oklch(0.97 0.001 106.424);
+  --popover: oklch(1 0 0);
+  --popover-foreground: oklch(0.147 0.004 49.25);
+  --primary: oklch(0.53 0.2 260);
+  --primary-foreground: oklch(0.985 0.005 255);
+  --secondary: oklch(0.97 0.001 106.424);
+  --secondary-foreground: oklch(0.216 0.006 56.043);
+  --muted: oklch(0.97 0.001 106.424);
+  --muted-foreground: oklch(0.5 0.012 58);
+  --accent: oklch(0.955 0.002 75);
+  --accent-foreground: oklch(0.216 0.006 56.043);
+  --destructive: oklch(0.577 0.245 27.325);
+  --destructive-foreground: oklch(0.985 0.001 106.423);
+  --border: oklch(0.923 0.003 48.717);
+  --border-strong: oklch(0.869 0.005 56.366);
+  --divider: oklch(0.94 0.002 60);
+  --input: oklch(0.895 0.004 56);
+  --ring: oklch(0.58 0.18 259);
+  --focus: oklch(0.58 0.18 259);
+
+  --sidebar-bg: oklch(0.97 0.002 80);
+
+  /* Data palette: Asterism blue through teal to green */
+  --chart-1: oklch(0.55 0.2 260); /* asterism blue */
+  --chart-2: oklch(0.7 0.13 232); /* sky */
+  --chart-3: oklch(0.6 0.11 192); /* teal */
+  --chart-4: oklch(0.76 0.14 160); /* mint */
+  --chart-5: oklch(0.58 0.15 148); /* green */
+  --on-chart-1: oklch(0.985 0.005 255);
+
+  --status-healthy: oklch(0.53 0.14 152);
+  --status-healthy-surface: oklch(0.53 0.14 152 / 0.12);
+  --status-warning: oklch(0.6 0.15 66);
+  --status-warning-surface: oklch(0.66 0.15 70 / 0.16);
+  --status-critical: oklch(0.56 0.21 27);
+  --status-critical-surface: oklch(0.58 0.21 27 / 0.12);
+  --status-info: oklch(0.53 0.19 258);
+  --status-info-surface: oklch(0.55 0.19 258 / 0.12);
+  --status-neutral: oklch(0.5 0.012 58);
+  --status-neutral-surface: oklch(0.5 0.012 58 / 0.1);
+
+  /* Port exposure (blueprint §12: public highlighted, loopback slate, internal muted) */
+  --exposure-public: oklch(0.6 0.15 66);
+  --exposure-public-surface: oklch(0.66 0.15 70 / 0.15);
+  --exposure-loopback: oklch(0.47 0.04 245);
+  --exposure-loopback-surface: oklch(0.47 0.04 245 / 0.1);
+  --exposure-internal: oklch(0.5 0.012 58);
+  --exposure-internal-surface: oklch(0.5 0.012 58 / 0.08);
+
+  /* Workload role accents: one distinct hue per role */
+  --role-proxy: oklch(0.56 0.17 258);
+  --role-app: oklch(0.57 0.11 192);
+  --role-db: oklch(0.55 0.16 292);
+  --role-cache: oklch(0.65 0.14 70);
+  --role-worker: oklch(0.58 0.16 354);
+
+  /* Overlays, masks and textures */
+  --overlay: oklch(0.147 0.004 49.25 / 0.24);
+  --minimap-mask: oklch(0.982 0.0015 80 / 0.72);
+  --hatch-stripe: oklch(1 0 0 / 0.22);
+  --meter-track: oklch(0.216 0.006 56.043 / 0.08);
+  --skeleton: oklch(0.216 0.006 56.043 / 0.07);
+
+  --iso-grid-dot: oklch(0.216 0.006 56.043 / 0.14);
+  --iso-platform-bg: oklch(0.975 0.002 80 / 0.94);
+  --iso-platform-border: oklch(0.869 0.005 56.366);
+  --iso-highlight: oklch(1 0 0 / 0.3);
+  --iso-highlight-strong: oklch(1 0 0 / 0.6);
+  --iso-proxy-top: oklch(0.75 0.13 258);
+  --iso-proxy-left: oklch(0.56 0.17 258);
+  --iso-proxy-right: oklch(0.43 0.15 260);
+  --iso-app-top: oklch(0.77 0.1 192);
+  --iso-app-left: oklch(0.57 0.11 192);
+  --iso-app-right: oklch(0.44 0.09 194);
+  --iso-db-top: oklch(0.74 0.12 292);
+  --iso-db-left: oklch(0.55 0.16 292);
+  --iso-db-right: oklch(0.42 0.14 292);
+  --iso-cache-top: oklch(0.83 0.13 74);
+  --iso-cache-left: oklch(0.65 0.14 70);
+  --iso-cache-right: oklch(0.5 0.12 66);
+  --iso-worker-top: oklch(0.77 0.13 354);
+  --iso-worker-left: oklch(0.58 0.16 354);
+  --iso-worker-right: oklch(0.44 0.13 354);
+
+  /* Elevation: square cards carry a 1px ring instead of a border */
+  --elevation-card: 0 0 0 1px var(--card-ring);
+  --elevation-raised: 0 1px 2px oklch(0.147 0.004 49.25 / 0.07), 0 0 0 1px var(--border);
+  --elevation-pop:
+    0 12px 32px -8px oklch(0.147 0.004 49.25 / 0.16), 0 2px 6px -2px oklch(0.147 0.004 49.25 / 0.06),
+    0 0 0 1px var(--border);
+}
+
+/* ------------------------------------------------------------------------ */
+/* Dark theme                                                                */
+/* ------------------------------------------------------------------------ */
+
+.dark {
+  color-scheme: dark;
+
+  /* Stone dark: near-black page, stone-900 surfaces, white hairlines */
+  --background: oklch(0.147 0.004 49.25);
+  --foreground: oklch(0.985 0.001 106.423);
+  --foreground-2: oklch(0.85 0.006 70);
+  --foreground-4: oklch(0.63 0.01 58);
+  --card: oklch(0.185 0.005 56);
+  --card-foreground: oklch(0.985 0.001 106.423);
+  --surface-subtle: oklch(0.166 0.004 52);
+  --popover: oklch(0.216 0.006 56.043);
+  --popover-foreground: oklch(0.985 0.001 106.423);
+  --primary: oklch(0.56 0.2 260);
+  --primary-foreground: oklch(0.985 0.005 255);
+  --secondary: oklch(0.235 0.006 50);
+  --secondary-foreground: oklch(0.985 0.001 106.423);
+  --muted: oklch(0.268 0.007 34.298);
+  --muted-foreground: oklch(0.709 0.01 56.259);
+  --accent: oklch(0.268 0.007 34.298);
+  --accent-foreground: oklch(0.985 0.001 106.423);
+  --destructive: oklch(0.704 0.191 22.216);
+  --destructive-foreground: oklch(0.985 0.001 106.423);
+  --border: oklch(1 0 0 / 0.1);
+  --border-strong: oklch(1 0 0 / 0.16);
+  --divider: oklch(1 0 0 / 0.07);
+  --input: oklch(1 0 0 / 0.15);
+  --ring: oklch(0.68 0.16 258);
+  --focus: oklch(0.68 0.16 258);
+
+  --sidebar-bg: oklch(0.166 0.004 52);
+
+  --chart-1: oklch(0.66 0.18 260); /* asterism blue */
+  --chart-2: oklch(0.78 0.12 232); /* sky */
+  --chart-3: oklch(0.72 0.12 192); /* teal */
+  --chart-4: oklch(0.83 0.14 160); /* mint */
+  --chart-5: oklch(0.7 0.16 148); /* green */
+  --on-chart-1: oklch(0.147 0.004 49.25);
+
+  --status-healthy: oklch(0.78 0.15 155);
+  --status-healthy-surface: oklch(0.78 0.15 155 / 0.14);
+  --status-warning: oklch(0.83 0.15 78);
+  --status-warning-surface: oklch(0.83 0.15 78 / 0.14);
+  --status-critical: oklch(0.74 0.17 24);
+  --status-critical-surface: oklch(0.72 0.18 24 / 0.16);
+  --status-info: oklch(0.76 0.13 255);
+  --status-info-surface: oklch(0.72 0.15 258 / 0.16);
+  --status-neutral: oklch(0.72 0.01 58);
+  --status-neutral-surface: oklch(1 0 0 / 0.07);
+
+  --exposure-public: oklch(0.83 0.15 78);
+  --exposure-public-surface: oklch(0.83 0.15 78 / 0.14);
+  --exposure-loopback: oklch(0.76 0.04 245);
+  --exposure-loopback-surface: oklch(0.76 0.04 245 / 0.12);
+  --exposure-internal: oklch(0.7 0.01 58);
+  --exposure-internal-surface: oklch(1 0 0 / 0.06);
+
+  --role-proxy: oklch(0.72 0.15 257);
+  --role-app: oklch(0.75 0.11 190);
+  --role-db: oklch(0.73 0.14 292);
+  --role-cache: oklch(0.81 0.14 74);
+  --role-worker: oklch(0.74 0.14 354);
+
+  --overlay: oklch(0 0 0 / 0.56);
+  --minimap-mask: oklch(0.147 0.004 49.25 / 0.72);
+  --hatch-stripe: oklch(1 0 0 / 0.1);
+  --meter-track: oklch(1 0 0 / 0.08);
+  --skeleton: oklch(1 0 0 / 0.07);
+
+  --iso-grid-dot: oklch(1 0 0 / 0.09);
+  --iso-platform-bg: oklch(0.178 0.005 54 / 0.94);
+  --iso-platform-border: oklch(1 0 0 / 0.1);
+  --iso-highlight: oklch(1 0 0 / 0.26);
+  --iso-highlight-strong: oklch(1 0 0 / 0.55);
+  --iso-proxy-top: oklch(0.75 0.14 257);
+  --iso-proxy-left: oklch(0.55 0.16 259);
+  --iso-proxy-right: oklch(0.4 0.13 261);
+  --iso-app-top: oklch(0.77 0.11 190);
+  --iso-app-left: oklch(0.56 0.11 191);
+  --iso-app-right: oklch(0.41 0.09 193);
+  --iso-db-top: oklch(0.75 0.13 292);
+  --iso-db-left: oklch(0.55 0.15 292);
+  --iso-db-right: oklch(0.4 0.13 292);
+  --iso-cache-top: oklch(0.83 0.14 74);
+  --iso-cache-left: oklch(0.64 0.13 70);
+  --iso-cache-right: oklch(0.48 0.11 66);
+  --iso-worker-top: oklch(0.76 0.14 354);
+  --iso-worker-left: oklch(0.57 0.15 354);
+  --iso-worker-right: oklch(0.42 0.12 354);
+
+  --elevation-card: 0 0 0 1px var(--card-ring);
+  --elevation-raised: 0 1px 2px oklch(0 0 0 / 0.4), 0 0 0 1px var(--border-strong);
+  --elevation-pop: 0 16px 40px -10px oklch(0 0 0 / 0.6), 0 0 0 1px var(--border-strong);
+}
+
+/* ------------------------------------------------------------------------ */
+/* Derived variables (declared on .dark too so a dark subtree resolves them) */
+/* ------------------------------------------------------------------------ */
+
+:root,
+.dark {
+  --sidebar: var(--sidebar-bg);
+  --sidebar-foreground: var(--foreground-2);
+  --sidebar-primary: var(--primary);
+  --sidebar-primary-foreground: var(--primary-foreground);
+  /* menuAccent "subtle": hover and active items get a faint tint, not a slab. */
+  --sidebar-accent: color-mix(in oklab, var(--foreground) 6%, transparent);
+  --sidebar-accent-foreground: var(--foreground);
+  --sidebar-border: var(--border);
+  --sidebar-ring: var(--ring);
+
+  /* lyra card edge: a flat 1px ring at 10% of the text colour. */
+  --card-ring: color-mix(in oklab, var(--foreground) 10%, transparent);
+
+  --focus-soft: color-mix(in oklab, var(--focus) 30%, transparent);
+  /* 1px focus ring (lyra): a solid edge plus a faint 1px halo. Box shadows follow the corner radius. */
+  --elevation-focus: 0 0 0 1px var(--focus), 0 0 0 2px var(--focus-soft);
+}
+
+/* ------------------------------------------------------------------------ */
+/* Tailwind theme                                                            */
+/* ------------------------------------------------------------------------ */
+
+/*
+ * Corners: a subtle scale from --radius (8px). `static` keeps every value
+ * on :root because the semantic radii reference the scale.
+ *   card 8   cards, KPI tiles, table frames, sheets, dialogs, popovers,
+ *            menus, toasts, the topology canvas and its nodes
+ *   tile 6   inner tiles, code and log blocks, chart frames, legend chips
+ *   control 8 / control-item 6   inputs, selects, segmented controls and
+ *            tab lists / their items and sliding indicators
+ *   button 10 (button-sm 9)      every button, icon buttons included
+ *   chip 6   badges, status pills, port, domain and count chips, kbd
+ *   nav 8    sidebar items and their active tint; menu-item 6
+ *   bar 4    meters and exposure bars (outer ends only when segmented)
+ *   avatar 8 avatars and the logo tile; dots stay rounded-full
+ */
+@theme static {
+  --radius-xs: calc(var(--radius) * 0.25);
+  --radius-sm: calc(var(--radius) * 0.5);
+  --radius-md: calc(var(--radius) * 0.75);
+  --radius-lg: var(--radius);
+  --radius-xl: calc(var(--radius) * 1.25);
+  --radius-2xl: calc(var(--radius) * 1.5);
+  --radius-3xl: calc(var(--radius) * 2);
+  --radius-4xl: calc(var(--radius) * 3);
+
+  --radius-card: var(--radius-lg);
+  --radius-tile: var(--radius-md);
+  --radius-control: var(--radius-lg);
+  --radius-control-item: var(--radius-md);
+  --radius-button: var(--radius-xl);
+  --radius-button-sm: calc(var(--radius) * 1.125);
+  --radius-chip: var(--radius-md);
+  --radius-nav: var(--radius-lg);
+  --radius-menu-item: var(--radius-md);
+  --radius-bar: var(--radius-sm);
+  --radius-avatar: var(--radius-lg);
+}
+
+@theme {
+  --font-sans: "Outfit Variable", "Outfit", -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+  /* Headings: page and card titles, sheet titles, KPI values (fixed-width digits). */
+  --font-heading: "Oxanium Variable", "Oxanium", "Outfit Variable", sans-serif;
+  --font-mono: "Geist Mono Variable", "Geist Mono", ui-monospace, SFMono-Regular, Menlo, monospace;
+
+  /* Named type scale (sizing contract). Nothing visible goes below 12px. */
+  --text-display: 26px;
+  --text-display--line-height: 1.25;
+  --text-display--letter-spacing: -0.025em;
+  --text-display--font-weight: 600;
+  --text-title: 22px;
+  --text-title--line-height: 1.3;
+  --text-title--letter-spacing: -0.02em;
+  --text-title--font-weight: 600;
+  --text-kpi: 28px;
+  --text-kpi--line-height: 1.15;
+  --text-kpi--letter-spacing: -0.02em;
+  --text-kpi--font-weight: 600;
+  --text-heading: 15px;
+  --text-heading--line-height: 1.4;
+  --text-heading--letter-spacing: -0.01em;
+  --text-heading--font-weight: 600;
+  --text-body: 14px;
+  --text-body--line-height: 1.5;
+  --text-control: 13px;
+  --text-control--line-height: 1.4;
+  --text-small: 12.5px;
+  --text-small--line-height: 1.45;
+  --text-mono: 12.5px;
+  --text-mono--line-height: 1.45;
+  --text-pill: 12px;
+  --text-pill--line-height: 1;
+}
+
+@theme inline {
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+  --color-card: var(--card);
+  --color-card-foreground: var(--card-foreground);
+  --color-popover: var(--popover);
+  --color-popover-foreground: var(--popover-foreground);
+  --color-primary: var(--primary);
+  --color-primary-foreground: var(--primary-foreground);
+  --color-secondary: var(--secondary);
+  --color-secondary-foreground: var(--secondary-foreground);
+  --color-muted: var(--muted);
+  --color-muted-foreground: var(--muted-foreground);
+  --color-accent: var(--accent);
+  --color-accent-foreground: var(--accent-foreground);
+  --color-destructive: var(--destructive);
+  --color-destructive-foreground: var(--destructive-foreground);
+  --color-border: var(--border);
+  --color-border-strong: var(--border-strong);
+  --color-divider: var(--divider);
+  --color-input: var(--input);
+  --color-ring: var(--ring);
+  --color-surface-subtle: var(--surface-subtle);
+  --color-text-2: var(--foreground-2);
+  --color-text-4: var(--foreground-4);
+  --color-overlay: var(--overlay);
+  --color-meter-track: var(--meter-track);
+  --color-skeleton: var(--skeleton);
+
+  --color-sidebar: var(--sidebar);
+  --color-sidebar-foreground: var(--sidebar-foreground);
+  --color-sidebar-primary: var(--sidebar-primary);
+  --color-sidebar-primary-foreground: var(--sidebar-primary-foreground);
+  --color-sidebar-accent: var(--sidebar-accent);
+  --color-sidebar-accent-foreground: var(--sidebar-accent-foreground);
+  --color-sidebar-border: var(--sidebar-border);
+  --color-sidebar-ring: var(--sidebar-ring);
+
+  --color-chart-1: var(--chart-1);
+  --color-chart-2: var(--chart-2);
+  --color-chart-3: var(--chart-3);
+  --color-chart-4: var(--chart-4);
+  --color-chart-5: var(--chart-5);
+  --color-on-chart-1: var(--on-chart-1);
+
+  --color-status-healthy: var(--status-healthy);
+  --color-status-healthy-surface: var(--status-healthy-surface);
+  --color-status-warning: var(--status-warning);
+  --color-status-warning-surface: var(--status-warning-surface);
+  --color-status-critical: var(--status-critical);
+  --color-status-critical-surface: var(--status-critical-surface);
+  --color-status-info: var(--status-info);
+  --color-status-info-surface: var(--status-info-surface);
+  --color-status-neutral: var(--status-neutral);
+  --color-status-neutral-surface: var(--status-neutral-surface);
+
+  --color-exposure-public: var(--exposure-public);
+  --color-exposure-public-surface: var(--exposure-public-surface);
+  --color-exposure-loopback: var(--exposure-loopback);
+  --color-exposure-loopback-surface: var(--exposure-loopback-surface);
+  --color-exposure-internal: var(--exposure-internal);
+  --color-exposure-internal-surface: var(--exposure-internal-surface);
+
+  --color-role-proxy: var(--role-proxy);
+  --color-role-app: var(--role-app);
+  --color-role-db: var(--role-db);
+  --color-role-cache: var(--role-cache);
+  --color-role-worker: var(--role-worker);
+
+  /* h-control, h-control-sm, h-pill (also size-*, min-h-*, w-*) */
+  --spacing-control: var(--control-h);
+  --spacing-control-sm: var(--control-h-sm);
+  --spacing-pill: var(--pill-h);
+  --spacing-sidebar-item: var(--sidebar-item-h);
+  --spacing-topbar: var(--topbar-h);
+
+  --shadow-card: var(--elevation-card);
+  --shadow-raised: var(--elevation-raised);
+  --shadow-pop: var(--elevation-pop);
+  --shadow-focus: var(--elevation-focus);
+
+  --ease-out: var(--ease-out-quint);
+  --ease-in-out: var(--ease-in-out-quart);
+  --ease-drawer: var(--ease-drawer);
+
+  --transition-duration-press: var(--duration-press);
+  --transition-duration-menu-in: var(--duration-menu-in);
+  --transition-duration-menu-out: var(--duration-menu-out);
+  --transition-duration-tabs: var(--duration-tabs);
+
+  --default-transition-duration: var(--duration-color);
+  --default-transition-timing-function: ease;
+
+  /* tw-animate-css defaults: menu timings and the ease-out curve. */
+  --animate-in: enter var(--tw-animation-duration, var(--tw-duration, var(--duration-menu-in)))
+    var(--tw-ease, var(--ease-out-quint)) var(--tw-animation-delay, 0s)
+    var(--tw-animation-iteration-count, 1) var(--tw-animation-direction, normal)
+    var(--tw-animation-fill-mode, none);
+  --animate-out: exit var(--tw-animation-duration, var(--tw-duration, var(--duration-menu-out)))
+    var(--tw-ease, var(--ease-out-quint)) var(--tw-animation-delay, 0s)
+    var(--tw-animation-iteration-count, 1) var(--tw-animation-direction, normal)
+    var(--tw-animation-fill-mode, none);
+}
+
+@layer base {
+  * {
+    @apply border-border outline-ring;
+  }
+
+  html {
+    @apply font-sans;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+    text-rendering: optimizeLegibility;
+  }
+
+  html,
+  body {
+    min-height: 100%;
+  }
+
+  body {
+    @apply bg-background text-body text-foreground;
+  }
+
+  button:not(:disabled),
+  [role="button"]:not([aria-disabled="true"]) {
+    cursor: pointer;
+  }
+}
+
+/* ------------------------------------------------------------------------ */
+/* Utilities                                                                 */
+/* ------------------------------------------------------------------------ */
+
+/* Press feedback: scale to 0.97 on :active; colours keep the 150ms ease. */
+@utility pressable {
+  transition-property: transform, color, background-color, border-color, box-shadow, opacity;
+  transition-duration:
+    var(--duration-press), var(--duration-color), var(--duration-color), var(--duration-color),
+    var(--duration-color), var(--duration-color);
+  transition-timing-function: var(--ease-out-quint), ease, ease, ease, ease, ease;
+
+  &:active:not(:disabled, [aria-disabled="true"]) {
+    transform: scale(0.97);
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    &:active:not(:disabled, [aria-disabled="true"]) {
+      transform: none;
+    }
+  }
+}
+
+@utility no-scrollbar {
+  scrollbar-width: none;
+
+  &::-webkit-scrollbar {
+    display: none;
+  }
+}
+
+/* Crisp hatched diagonal texture for memory and capacity bars. */
+@utility hatch {
+  background-image: repeating-linear-gradient(
+    -55deg,
+    transparent,
+    transparent 4px,
+    var(--hatch-stripe) 4px,
+    var(--hatch-stripe) 5.5px
+  );
+}
+
+/* Legacy class name kept for existing components. */
+.asterism-hatch {
+  background-image: repeating-linear-gradient(
+    -55deg,
+    transparent,
+    transparent 4px,
+    var(--hatch-stripe) 4px,
+    var(--hatch-stripe) 5.5px
+  );
+}
+
+.tabular-nums {
+  font-variant-numeric: tabular-nums;
+}
+
+/* ------------------------------------------------------------------------ */
+/* Third-party surfaces                                                      */
+/* ------------------------------------------------------------------------ */
+
+.react-flow__background {
+  background-color: transparent;
+}
+
+/* Zoom controls: 32px buttons (40px on touch), 16px icons, themed surface. */
+.react-flow__controls {
+  margin: 12px;
+  background: var(--card);
+  border-radius: var(--radius-button);
+  overflow: hidden;
+  box-shadow: var(--elevation-raised);
+}
+
+.react-flow__controls-button {
+  width: var(--control-h);
+  height: var(--control-h);
+  padding: 0;
+  background: var(--card);
+  color: var(--muted-foreground);
+  border-bottom: 1px solid var(--divider);
+  transition: background-color var(--duration-color) ease, color var(--duration-color) ease;
+}
+
+.react-flow__controls-button:last-child {
+  border-bottom: 0;
+}
+
+.react-flow__controls-button:hover {
+  background: var(--accent);
+  color: var(--foreground);
+}
+
+.react-flow__controls-button:focus-visible {
+  outline: 2px solid var(--ring);
+  outline-offset: -2px;
+}
+
+.react-flow__controls-button svg {
+  fill: currentColor;
+  width: 16px;
+  height: 16px;
+  max-width: 16px;
+  max-height: 16px;
+}
+
+.react-flow__minimap {
+  margin: 12px;
+  background: var(--card);
+  border-radius: var(--radius-card);
+  overflow: hidden;
+  box-shadow: var(--elevation-raised);
+}
+
+.react-flow__attribution {
+  display: none;
+}
+
+/* Keyboard focus on map nodes uses the shared focus ring. */
+.react-flow__node:focus-visible {
+  outline: none;
+  border-radius: var(--radius-card);
+  box-shadow: var(--elevation-focus);
+}
+
+.react-flow__edge-path {
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+
+/* Travelling pulse along live edges (off under reduced motion, see below). */
+@keyframes asterism-dash-flow {
+  to {
+    stroke-dashoffset: -24;
+  }
+}
+
+.asterism-edge-animated {
+  stroke-dasharray: 2 10;
+  stroke-linecap: round;
+  animation: asterism-dash-flow var(--edge-speed, 1.35s) linear infinite;
+}
+
+.uplot {
+  font-family: var(--font-mono);
+}
+
+.u-legend {
+  display: none;
+}
+
+/* ------------------------------------------------------------------------ */
+/* Reduced motion: fades stay, movement goes                                 */
+/* ------------------------------------------------------------------------ */
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  ::before,
+  ::after {
+    --tw-enter-scale: 1;
+    --tw-exit-scale: 1;
+    --tw-enter-translate-x: 0;
+    --tw-enter-translate-y: 0;
+    --tw-exit-translate-x: 0;
+    --tw-exit-translate-y: 0;
+    --tw-enter-rotate: 0;
+    --tw-exit-rotate: 0;
+    scroll-behavior: auto !important;
+  }
+
+  /* Continuous and decorative animations stop entirely. */
+  .asterism-edge-animated,
+  .animate-spin,
+  .animate-ping,
+  .animate-bounce,
+  .animate-pulse {
+    animation: none !important;
+  }
+
+  /* Transform transitions (hover lifts, scale) are removed; colour/opacity stay. */
+  [class*="hover:scale"],
+  [class*="hover:-translate"],
+  [class*="hover:translate"],
+  .react-flow__viewport {
+    transition-property: color, background-color, border-color, opacity, box-shadow !important;
+  }
+
+  [class*="hover:scale"]:hover,
+  [class*="hover:-translate"]:hover,
+  [class*="hover:translate"]:hover {
+    transform: none !important;
+    scale: none !important;
+    translate: none !important;
+  }
+}
