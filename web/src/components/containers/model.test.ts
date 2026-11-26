@@ -7,14 +7,17 @@ import {
   ContainerHealth,
   ContainerSchema,
   ContainerState,
+  ContainerStatsSchema,
 } from "@/gen/asterism/v1/asterism_pb";
 import {
   actionBlockedReason,
   actionErrorText,
   containerName,
+  groupContainersByProject,
   matchesStateFilter,
   shortImage,
   stateStyle,
+  summarizeContainers,
   validActions,
 } from "./model";
 
@@ -120,5 +123,49 @@ describe("names and images", () => {
   it("trims registry hosts", () => {
     expect(shortImage({ image: "", imageRepo: "ghcr.io/acme/api", imageTag: "v1" })).toBe("acme/api:v1");
     expect(shortImage({ image: "", imageRepo: "postgres", imageTag: "17" })).toBe("postgres:17");
+  });
+});
+
+describe("groupContainersByProject", () => {
+  const ctr = (name: string, projectId: string) => create(ContainerSchema, { id: `ctr:${name}`, name, projectId });
+
+  it("groups consecutive runs of a project in server order", () => {
+    const rows = [ctr("a-web", "proj:a"), ctr("a-db", "proj:a"), ctr("b-web", "proj:b"), ctr("solo", "")];
+    const groups = groupContainersByProject(rows);
+    expect(groups.map((g) => [g.projectId, g.rows.map((c) => c.name)])).toEqual([
+      ["proj:a", ["a-web", "a-db"]],
+      ["proj:b", ["b-web"]],
+      ["", ["solo"]],
+    ]);
+  });
+
+  it("keeps a project split by another one as two groups", () => {
+    const rows = [ctr("a1", "proj:a"), ctr("b1", "proj:b"), ctr("a2", "proj:a")];
+    expect(groupContainersByProject(rows).map((g) => g.projectId)).toEqual(["proj:a", "proj:b", "proj:a"]);
+  });
+
+  it("returns one flat group when grouping is off, and none for an empty page", () => {
+    const rows = [ctr("a1", "proj:a"), ctr("b1", "proj:b")];
+    expect(groupContainersByProject(rows, false)).toEqual([{ projectId: "", rows }]);
+    expect(groupContainersByProject([])).toEqual([]);
+  });
+});
+
+describe("summarizeContainers", () => {
+  const stats = (cpuUtil: number, mem: number) => create(ContainerStatsSchema, { cpuUtil, memUsedBytes: BigInt(mem) });
+
+  it("adds up running usage and counts up and attention", () => {
+    const rows = [
+      create(ContainerSchema, { state: ContainerState.RUNNING, stats: stats(0.25, 100) }),
+      create(ContainerSchema, { state: ContainerState.RUNNING, health: ContainerHealth.UNHEALTHY, stats: stats(0.5, 50) }),
+      create(ContainerSchema, { state: ContainerState.PAUSED, stats: stats(0.9, 30) }),
+      create(ContainerSchema, { state: ContainerState.EXITED, exitCode: 1, stats: stats(0.4, 999) }),
+      create(ContainerSchema, { state: ContainerState.RESTARTING }),
+    ];
+    expect(summarizeContainers(rows)).toEqual({ total: 5, up: 4, cpuUtil: 0.75, memUsedBytes: 180, attention: 2 });
+  });
+
+  it("is all zeros for an empty group", () => {
+    expect(summarizeContainers([])).toEqual({ total: 0, up: 0, cpuUtil: 0, memUsedBytes: 0, attention: 0 });
   });
 });

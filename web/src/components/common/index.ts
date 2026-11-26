@@ -6,6 +6,7 @@ export { Page, PageHeader, type PageHeaderBackLink, type PageHeaderProps, type P
 export { PortChip, type PortChipProps } from "./PortChip";
 export { SearchInput, type SearchInputProps } from "./SearchInput";
 export { SectionCard, type SectionCardProps } from "./SectionCard";
+export { CardGrid, CardStack, type CardGridProps, type CardStackProps } from "./CardLayout";
 export {
   SegmentedControl,
   type SegmentedControlProps,

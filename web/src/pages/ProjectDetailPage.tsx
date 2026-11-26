@@ -6,6 +6,7 @@ import { Icon } from "@/components/ui/icon";
 import { WorkloadRole } from "@/gen/asterism/v1/asterism_pb";
 import { inventoryClient, topologyClient } from "@/lib/rpc";
 import {
+  CardGrid,
   CategoryBadge,
   DomainChip,
   EmptyState,
@@ -178,18 +179,19 @@ export function ProjectDetailPage() {
         </Card>
       )}
 
-      <div className="grid items-start gap-3 lg:grid-cols-12">
+      <CardGrid split="7:5">
         <ServicesCard projectId={project.id} total={project.workloads.length} onSelect={setSelectedWorkloadId} />
 
         <SectionCard
           title="Domains and routing"
           icon={Route01Icon}
           description="Public hostnames proxied into this project"
-          className="lg:col-span-5"
+          bodyClassName="flex flex-col"
           flush
         >
           {projectRoutes.length === 0 ? (
             <EmptyState
+              className="flex-1"
               size="compact"
               icon={Globe02Icon}
               title="No public routes"
@@ -237,7 +239,7 @@ export function ProjectDetailPage() {
             </div>
           )}
         </SectionCard>
-      </div>
+      </CardGrid>
 
       <WorkloadInspectorSheet workloadId={selectedWorkloadId} onClose={() => setSelectedWorkloadId(null)} />
     </Page>
@@ -270,7 +272,6 @@ function ServicesCard({ projectId, total, onSelect }: { projectId: string; total
       title="Services"
       icon={CubeIcon}
       description="Select a service for live charts, ports and redacted logs"
-      className="lg:col-span-7"
       flush
     >
       {total > PROJECT_SERVICES_LIST.defaultPageSize && (

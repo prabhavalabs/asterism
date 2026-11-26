@@ -463,7 +463,13 @@ function ContainersList({ projects, actions, hostTotal }: ContainersListProps) {
               projectTotals={projectTotals}
             />
           ) : (
-            <ContainerCardList containers={rows} projects={projects} actions={actions} />
+            <ContainerCardList
+              containers={rows}
+              projects={projects}
+              actions={actions}
+              groupByProject={grouped}
+              projectTotals={projectTotals}
+            />
           )}
         </PaginatedScrollArea>
       </SectionCard>
