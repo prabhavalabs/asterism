@@ -10,6 +10,11 @@ behind_tls = false
 # External origin (no path), used to make link-preview tags absolute so shared
 # links show the Asterism card. Also ASTERISM_PUBLIC_URL.
 # public_url = "https://monitor.example.com"
+# Asterism's own state (uploaded and cached project icons). Relative paths
+# resolve against the working directory; production uses the systemd
+# StateDirectory. Also ASTERISM_DATA_DIR.
+data_dir = "data"
+# data_dir = "/var/lib/asterism"
 
 [collect]
 # Modes: "local" (host metrics only), "showcase" (live host + demo VPS topology),
@@ -76,9 +81,21 @@ default_stop_timeout_seconds = 10
 #           wordpress, ghost, nextcloud, gitea, n8n, docker (unknown slugs are ignored)
 #   color = design token: chart-1..chart-5, role-proxy, role-app, role-db,
 #           role-cache, role-worker, or primary
+#   favicon_fetch = false disables favicon fetching for one project
 # [projects."shop"]
 # icon = "wordpress"
 # color = "chart-3"
+# favicon_fetch = false
+#
+# Real icons: an admin can upload an image on the project page (stored under
+# data_dir; it wins over everything above). Otherwise a favicon found in the
+# project's compose directory (public/, static/, app/, ... ; scanned by the
+# agent in agent mode) or on a public hostname routed to the project wins
+# over detection, but not over icon/asterism.icon settings. Domain fetches
+# are https-only, refuse private and loopback addresses, run at most daily
+# and send User-Agent "Asterism-favicon/1.0". Also ASTERISM_FAVICON_FETCH.
+[projects]
+favicon_fetch = true
 
 # Enrolled asterism-agents (collect.mode = "agent"). Create an entry with
 #   asterism agent token create --host prod-1 [--allow-actions]
