@@ -46,6 +46,8 @@ memory and CPU, which ports are really public, and how traffic reaches it.
   resolution, streamed over ConnectRPC into canvas charts (`uPlot`).
 - **Docker, fully inventoried.** Every container (running or stopped) with health, restarts,
   OOM kills and live usage, plus images, volumes, networks and `docker system df`.
+- **Ask your server questions.** A read-only MCP server lets Claude and other MCP clients
+  answer "what is eating memory?" or "which images are safe to delete?" from the same data.
 - **Safe by default.** Binds to `127.0.0.1`, never returns environment values or secrets, and
   keeps start / stop / restart behind an explicit opt-in, scoped tokens and an audit trail.
 
@@ -122,11 +124,12 @@ flowchart LR
     SV --> UI[embedded React UI]
   end
   API --> CLI[CLI · scripts]
+  SV --> MCP[MCP server] --> AI[Claude · IDEs]
   UI --> Browser
 ```
 
 - **Collectors → bus → store → services → API / UI.** All domain logic lives in one service
-  layer, so the web UI, API (and, next, the MCP server and CLI) return the same answers.
+  layer, so the web UI, the API and the MCP server return the same answers.
 - **The agent only dials out.** `asterism-agent` (about 11 MiB, under 15 MB RSS, 0.1% of a core
   for 50 containers) pushes facts and metrics to the hub; the VPS opens no port and the hub
   holds no SSH key.
@@ -254,6 +257,37 @@ DOCKER_GID=$(getent group docker | cut -d: -f3) docker compose -f docker-compose
 Check a config with `asterism-agent validate --config /etc/asterism/agent.yaml`; the agent
 appears under **Settings → Agents** within a few seconds.
 
+## Ask it from Claude (MCP)
+
+Asterism ships an MCP server with 18 read-only tools: `overview`, projects, workloads,
+containers, ports, ingress, images, volumes, networks, `disk_usage`, events, `tail_logs`, `top`,
+`query_metrics` and `get_topology`. Environment variable values and secrets are never returned.
+
+Create a read-only token on the hub and store it where `asterism mcp` looks for it:
+
+```sh
+asterism token generate --name mcp --scope read     # paste the [[auth.tokens]] entry into asterism.toml
+sudo install -m 0600 /dev/stdin /etc/asterism/mcp.token   # paste the token, then Ctrl-D
+```
+
+**Over SSH (stdio).** Nothing to expose: the client starts `asterism mcp` on the VPS, which calls
+the local hub.
+
+```sh
+claude mcp add asterism -- ssh my-vps asterism mcp
+```
+
+**Over HTTPS (Streamable HTTP).** The hub serves stateless MCP at `/mcp` for bearer tokens with
+the `read` scope; browser session cookies are refused.
+
+```sh
+claude mcp add --transport http asterism https://monitor.example.com/mcp \
+  --header "Authorization: Bearer $ASTERISM_TOKEN"
+```
+
+Then ask things like *"Which containers restarted today and why?"*, *"What is using the most
+memory?"* or *"Which Docker images and volumes are unused?"*.
+
 ## Security model
 
 - **Read-only by default.** Container actions need `[actions] allow_actions = true`, an
@@ -288,7 +322,8 @@ Binary and image size are CI gates; the rest is measured with `make agent-footpr
 | Milestone | Scope | Status |
 |---|---|---|
 | M0–M2 | Contracts, embedded SPA, host and Docker inventory, projects, ports, ingress discovery, isometric portal, guarded container actions, server-side pagination, `asterism-agent` | Done |
-| M3 | MCP server (stdio + stateless Streamable HTTP) and CLI (`status`, `ps`, `ports`, `ingress`, `logs`, `topo`) | Next |
+| M3 | MCP server (stdio + stateless Streamable HTTP, 18 read-only tools) | Done |
+| M3 | CLI views (`status`, `ps`, `ports`, `ingress`, `logs`, `topo`) | Next |
 | M4 | SQLite history tiers, downsampling, range queries | Planned |
 | M5 | Observed TCP topology, alert rules, `diagnose` | Planned |
 | M6 | Release packaging (GoReleaser), install docs, public launch | Planned |
@@ -307,7 +342,7 @@ make agent   # static asterism-agent binary
 ```text
 asterism/
 ├── proto/asterism/v1/   # Protobuf contracts (source of truth)
-├── cmd/asterism/        # Hub: serve, agent token create, token generate, hash-password
+├── cmd/asterism/        # Hub: serve, mcp, agent token create, token generate, hash-password
 ├── cmd/asterism-agent/  # Agent: run, validate, discover
 ├── internal/
 │   ├── agent/           # Agent collectors, Docker API client, procfs, actions
@@ -316,6 +351,7 @@ asterism/
 │   ├── store/           # Ring buffers and event log
 │   ├── service/         # Domain logic shared by every interface
 │   ├── api/             # ConnectRPC handlers
+│   ├── mcp/             # MCP tools over the same services (stdio + HTTP)
 │   ├── auth/            # Sessions and scoped bearer tokens
 │   ├── config/          # TOML + environment configuration
 │   └── web/             # Embedded SPA handler
