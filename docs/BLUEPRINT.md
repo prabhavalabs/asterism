@@ -386,12 +386,47 @@ appear as first-class workloads and projects alongside Docker stacks.
 - Health score per project (0–100) from workload health, restarts, CPU throttling, memory
   pressure (`memory.events` high/oom), and error-tail rate.
 - Per-project memory cost share (% of total VPS RAM and % of container limits).
-- Built-in alert rules (TOML-configurable): disk > 85%, mem > 90% for 5 min, container restart
-  loop, OOM kill, health check failing, CPU steal > 20% (noisy-neighbour indicator on VPSes).
-- **Active alert count** (`GetOverview.active_alert_count`, the sidebar Events badge): warning
-  and critical events over the whole retained event log that fall in the `alerts` kind group,
-  the same rule as `ListEvents(kind_group = "alerts")`. Audit records and container lifecycle
-  events (start, die, restart, health, …) are not alerts, even at warning severity.
+- **Alert rules** (`internal/service/alerting`, configured in the UI and stored in SQLite; §8.9).
+  A built-in catalogue evaluated every `[alerts] evaluation_interval` (15 s) against the same
+  snapshot the UI reads (Docker inventory, host vitals, per-mount filesystems in agent mode,
+  workloads, enrolled agents) plus new events, so every collector mode alerts identically:
+
+  | Rule | Kind | Default |
+  |---|---|---|
+  | `container_exited`: stopped with a non-zero exit, not by an Asterism stop/restart action | condition | on, critical |
+  | `restart_loop`: ≥ N restart-count increases in a window, or Docker state `restarting` | count | on, warning, 3 in 10 min |
+  | `container_unhealthy`: health check unhealthy | condition | on, warning, for 1 min |
+  | `oom_kill`: last exit was an OOM kill (until it runs again), or a `unit.oom` event | condition | on, critical |
+  | `container_memory`: memory / limit (containers with a limit) | threshold | on, 90 / 98%, for 5 min |
+  | `host_cpu` | threshold | off, 90%, for 10 min |
+  | `host_memory` | threshold | on, 90 / 97%, for 5 min |
+  | `disk_usage` per mount (root disk outside agent mode) | threshold | on, 85 / 95%, for 5 min |
+  | `agent_offline` (agent mode) | condition | on, critical |
+  | `unit_failed`: systemd unit state `failed` | condition | on, warning |
+  | `event_forward`: events of chosen kinds at ≥ a severity, as one-shot alerts | forward | off |
+
+  Every rule has an enabled flag, a `for` duration (pending → firing), severity (threshold rules
+  derive it from the level crossed) and project include/exclude filters.
+- **Lifecycle.** Alerts are deduplicated by fingerprint (`rule|entity[|key]`, e.g.
+  `disk_usage|host|/`) and move inactive → pending → firing → resolved. A pending alert whose
+  condition clears is dropped silently. A firing alert resolves only after its condition has been
+  absent for `keep_firing_for` (2 × the evaluation interval). Severity escalation re-notifies;
+  still-firing alerts re-notify every `repeat_interval` (4 h). An alert with 6 state changes
+  within an hour is marked flapping and stays quiet until it is stable for 30 minutes. For the
+  first minute after start (startup grace) nothing resolves, and a rule whose data source is
+  missing (Docker unavailable, no host vitals yet) holds its alerts instead of resolving them.
+  Firing alerts and their last notification time persist in SQLite, so a restart neither
+  re-notifies nor forgets them. Event-sourced (one-shot) alerts fire once and resolve quietly
+  after 10 minutes without a new matching event; audit, `alert.*` and `notification.*` events
+  are never forwarded. Firing and resolved transitions are written as `alert.firing` /
+  `alert.resolved` events. Resolved alerts are kept 7 days (at most 500).
+- **Silences** mute alerts matching a rule, an entity and/or a project for 1 minute to 30 days,
+  with a reason and the creating actor; matching alerts keep evaluating but send nothing, and a
+  silence can be expired early.
+- **Active alert count** (`GetOverview.active_alert_count`, the sidebar Alerts badge): with
+  alerting enabled, the number of firing alerts that are not silenced. With `[alerts] enabled =
+  false` it falls back to warning and critical events in the `alerts` kind group (the
+  `ListEvents(kind_group = "alerts")` rule; audit and container lifecycle events never count).
 
 ### 6.10 Agent collectors (`asterism-agent`)
 The agent is a separate static binary (`cmd/asterism-agent`, D22) with its own collectors in
@@ -449,6 +484,20 @@ agent upgrade (D24).
   their digest when served. A favicon entry without an image is the negative cache. The M4
   SQLite database will live in the same directory.
 
+**Implemented so far** (`internal/store/sqlite`): one database at `<data_dir>/asterism.db`
+(`server.data_dir`, `ASTERISM_DATA_DIR`, default `data`; `/var/lib/asterism` under systemd's
+`StateDirectory`). The directory is created 0700 and the database file 0600; pragmas
+`journal_mode=WAL`, `synchronous=NORMAL`, `busy_timeout=5000`, `foreign_keys=1`, one
+connection. Migrations are forward-only, numbered from 1 in a `schema_migrations` table, each
+applied in its own transaction; a database newer than the binary is refused. Migration 1 holds
+the alerting tables: `settings`, `alert_rules` (overrides of the catalogue), `alert_state`
+(active alerts and 7-day history), `silences`, `channels` (public settings plus a sealed secret
+blob), `deliveries` (capped at 200 per channel) and `push_subscriptions`. Rows store the
+protobuf message in a `data` column next to the few columns used for lookups, so fields can be
+added without migrations. Secrets are sealed with AES-256-GCM (`internal/store/secretbox`) under
+`<data_dir>/secret.key` (32 random bytes, 0600, tightened if looser), with the owning row id as
+associated data so blobs cannot be swapped between rows. Metric tiers follow in M4.
+
 ---
 
 ## 8. API and real-time transport
@@ -502,6 +551,26 @@ service ProjectSettingsService {                                    // Asterism'
   rpc SetProjectIcon(SetProjectIconRequest) returns (ProjectIconResponse);
   rpc ClearProjectIcon(ClearProjectIconRequest) returns (ProjectIconResponse);
   rpc RefreshProjectIcon(RefreshProjectIconRequest) returns (ProjectIconResponse);
+}
+service AlertsService {                                             // §8.9; writes: admin session, audited
+  rpc ListAlerts(ListAlertsRequest) returns (ListAlertsResponse);
+  rpc ListRules(ListRulesRequest) returns (ListRulesResponse);
+  rpc UpdateRule(UpdateRuleRequest) returns (AlertRule);
+  rpc ListSilences(ListSilencesRequest) returns (ListSilencesResponse);
+  rpc CreateSilence(CreateSilenceRequest) returns (Silence);
+  rpc DeleteSilence(DeleteSilenceRequest) returns (DeleteSilenceResponse);
+}
+service NotificationsService {                                      // §8.9; secrets write-only
+  rpc ListChannels(ListChannelsRequest) returns (ListChannelsResponse);
+  rpc CreateChannel(CreateChannelRequest) returns (NotificationChannel);
+  rpc UpdateChannel(UpdateChannelRequest) returns (NotificationChannel);
+  rpc DeleteChannel(DeleteChannelRequest) returns (DeleteChannelResponse);
+  rpc TestChannel(TestChannelRequest) returns (TestChannelResponse);
+  rpc ListDeliveries(ListDeliveriesRequest) returns (ListDeliveriesResponse);
+  rpc GetWebPushConfig(GetWebPushConfigRequest) returns (GetWebPushConfigResponse);
+  rpc SubscribeWebPush(SubscribeWebPushRequest) returns (SubscribeWebPushResponse);
+  rpc UnsubscribeWebPush(UnsubscribeWebPushRequest) returns (UnsubscribeWebPushResponse);
+  rpc ListWebPushSubscriptions(ListWebPushSubscriptionsRequest) returns (ListWebPushSubscriptionsResponse);
 }
 service ActionsService {                                            // mutating, opt-in, audited
   rpc StartContainer(StartContainerRequest) returns (ContainerActionResponse);
@@ -680,6 +749,8 @@ obvious fields; for containers and ports a number also matches a port exactly), 
 | `ListPorts` | `exposure` | `exposure`, `port`, `workload`, `project`, `proto` (`exposure, port`) | `exposure_counts` |
 | `ListIngress` | — | `hostname`, `port`, `proxy`, `upstreams` (`hostname`) | — |
 | `ListEvents` | `entity_id`, `severities`, `kind_group` | `ts`, `severity`, `kind`, `entity` (`ts desc`) | `severity_counts`, `kind_counts` |
+| `ListAlerts` | `states`, `severities` | `state`, `severity`, `since`, `rule`, `entity` (`state, severity desc, since desc`; state ranks firing, pending, resolved) | `state_counts` (`firing`, `pending`, `resolved`, `silenced`; ignore `states`) |
+| `ListDeliveries` | `channel_id` | newest first (fixed) | — |
 
 `order_by` is a comma-separated list of `<field> [asc|desc]`; field names are case-insensitive.
 Unknown fields, unknown directions, empty terms, and repeated fields return `InvalidArgument`
@@ -778,6 +849,79 @@ service AgentAdminService {                  // read scope (session or API token
   and the UI shows it in the disabled-action tooltips. Audit attrs add
   `executed_by = agent:<name>`, `agent_audit_id` and `agent_request_id`.
 
+### 8.9 Alerts and notifications (`AlertsService`, `NotificationsService`)
+
+**Authorization.** Reads (alerts, rules, silences, channels, deliveries, Web Push config) need
+the `read` scope like every read RPC. Every write (rule update or reset, silence create or
+expire, channel create, update, delete or test, Web Push subscribe or unsubscribe) needs an
+**admin browser session**: API tokens are refused with `PermissionDenied` whatever their scopes,
+since these settings decide where data leaves the hub. Writes are not gated by `allow_actions`
+(they never touch the host). Both services require the `Connect-Protocol-Version` header (CSRF,
+§13). Every write attempt by an authenticated caller, including refusals, records one audit
+event `audit.alerts.<action>` or `audit.notifications.<action>` with an `ActionAudit` (actor,
+action such as `channel.create`, target, result, error, remote address); audit text never
+contains secrets.
+
+**Channels.** Per channel: name, enabled, minimum severity (default warning), optional filters
+(`kinds`: rule ids or forwarded event kinds with `prefix.*`; `projects`: names or ids),
+`send_resolved`, and `rate_limit_per_hour` (token bucket, 0 = unlimited; excess deliveries are
+logged `rate_limited`).
+
+| Type | Settings | Secret (write-only) | Payload |
+|---|---|---|---|
+| Slack | — | incoming webhook URL (`hooks.slack.com`) | Block Kit in a coloured attachment: header, one section per alert (≤ 10) with severity, state, entity, project, rule, since, link |
+| Webhook | — | URL, signing secret (≥ 16), header values | `asterism.notification.v1` JSON (below) |
+| Email | host, port, STARTTLS / TLS / none (loopback only), username, from, to (≤ 20) | password | multipart/alternative text + HTML, `Auto-Submitted: auto-generated` |
+| Web Push | — | — (subscriptions are per browser) | `{title, body, url, tag, severity, status, ts}` for `web/public/sw.js` |
+| Discord | — | webhook URL (`discord.com`) | embeds (≤ 10), mentions disabled |
+| Telegram | chat id | bot token | HTML `sendMessage` |
+
+The webhook body (`notify.WebhookPayload`) is `{schema: "asterism.notification.v1", type:
+"alert"|"test", status: "firing"|"resolved"|"test", delivery_id, group_key, project, title,
+hub_url, sent_at, alerts: [{id, rule, rule_name, severity, status, entity_id, entity_name,
+project_id, summary, value, starts_at, firing_at, ends_at, url, labels}]}`; headers
+`X-Asterism-Event`, `X-Asterism-Delivery`, `X-Asterism-Schema`, and with a signing secret
+`X-Asterism-Signature: t=<unix seconds>,v1=<hex HMAC-SHA256(secret, "<t>." + body)>` (receivers
+should reject timestamps older than a few minutes). Custom headers cannot override these,
+`Content-Type`, `Host` or `User-Agent`. Links use `server.public_url` (`/alerts?alert=<id>`).
+
+**Secrets.** Secret fields are accepted on create and update and never returned: responses carry
+`SecretStatus{field, has_value, hint}` (a URL's host, `••••`, or the last 4 characters of a long
+token) and webhook `header_names`. An update that leaves a secret empty keeps the stored value;
+optional secrets (`signing_secret`, `password`, `headers.<Name>`) are removed with
+`clear_secrets`. Secrets are sealed per channel with the secret box (§7) and redacted from every
+delivery error (including path segments and query values of secret URLs that receivers echo).
+MCP has no access to channels.
+
+**Delivery.** Notifications for one project (or `host`) and one kind (firing/resolved) are
+grouped for `group_wait` (30 s) and sent as one message per channel; a resolve within the wait
+cancels the pending firing notice. Channel filters apply per alert. Jobs go to a bounded queue
+(256, 4 workers) so evaluation never blocks; a full queue logs `dropped`. Each attempt has a
+30 s timeout; network errors, 408, 429 and 5xx retry up to 4 attempts with full-jitter
+exponential backoff (2 s doubling, 60 s cap, at least `Retry-After`); other failures are
+permanent. Every attempt is written to the delivery log; a final failure raises a
+`notification.failed` warning event (at most one per channel per 10 minutes). "Send test" sends
+one synchronous attempt that bypasses filters, rate limits and the enabled flag. Alerts that
+fired before a channel existed reach it at their next repeat.
+
+**SSRF guard.** HTTP channels (Slack, webhook, Discord, Telegram, Web Push endpoints) require
+https and refuse loopback, private, link-local, CGNAT, multicast and reserved addresses, both
+as literals at validation time and **at dial time** after DNS resolution (so rebinding cannot
+bypass it). Redirects are never followed and no environment proxy is used.
+`[alerts] allow_private_targets = true` lifts the address check and allows plain http for LAN
+receivers and development. SMTP is exempt (loopback relays are common); plain SMTP is allowed
+only to a loopback host unless that flag is set.
+
+**Web Push.** VAPID P-256 keys are generated once into `<data_dir>/vapid.json` (0600); losing
+or replacing it invalidates every browser subscription. `github.com/SherClockHolmes/webpush-go`
+does the RFC 8291 `aes128gcm` encryption and VAPID JWT, over the guarded HTTP client
+(`Urgency` from severity, `Topic` from the group, TTL 1 h). Subscribing a browser (endpoint,
+`p256dh`, `auth`; the endpoint and keys sealed at rest, keyed by the endpoint's SHA-256) creates
+the single "Browser notifications" channel on first use; endpoints answering 404/410 are
+removed. The service worker is served at `/sw.js` with `Cache-Control: no-cache` and
+`Service-Worker-Allowed: /` so it controls the whole SPA. Browsers require a secure context:
+HTTPS in production, `http://localhost` in development.
+
 ---
 
 ## 9. MCP server (agent interface)
@@ -802,7 +946,7 @@ share method signatures), so every interface returns the same answers:
    be driven cross-site. Legacy HTTP+SSE is deprecated and not implemented.
 
 ### 9.3 Tools (v1)
-Eighteen read-only tools with JSON Schemas from Go struct tags, concise descriptions, and MCP
+Nineteen read-only tools with JSON Schemas from Go struct tags, concise descriptions, and MCP
 annotations (`readOnlyHint`, `idempotentHint`, `openWorldHint: false`). A golden file
 (`internal/mcp/testdata/tools.golden`) pins the catalogue.
 
@@ -817,12 +961,13 @@ annotations (`readOnlyHint`, `idempotentHint`, `openWorldHint: false`). A golden
 | `list_images` / `list_volumes` / `list_networks` | Docker resources with users; `filter: unused` for cleanup questions | Adds `ListImagesRequest.unused_only` |
 | `disk_usage` | Root disk + Docker breakdown (images, containers, volumes, build cache) with reclaimable bytes | |
 | `list_events` | Lifecycle events, OOMs, restarts, alerts, audited actions | |
+| `list_alerts` | Active (firing and pending) alerts by default; `state: resolved\|all` for history; severity filter, paged | Never exposes channels or secrets |
 | `tail_logs` | Last N lines (≤ 500) with optional `grep` and `before` paging | Redacts obvious secrets |
 | `top` | Top N workloads by CPU or memory | |
 | `query_metrics` | Entity + metrics + window (≤ 15 min hot buffer) → min/max/avg/p95/last (`raw: true` capped at 500 points) | |
 | `get_topology` | Nodes + edges, optional `focus` entity and `depth` 1–2, capped at 150 nodes | |
 
-`diagnose` arrives with M5 (alerts and observed topology).
+`diagnose` arrives with M5 (observed topology).
 
 **Opt-in mutating tools** (disabled unless `mcp.allow_actions = true`, `destructiveHint: true`):
 `restart_workload`, `stop_workload`, `start_workload`. Every invocation writes an entry to
@@ -895,6 +1040,11 @@ actionable "daemon not reachable" error.
 /host                     Host deep-dive: CPU per core + steal, memory, disks, network, processes
 /events                   Event timeline (`?kind=lifecycle|audit|alerts`, `?severity=critical|warning|info`);
                           `?kind=audit` is the audit log
+/alerts                   Alerts: firing/pending/resolved table with severity and state filters, alert detail
+                          sheet (`?alert=<fingerprint>`, the notification link), silence action; `?tab=rules`
+                          (toggle and edit each rule in a sheet), `?tab=silences`
+/settings/notifications   Notification channels (list with last delivery, editor sheet with write-only
+                          secret inputs, test, delete), browser push for this device, delivery log
 /settings                 Appearance, session, collector, Agents, API & MCP (`?section=agents|mcp`
                           scrolls to and outlines that card), deployment; later auth tokens,
                           categories, alert rules
@@ -906,11 +1056,11 @@ Time range, view mode, category filter, and selections follow the same rule as t
 the URL.
 
 **Navigation (sidebar).** Five labelled groups separated by hairlines: **Overview** (Dashboard,
-Topology map, Events with the active-alert count), **Workloads** (Projects with count,
+Topology map, Alerts with the firing-alert count, Events), **Workloads** (Projects with count,
 Containers with running/total, Images, Volumes, Networks), **Network** (Ports with the public
 port count, Ingress & domains with the route count), **Host** (Host vitals, Disk usage) and
 **Administration** (Audit log, Agents in agent mode only with a connected/enrolled badge,
-Settings, API & MCP). Items that share a path are told apart by
+Settings, Notifications, API & MCP). Items that share a path are told apart by
 the search param they own (`isNavItemActive` in `web/src/components/layout/nav.ts`); nested
 detail routes keep their parent item active. Counts come from `GetOverview` only. The footer
 keeps the live host card and the user menu (theme, documentation link to the public
@@ -1110,6 +1260,11 @@ A monitor with access to `docker.sock` is effectively root. Treat it accordingly
 - **Icon images** are untrusted content: sniffed and decoded before storage, served from a
   hashed key with a sandboxing CSP and `nosniff`, and rendered with `<img>` only, so an SVG can
   never run script in the Asterism origin.
+- **Alerting and notifications** (§8.9): settings writes need an admin browser session (API
+  tokens are refused) and are audited; channel secrets are write-only, AES-256-GCM sealed under
+  `<data_dir>/secret.key`, redacted from delivery errors and never reachable from MCP; HTTP
+  channels refuse private and link-local targets at dial time and never follow redirects; webhook
+  bodies can be HMAC-SHA256 signed.
 - **Supply chain:** `govulncheck` and `pnpm audit` in CI, pinned GitHub Actions, signed
   releases (`cosign`), SBOM.
 
@@ -1149,7 +1304,8 @@ asterism/
 - Go: `1.27.x` (local dev toolchain verified at `1.27.3`; `go.mod` minimum set at M0)
 - Node / pnpm: `Node 24.x` (verified `24.19.0`) / `pnpm`
 - Go libraries: `connectrpc.com/connect` `__`, `modelcontextprotocol/go-sdk` `≥1.7.0`,
-  `moby/moby/client` `__`, `gopsutil` `v4.__`, `modernc.org/sqlite` `__`
+  `moby/moby/client` `__`, `gopsutil` `v4.__`, `modernc.org/sqlite` `v1.63.0`,
+  `SherClockHolmes/webpush-go` `v1.4.0`
 - Web libraries: `React 19.x`, `TanStack Router` `__`, `TanStack Query 5.x`,
   `@xyflow/react 12.x`, `uPlot 1.6.x`, `Recharts 3.x`, `Tailwind CSS 4.x`
 
@@ -1283,19 +1439,19 @@ stdio + stateless Streamable HTTP MCP server, token auth, v1 tools (`overview` t
 `disk_usage`), and `asterism status / ps / ports / ingress / logs / topo`.
 
 **M4 — Storage + history (week 7)**
-SQLite warm/cold tiers, 10 s / 1 min downsampling, range queries, time-range picker, events
+Started with the alerting store (§7: data dir, migrations, secret box). Remaining: SQLite warm/cold tiers, 10 s / 1 min downsampling, range queries, time-range picker, events
 and audit timeline.
 
 **M5 — Observed topology (Tier B) + alerts + diagnose (weeks 8–9)**
-Observed TCP connections via `/proc/<pid>/net/tcp{,6}` + conntrack, edge fading, built-in
-alert rules, `diagnose` tool, project health scores.
+Observed TCP connections via `/proc/<pid>/net/tcp{,6}` + conntrack, edge fading, `diagnose`
+tool, project health scores. Built-in alert rules, silences and notification channels (Slack,
+webhook, email, Web Push, Discord, Telegram) are done (§6.9, §8.9).
 
 **M6 — Polish, VPS deployment templates, and open-source launch (week 10)**
 Light theme pass, empty/error states, Nginx + Caddy + systemd deploy configs, install script,
 GoReleaser, demo media, public release.
 
-**Later:** eBPF Tier C (bytes/sec per edge), multi-host hub/agent, notification channels
-(Telegram/Discord/webhook), Podman, read-only k3s.
+**Later:** eBPF Tier C (bytes/sec per edge), multi-host hub/agent, Podman, read-only k3s.
 
 ---
 
@@ -1346,7 +1502,7 @@ GoReleaser, demo media, public release.
 | D23 | **Push, outbound only**: the agent dials the hub with a host-bound, ingest-only token and never listens | Works behind NAT, CGNAT and default-deny firewalls; the hub holds no SSH keys or root-equivalent VPS credentials; a stolen agent token can spoof one host's data but read nothing | Operators need pull-only collection where no outbound connection is allowed |
 | D24 | **The agent sends facts; the hub assembles them**: normalised `Container`, `Workload`, `PortBinding`, `IngressRoute`, Docker resources and resolved project rules go up, and role, category, icon, edge and upstream resolution stay in `internal/collect/assemble`, shared with the SSH bridge | Classifier and topology changes ship with the hub alone, never requiring agent upgrades; SSH and agent modes classify identically | Hub-side assembly becomes a CPU bottleneck at many hosts |
 | D25 | **Transport**: connect-rpc bidi `Stream` over HTTP/2 as the primary path, with unary `Push` plus a server-streaming `Commands` fallback for HTTP/1.1-only proxies; same frames on both, gzip, per-connection series dictionary, seq + ack only for replayable frames | One session implementation; works through any reverse proxy that already passes `LiveService` streams; acks bound memory on both ends without a disk queue | A transport (QUIC, WebTransport) becomes clearly cheaper, or unary overhead dominates at short flush intervals |
-| D26 | The active alert count covers the whole retained event log with the `alerts` kind group (warning and critical, excluding audit and container lifecycle events), the same rule as `ListEvents(kind_group = "alerts")` | The sidebar badge and the Events "Alerts" filter must agree; routine lifecycle warnings (a container stopping) were inflating the count | Alert rules gain firing/resolved state (M4), at which point the count becomes "firing alerts" |
+| D26 | The active alert count covers the whole retained event log with the `alerts` kind group (warning and critical, excluding audit and container lifecycle events), the same rule as `ListEvents(kind_group = "alerts")`. **Superseded by D34** while alerting is enabled: the count is firing, unsilenced alerts and moves to the Alerts nav item | The sidebar badge and the Events "Alerts" filter must agree; routine lifecycle warnings (a container stopping) were inflating the count | — |
 | D27 | `ListNetworks.user_defined_only` with `NetworkCounts` (`total`, `builtin`, `user_defined`, ignoring that filter); the web Networks tab defaults to user-defined | Docker's `bridge`, `host` and `none` networks are noise on most hosts but must stay one click away; server-side counts keep the toggle correct across pages | Users routinely need the built-in networks first |
 | D28 | Agent budgets: binary ≤ 11 MiB, image ≤ 12 MB, steady RSS ≤ 15 MB at default intervals, CPU ≤ 0.5% of a core, ≤ 2 KB/s, all measured (§16); gzip at `BestSpeed`; `net/http/pprof` only with `-tags pprof` | connect, protobuf and TLS alone are ~9.6 MB of binary; `BestSpeed` saves ~0.3 MB of encoder state per pooled writer for ~10% more bytes on a ~100 B/s stream; release binaries must never listen | Steady RSS at default intervals exceeds 15 MB on reference hardware, or a cheaper compressor appears in connect |
 | D29 | One shared, program-aware redaction rule set for arguments and text (§8.6), applied on the agent and again on the hub, with shell strings tokenized rather than split on whitespace | Short flags (`redis-cli -a`, `mysql -p`, `curl -u`, `sshpass -p`) and env args (`-e KEY=VALUE`) leaked through name-only rules; program context keeps `-p` as a port for `docker run`, `ssh` and `psql` | A credential form escapes the golden tables, or false positives hide information operators need |
@@ -1354,3 +1510,6 @@ GoReleaser, demo media, public release.
 | D31 | CLI views are API clients only: no in-process collector fallback when the daemon is stopped; `top` refreshes by polling `GetOverview` + `ListWorkloads` and `logs -f` by polling `TailLogs`, both at 1 s; the shared `internal/apiclient` serves the CLI and `asterism mcp` | A fallback would duplicate the hub's collector wiring in the CLI and could disagree with the daemon; polling reuses existing RPCs and needs no new streaming contract | Users routinely run one-shot views on hosts without a running daemon, or a server-streaming logs RPC lands |
 | D32 | `[server] data_dir` (default `data`, production `/var/lib/asterism` via `StateDirectory`) for Asterism's own files, starting with project icons as hashed-name files written atomically | Icons need persistence before the M4 SQLite store; files keep images out of the database and are trivially inspectable; hashed names keep project names out of paths | The M4 store lands and small blobs fit better in SQLite |
 | D33 | Real project icons: admin upload > config > label > favicon > detected > monogram; favicons from the compose directory (agent-side scan, digest in inventory, bytes on demand) then the project's public hostnames (SSRF-guarded https, daily, negative-cached); settings RPCs are session-only and audited but not gated by `allow_actions` | Brand icons make projects recognisable at a glance; directory files work without public DNS; on-demand bytes keep agent frames small; uploads change only Asterism's data, not the host, so the host-mutation gate does not apply, but they still need a human admin and an audit trail | Users want per-user icon permissions, or favicon fetches cause noticeable outbound traffic |
+| D34 | Hub-side alerting in `internal/service/alerting`: a fixed built-in rule catalogue (UI-editable settings, no expression language) evaluated against the service snapshot and event stream, with Alertmanager-style lifecycle (fingerprints, `for`, keep-firing hold, repeat, group wait, silences, flap suppression, startup grace) | One code path for local, ssh, agent and showcase modes; the catalogue covers what single-VPS operators ask for without a PromQL-like language; state in SQLite survives restarts without duplicate notifications | Users need custom expressions, per-rule routing trees, or alert evaluation on the agent while the hub is offline |
+| D35 | SQLite (`modernc.org/sqlite`) at `<data_dir>/asterism.db` with forward-only migrations and protobuf blobs per row, started for alerting ahead of the M4 metric tiers; secrets sealed with AES-256-GCM under `<data_dir>/secret.key` | Pure Go keeps cross-compilation; blobs avoid a migration per field; a key file next to the database is simple to back up and restore with it, and keeps secrets out of plaintext dumps and backups of the database alone | Multi-user accounts or secret rotation need a KMS or per-secret keys |
+| D36 | Notification channels Slack, signed webhook (`asterism.notification.v1`), SMTP, Web Push (`webpush-go`, VAPID in the data dir), Discord and Telegram; settings writes only from an admin browser session; write-only secrets; SSRF guard at dial time with `allow_private_targets` as the only escape hatch | These cover team chat, automation, email and phones without third-party relays; admin-session-only writes stop a leaked API token from redirecting alerts or exfiltrating data; dial-time checks defeat DNS rebinding | Operators need token-driven configuration (infrastructure as code), or a channel type that cannot work over plain HTTPS |
