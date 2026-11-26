@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
 import {
+  validateAlertsSearch,
   validateContainerDetailSearch,
   validateContainersSearch,
   validateEventsSearch,
@@ -116,5 +117,10 @@ describe("route search validators", () => {
     });
     expect(validateTopologySearch({ view: "isometric", project: "" })).toEqual({});
     expect(validateTopologySearch({ view: "3d" })).toEqual({});
+  });
+  it("validates alerts tabs, filters and deep links", () => {
+    expect(validateAlertsSearch({ tab: "rules", state: "resolved", severity: "critical" })).toEqual({ tab: "rules", state: "resolved", severity: "critical" });
+    expect(validateAlertsSearch({ tab: "alerts", state: "active", severity: "loud" })).toEqual({});
+    expect(validateAlertsSearch({ alert: "disk_usage|host|/" })).toEqual({ alert: "disk_usage|host|/" });
   });
 });

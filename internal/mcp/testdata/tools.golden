@@ -74,6 +74,49 @@ One workload: image, role, ports, networks, environment variable names (never va
     "type": "object"
   }
 
+## list_alerts — List alerts
+Alerts from the built-in rules (container exits, restart loops, failing health checks, OOM kills, memory, CPU and disk thresholds, offline agents, failed units). Defaults to active alerts (firing and pending); state "resolved" or "all" shows recent history. order_by: state, severity, since, rule, entity (default "state, severity desc, since desc").
+  {
+    "additionalProperties": false,
+    "properties": {
+      "order_by": {
+        "description": "default \"state, severity desc, since desc\"",
+        "type": "string"
+      },
+      "page": {
+        "description": "1-based page (default 1)",
+        "maximum": 2147483647,
+        "minimum": -2147483648,
+        "type": "integer"
+      },
+      "page_size": {
+        "description": "items per page, 10-100 (default 25)",
+        "maximum": 2147483647,
+        "minimum": -2147483648,
+        "type": "integer"
+      },
+      "query": {
+        "description": "case-insensitive substring over rule, entity, project and summary",
+        "type": "string"
+      },
+      "severities": {
+        "description": "any of info, warning, critical",
+        "items": {
+          "type": "string"
+        },
+        "type": [
+          "null",
+          "array"
+        ]
+      },
+      "state": {
+        "description": "active (default: firing and pending), firing, pending, resolved or all",
+        "type": "string"
+      }
+    },
+    "type": "object"
+  }
+
 ## list_containers — List containers
 Every Docker container, running or stopped, with state, health, restarts, OOM kills, CPU, memory and ports. order_by: name, project, state, image, cpu, memory, uptime, restarts, created (default "project, name").
   {

@@ -1,0 +1,92 @@
+{
+  "text": "FIRING (2) shop: Container exited unexpectedly · shop-api-1 and 1 more",
+  "attachments": [
+    {
+      "color": "#E5484D",
+      "blocks": [
+        {
+          "type": "header",
+          "text": {
+            "type": "plain_text",
+            "text": "FIRING (2) shop: Container exited unexpectedly · shop-api-1 and 1 more"
+          }
+        },
+        {
+          "type": "section",
+          "text": {
+            "type": "mrkdwn",
+            "text": "*\u003chttps://monitor.example.com/alerts?alert=container_exited%7Cctr%3Ashop-api-1|Container shop-api-1 exited with code 1 \u0026lt;\u0026amp;\u0026gt;\u003e*"
+          },
+          "fields": [
+            {
+              "type": "mrkdwn",
+              "text": "*Severity*\ncritical"
+            },
+            {
+              "type": "mrkdwn",
+              "text": "*State*\nfiring"
+            },
+            {
+              "type": "mrkdwn",
+              "text": "*Entity*\n`ctr:shop-api-1`"
+            },
+            {
+              "type": "mrkdwn",
+              "text": "*Project*\nproj:shop"
+            },
+            {
+              "type": "mrkdwn",
+              "text": "*Rule*\nContainer exited unexpectedly"
+            },
+            {
+              "type": "mrkdwn",
+              "text": "*Since*\n2026-11-26T11:59:00Z"
+            }
+          ]
+        },
+        {
+          "type": "section",
+          "text": {
+            "type": "mrkdwn",
+            "text": "*Health check failing*"
+          },
+          "fields": [
+            {
+              "type": "mrkdwn",
+              "text": "*Severity*\nwarning"
+            },
+            {
+              "type": "mrkdwn",
+              "text": "*State*\nfiring"
+            },
+            {
+              "type": "mrkdwn",
+              "text": "*Entity*\n`ctr:shop-worker-1`"
+            },
+            {
+              "type": "mrkdwn",
+              "text": "*Project*\nproj:shop"
+            },
+            {
+              "type": "mrkdwn",
+              "text": "*Rule*\nHealth check failing"
+            },
+            {
+              "type": "mrkdwn",
+              "text": "*Since*\n2026-11-26T11:59:00Z"
+            }
+          ]
+        },
+        {
+          "type": "context",
+          "elements": [
+            {
+              "type": "mrkdwn",
+              "text": "Asterism · \u003chttps://monitor.example.com/alerts|Open alerts\u003e"
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}

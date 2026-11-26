@@ -72,6 +72,7 @@ func newHub(t *testing.T) hub {
 	svc := service.New(b, r, fakeHost{}, sc, "showcase")
 	svc.SetLogger(slog.New(slog.NewTextHandler(io.Discard, nil)))
 	svc.ConfigureDocker(sc, sc, service.ActionPolicy{DefaultTimeout: time.Second})
+	configureTestAlerts(t, svc)
 	h := api.New(svc)
 	mux := http.NewServeMux()
 	mgr.RegisterRoutes(mux)
@@ -218,6 +219,8 @@ func TestToolsOverStreamableHTTP(t *testing.T) {
 		{"disk_usage", nil, "Root disk 40.0 GiB of 100.0 GiB (40%)"},
 		{"list_events", map[string]any{"severities": []string{"warning", "critical"}}, "events"},
 		{"tail_logs", map[string]any{"workload_id": "ctr:nova-api", "limit": 5}, "from ctr:nova-api"},
+		{"list_alerts", nil, "firing"},
+		{"list_alerts", map[string]any{"state": "all", "severities": []string{"critical"}}, "alerts ("},
 		{"top", map[string]any{"metric": "memory", "limit": 3}, "Top 3 workloads by memory"},
 		{"query_metrics", map[string]any{"window": "5m"}, "cpu.util avg"},
 		{"get_topology", map[string]any{"focus": "ctr:nova-api"}, "nodes and"},
@@ -247,6 +250,7 @@ func TestToolErrorsAreActionable(t *testing.T) {
 		{"list_projects", map[string]any{"order_by": "weight"}, "allowed"},
 		{"query_metrics", map[string]any{"window": "2h"}, "longer than the 15m0s"},
 		{"tail_logs", map[string]any{"workload_id": ""}, "workload_id is required"},
+		{"list_alerts", map[string]any{"state": "burning"}, "use active, firing"},
 		{"get_topology", map[string]any{"focus": "ctr:ghost"}, "unknown entity"},
 	} {
 		r := callTool(t, cs, tc.tool, tc.args)

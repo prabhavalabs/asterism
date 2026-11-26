@@ -10,9 +10,10 @@ behind_tls = false
 # External origin (no path), used to make link-preview tags absolute so shared
 # links show the Asterism card. Also ASTERISM_PUBLIC_URL.
 # public_url = "https://monitor.example.com"
-# Asterism's own state (uploaded and cached project icons). Relative paths
-# resolve against the working directory; production uses the systemd
-# StateDirectory. Also ASTERISM_DATA_DIR.
+# Asterism's own state: the SQLite store, secret.key, vapid.json and
+# project icons (ASTERISM_DATA_DIR). Relative paths resolve against the
+# working directory; the systemd unit's StateDirectory is /var/lib/asterism.
+# Created with mode 0700.
 data_dir = "data"
 # data_dir = "/var/lib/asterism"
 
@@ -110,3 +111,18 @@ favicon_fetch = true
 # sha256 = "<64-character hex digest printed by asterism agent token create>"
 # machine_id = ""        # optional pin; the hub logs the observed value on first connect
 # allow_actions = false  # hub-side per-agent gate
+
+[alerts]
+# Built-in alert rules and notification channels (configure both in the UI:
+# Alerts -> Rules, Settings -> Notifications). Env: ASTERISM_ALERTS_ENABLED,
+# ASTERISM_ALERTS_EVALUATION_INTERVAL, ASTERISM_ALERTS_GROUP_WAIT,
+# ASTERISM_ALERTS_ALLOW_PRIVATE_TARGETS.
+enabled = true
+evaluation_interval = "15s"
+# Batch alerts of one project that fire within this window (0s to 5m).
+group_wait = "30s"
+# Re-send alerts that are still firing (5m to 168h).
+repeat_interval = "4h"
+# Let Slack/webhook/Discord/Telegram/Web Push reach loopback, private and
+# link-local addresses (and plain http there). Keep false in production.
+allow_private_targets = false

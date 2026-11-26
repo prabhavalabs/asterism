@@ -455,6 +455,13 @@ func (v *HostView) applyContainerUpdate(c *asterismv1.Container) {
 // service.HostProvider
 // ---------------------------------------------------------------------------
 
+// Filesystems returns the agent's per-mount usage (service.FilesystemProvider).
+func (v *HostView) Filesystems() []*asterismv1.FilesystemUsage {
+	v.mu.RLock()
+	defer v.mu.RUnlock()
+	return cloneList(v.filesystems)
+}
+
 // HostSnapshot returns static host facts merged with live vitals.
 func (v *HostView) HostSnapshot() *asterismv1.HostInfo {
 	v.mu.RLock()

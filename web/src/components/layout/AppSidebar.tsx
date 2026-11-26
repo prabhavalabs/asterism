@@ -25,7 +25,7 @@ import { NAV_SECTIONS, isNavItemActive, navItemsFor, type NavCounts, type NavIte
 import { UserMenu } from "./UserMenu";
 
 const COUNT_NOUNS: Record<keyof NavCounts, string> = {
-  alerts: "active alerts",
+  alerts: "firing alerts",
   projects: "projects",
   publicPorts: "public ports",
   ingressRoutes: "ingress routes",

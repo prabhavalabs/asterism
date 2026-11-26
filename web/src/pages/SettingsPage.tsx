@@ -1,6 +1,6 @@
 import { useEffect, useRef } from "react";
-import { useSearch } from "@tanstack/react-router";
-import { ComputerIcon, ComputerTerminal01Icon, Logout01Icon, Moon02Icon, PaintBoardIcon, Plug01Icon, SecurityCheckIcon, ServerStack01Icon, Sun03Icon } from "@hugeicons/core-free-icons";
+import { Link, useSearch } from "@tanstack/react-router";
+import { ArrowRight01Icon, ComputerIcon, ComputerTerminal01Icon, Logout01Icon, Mail01Icon, Moon02Icon, PaintBoardIcon, Plug01Icon, SecurityCheckIcon, ServerStack01Icon, Sun03Icon } from "@hugeicons/core-free-icons";
 import { Icon, type IconData } from "@/components/ui/icon";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import type { HostInfo } from "@/gen/asterism/v1/asterism_pb";
@@ -89,7 +89,7 @@ export function SettingsPage({ host, sourceMode, userEmail, onLogout }: Settings
     <Page>
       <PageHeader title="Settings" description="Appearance, your session, the collector and how agents connect." />
 
-      {/* Short preference cards pair up here; a lone card spans the row. */}
+      {/* Appearance and Notifications are one row each, so the pair ends level. */}
       <CardGrid gap={5} breakpoint="xl">
         <SectionCard title="Appearance" icon={PaintBoardIcon} flush {...target("appearance")}>
           <PropertyRow label="Theme" hint="System follows your OS setting">
@@ -100,6 +100,17 @@ export function SettingsPage({ host, sourceMode, userEmail, onLogout }: Settings
               onValueChange={setPreference}
               options={THEME_OPTIONS}
             />
+          </PropertyRow>
+        </SectionCard>
+
+        <SectionCard title="Notifications" icon={Mail01Icon} flush>
+          <PropertyRow label="Alert channels" hint="Slack, webhooks, email and browser push">
+            <Button variant="outline" size="sm" asChild>
+              <Link to="/settings/notifications">
+                Manage
+                <Icon icon={ArrowRight01Icon} />
+              </Link>
+            </Button>
           </PropertyRow>
         </SectionCard>
       </CardGrid>

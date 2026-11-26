@@ -49,6 +49,13 @@ func Handler(publicURL string) http.Handler {
 			case isBrandAsset(cleanPath):
 				w.Header().Set("Cache-Control", "public, max-age=86400")
 			}
+			if cleanPath == "sw.js" {
+				// The Web Push service worker must be revalidated on every
+				// load so updates reach browsers; scope is the whole SPA.
+				w.Header().Set("Cache-Control", "no-cache")
+				w.Header().Set("Content-Type", "text/javascript; charset=utf-8")
+				w.Header().Set("Service-Worker-Allowed", "/")
+			}
 			if strings.HasSuffix(cleanPath, ".webmanifest") {
 				w.Header().Set("Content-Type", "application/manifest+json")
 			}

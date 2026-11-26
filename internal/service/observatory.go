@@ -62,6 +62,9 @@ type Observatory struct {
 	onViewers   func(n int)
 
 	agents AgentDirectory
+
+	// alerts is nil when [alerts] enabled = false.
+	alerts *alertsState
 }
 
 // AgentDirectory reports enrolled asterism-agents (agent mode).
@@ -176,6 +179,9 @@ func (o *Observatory) Overview(p auth.Principal) *asterismv1.GetOverviewResponse
 		}
 	}
 	activeAlerts := o.activeAlertCount()
+	if firing, ok := o.FiringAlertCount(); ok {
+		activeAlerts = firing
+	}
 
 	var counts *asterismv1.ContainerCounts
 	if o.docker != nil {

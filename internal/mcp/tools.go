@@ -85,6 +85,9 @@ func (s *server) register(srv *sdk.Server) {
 	addTool(srv, "list_events", "List events",
 		"Lifecycle events, restarts, OOM kills, alerts, proxy reloads and audited actions, newest first. order_by: ts, severity, kind, entity (default \"ts desc\").",
 		s.listEvents)
+	addTool(srv, "list_alerts", "List alerts",
+		"Alerts from the built-in rules (container exits, restart loops, failing health checks, OOM kills, memory, CPU and disk thresholds, offline agents, failed units). Defaults to active alerts (firing and pending); state \"resolved\" or \"all\" shows recent history. order_by: state, severity, since, rule, entity (default \"state, severity desc, since desc\").",
+		s.listAlerts)
 	addTool(srv, "tail_logs", "Tail logs",
 		"Recent log lines for one workload (newest last), with optional substring filter. Obvious secrets are redacted.",
 		s.tailLogs)
@@ -789,6 +792,100 @@ func (s *server) listEvents(ctx context.Context, in ListEventsIn) (string, ListE
 	}
 	return fmt.Sprintf("%d of %d events (%d critical, %d warning, %d info).",
 		len(out.Events), out.Page.TotalSize, sc.GetCritical(), sc.GetWarning(), sc.GetInfo()), out, nil
+}
+
+type ListAlertsIn struct {
+	State      string   `json:"state,omitempty" jsonschema:"active (default: firing and pending), firing, pending, resolved or all"`
+	Severities []string `json:"severities,omitempty" jsonschema:"any of info, warning, critical"`
+	Query      string   `json:"query,omitempty" jsonschema:"case-insensitive substring over rule, entity, project and summary"`
+	OrderBy    string   `json:"order_by,omitempty" jsonschema:"default \"state, severity desc, since desc\""`
+	Page       int32    `json:"page,omitempty" jsonschema:"1-based page (default 1)"`
+	PageSize   int32    `json:"page_size,omitempty" jsonschema:"items per page, 10-100 (default 25)"`
+}
+
+type AlertView struct {
+	ID         string            `json:"id"`
+	Rule       string            `json:"rule"`
+	RuleName   string            `json:"rule_name"`
+	Severity   string            `json:"severity"`
+	State      string            `json:"state"`
+	EntityID   string            `json:"entity_id"`
+	EntityName string            `json:"entity_name,omitempty"`
+	ProjectID  string            `json:"project_id,omitempty"`
+	Summary    string            `json:"summary"`
+	Since      string            `json:"since"`
+	FiringAt   string            `json:"firing_at,omitempty"`
+	ResolvedAt string            `json:"resolved_at,omitempty"`
+	Value      float64           `json:"value,omitempty"`
+	Silenced   bool              `json:"silenced,omitempty"`
+	Flapping   bool              `json:"flapping,omitempty"`
+	Labels     map[string]string `json:"labels,omitempty"`
+}
+
+type ListAlertsOut struct {
+	Alerts []AlertView       `json:"alerts"`
+	Page   Page              `json:"page"`
+	Counts map[string]uint32 `json:"state_counts"`
+}
+
+var alertSeverityNames = map[string]asterismv1.AlertSeverity{
+	"info": asterismv1.AlertSeverity_ALERT_SEVERITY_INFO, "warning": asterismv1.AlertSeverity_ALERT_SEVERITY_WARNING,
+	"critical": asterismv1.AlertSeverity_ALERT_SEVERITY_CRITICAL,
+}
+
+func alertStateName(s asterismv1.AlertState) string {
+	return strings.ToLower(strings.TrimPrefix(s.String(), "ALERT_STATE_"))
+}
+
+func alertSeverityName(s asterismv1.AlertSeverity) string {
+	return strings.ToLower(strings.TrimPrefix(s.String(), "ALERT_SEVERITY_"))
+}
+
+func (s *server) listAlerts(ctx context.Context, in ListAlertsIn) (string, ListAlertsOut, error) {
+	var states []asterismv1.AlertState
+	switch strings.ToLower(strings.TrimSpace(in.State)) {
+	case "", "active":
+		states = []asterismv1.AlertState{asterismv1.AlertState_ALERT_STATE_FIRING, asterismv1.AlertState_ALERT_STATE_PENDING}
+	case "firing":
+		states = []asterismv1.AlertState{asterismv1.AlertState_ALERT_STATE_FIRING}
+	case "pending":
+		states = []asterismv1.AlertState{asterismv1.AlertState_ALERT_STATE_PENDING}
+	case "resolved":
+		states = []asterismv1.AlertState{asterismv1.AlertState_ALERT_STATE_RESOLVED}
+	case "all":
+	default:
+		return "", ListAlertsOut{}, fmt.Errorf("unknown state %q; use active, firing, pending, resolved or all", in.State)
+	}
+	var sevs []asterismv1.AlertSeverity
+	for _, v := range in.Severities {
+		sev, ok := alertSeverityNames[strings.ToLower(strings.TrimSpace(v))]
+		if !ok {
+			return "", ListAlertsOut{}, fmt.Errorf("unknown severity %q; use info, warning or critical", v)
+		}
+		sevs = append(sevs, sev)
+	}
+	r, err := call(s.ctx(ctx), s.b.ListAlerts, &asterismv1.ListAlertsRequest{
+		States: states, Severities: sevs, Query: in.Query, OrderBy: in.OrderBy, Page: pageReq(in.Page, in.PageSize),
+	})
+	if err != nil {
+		return "", ListAlertsOut{}, err
+	}
+	c := r.GetStateCounts()
+	out := ListAlertsOut{
+		Alerts: []AlertView{},
+		Page:   pageOf(r.GetPageInfo(), "state, severities or query"),
+		Counts: map[string]uint32{"firing": c.GetFiring(), "pending": c.GetPending(), "resolved": c.GetResolved(), "silenced": c.GetSilenced()},
+	}
+	for _, a := range r.GetAlerts() {
+		out.Alerts = append(out.Alerts, AlertView{
+			ID: a.Id, Rule: a.RuleId, RuleName: a.RuleName, Severity: alertSeverityName(a.Severity), State: alertStateName(a.State),
+			EntityID: a.EntityId, EntityName: a.EntityName, ProjectID: a.ProjectId, Summary: a.Summary,
+			Since: iso(a.StartedAtMs), FiringAt: iso(a.FiringAtMs), ResolvedAt: iso(a.ResolvedAtMs), Value: a.Value,
+			Silenced: a.SilencedBy != "", Flapping: a.Flapping, Labels: a.Labels,
+		})
+	}
+	return fmt.Sprintf("%d of %d alerts (%d firing, %d pending, %d resolved recently; %d silenced).",
+		len(out.Alerts), out.Page.TotalSize, c.GetFiring(), c.GetPending(), c.GetResolved(), c.GetSilenced()), out, nil
 }
 
 type TailLogsIn struct {

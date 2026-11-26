@@ -1,0 +1,48 @@
+From: "Asterism" <alerts@example.com>
+To: <ops@example.com>
+Subject: =?utf-8?q?[Asterism]_FIRING_(2)_shop:_Container_exited_unexpectedly_?= =?utf-8?q?=C2=B7_shop-api-1_and_1_more?=
+Date: Thu, 26 Nov 2026 12:00:00 +0000
+Message-ID: <d-123@example.com>
+MIME-Version: 1.0
+Auto-Submitted: auto-generated
+Content-Type: multipart/alternative; boundary="BOUNDARY"
+
+--BOUNDARY
+Content-Transfer-Encoding: quoted-printable
+Content-Type: text/plain; charset=utf-8
+
+FIRING (2) shop: Container exited unexpectedly =C2=B7 shop-api-1 and 1 more
+
+[CRITICAL] firing: Container shop-api-1 exited with code 1 <&>
+  entity: ctr:shop-api-1  project: proj:shop  since: 2026-11-26T11:59:00Z
+  https://monitor.example.com/alerts?alert=3Dcontainer_exited%7Cctr%3Ashop-=
+api-1
+[WARNING] firing: Health check failing
+  entity: ctr:shop-worker-1  project: proj:shop  since: 2026-11-26T11:59:00=
+Z
+
+Open alerts: https://monitor.example.com/alerts
+
+--=20
+Sent by Asterism
+
+--BOUNDARY
+Content-Transfer-Encoding: quoted-printable
+Content-Type: text/html; charset=utf-8
+
+<!doctype html><html><body style=3D"font-family:system-ui,-apple-system,Seg=
+oe UI,sans-serif;font-size:14px;line-height:1.5"><h2 style=3D"font-size:16p=
+x;margin:0 0 12px">FIRING (2) shop: Container exited unexpectedly =C2=B7 sh=
+op-api-1 and 1 more</h2><table cellpadding=3D"6" cellspacing=3D"0" style=3D=
+"border-collapse:collapse"><tr><th align=3Dleft>Severity</th><th align=3Dle=
+ft>State</th><th align=3Dleft>Alert</th><th align=3Dleft>Entity</th><th ali=
+gn=3Dleft>Project</th><th align=3Dleft>Since</th></tr><tr><td>critical</td>=
+<td>firing</td><td><a href=3D"https://monitor.example.com/alerts?alert=3Dco=
+ntainer_exited%7Cctr%3Ashop-api-1">Container shop-api-1 exited with code 1 =
+&lt;&amp;&gt;</a></td><td><code>ctr:shop-api-1</code></td><td>proj:shop</td=
+><td>1m</td></tr><tr><td>warning</td><td>firing</td><td>Health check failin=
+g</td><td><code>ctr:shop-worker-1</code></td><td>proj:shop</td><td>1m</td><=
+/tr></table><p><a href=3D"https://monitor.example.com/alerts">Open alerts i=
+n Asterism</a></p><p style=3D"color:#888;font-size:12px">Sent by Asterism</=
+p></body></html>
+--BOUNDARY--

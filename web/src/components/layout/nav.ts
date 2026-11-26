@@ -1,5 +1,6 @@
 import {
   Activity01Icon,
+  Alert02Icon,
   AuditIcon,
   ConnectIcon,
   ContainerIcon,
@@ -10,6 +11,7 @@ import {
   Globe02Icon,
   HardDriveIcon,
   Image01Icon,
+  Mail01Icon,
   NetworkIcon,
   Notification03Icon,
   Plug01Icon,
@@ -67,7 +69,8 @@ export const NAV_SECTIONS: ReadonlyArray<{ id: NavSection; label: string }> = [
 export const NAV_ITEMS: readonly NavItem[] = [
   { id: "dashboard", label: "Dashboard", to: "/", icon: DashboardSquare01Icon, section: "overview", exact: true },
   { id: "topology", label: "Topology map", to: "/topology", icon: CubeIcon, section: "overview" },
-  { id: "events", label: "Events", to: "/events", icon: Notification03Icon, section: "overview", param: "kind", count: "alerts" },
+  { id: "alerts", label: "Alerts", to: "/alerts", icon: Alert02Icon, section: "overview", param: "tab", count: "alerts" },
+  { id: "events", label: "Events", to: "/events", icon: Notification03Icon, section: "overview", param: "kind" },
 
   { id: "projects", label: "Projects", to: "/projects", icon: Folder01Icon, section: "workloads", count: "projects" },
   { id: "containers", label: "Containers", to: "/containers", icon: ContainerIcon, section: "workloads", param: "tab", count: "containers" },
@@ -83,7 +86,8 @@ export const NAV_ITEMS: readonly NavItem[] = [
 
   { id: "audit", label: "Audit log", to: "/events", search: { kind: "audit" }, icon: AuditIcon, section: "admin", param: "kind" },
   { id: "agents", label: "Agents", to: "/settings", search: { section: "agents" }, icon: Satellite01Icon, section: "admin", param: "section", count: "agents", mode: "agent" },
-  { id: "settings", label: "Settings", to: "/settings", icon: Settings01Icon, section: "admin", param: "section" },
+  { id: "settings", label: "Settings", to: "/settings", icon: Settings01Icon, section: "admin", param: "section", exact: true },
+  { id: "notifications", label: "Notifications", to: "/settings/notifications", icon: Mail01Icon, section: "admin" },
   { id: "mcp", label: "API & MCP", to: "/settings", search: { section: "mcp" }, icon: Plug01Icon, section: "admin", param: "section" },
 ];
 

@@ -1,0 +1,6 @@
+<b>FIRING (2) shop: Container exited unexpectedly · shop-api-1 and 1 more</b>
+
+• [critical] <a href="https://monitor.example.com/alerts?alert=container_exited%7Cctr%3Ashop-api-1">Container shop-api-1 exited with code 1 &lt;&amp;&gt;</a>
+  <code>ctr:shop-api-1</code>
+• [warning] Health check failing
+  <code>ctr:shop-worker-1</code>

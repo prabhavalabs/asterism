@@ -1,0 +1,62 @@
+{
+  "username": "Asterism",
+  "content": "FIRING (2) shop: Container exited unexpectedly · shop-api-1 and 1 more",
+  "embeds": [
+    {
+      "title": "FIRING · Container exited unexpectedly",
+      "description": "Container shop-api-1 exited with code 1 \u003c\u0026\u003e",
+      "url": "https://monitor.example.com/alerts?alert=container_exited%7Cctr%3Ashop-api-1",
+      "color": 15026253,
+      "fields": [
+        {
+          "name": "Severity",
+          "value": "critical",
+          "inline": true
+        },
+        {
+          "name": "Entity",
+          "value": "ctr:shop-api-1",
+          "inline": true
+        },
+        {
+          "name": "Project",
+          "value": "proj:shop",
+          "inline": true
+        }
+      ],
+      "timestamp": "2026-11-26T11:59:00Z",
+      "footer": {
+        "text": "Asterism"
+      }
+    },
+    {
+      "title": "FIRING · Health check failing",
+      "description": "Health check failing",
+      "color": 16098596,
+      "fields": [
+        {
+          "name": "Severity",
+          "value": "warning",
+          "inline": true
+        },
+        {
+          "name": "Entity",
+          "value": "ctr:shop-worker-1",
+          "inline": true
+        },
+        {
+          "name": "Project",
+          "value": "proj:shop",
+          "inline": true
+        }
+      ],
+      "timestamp": "2026-11-26T11:59:00Z",
+      "footer": {
+        "text": "Asterism"
+      }
+    }
+  ],
+  "allowed_mentions": {
+    "parse": []
+  }
+}

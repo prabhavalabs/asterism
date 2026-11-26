@@ -28,6 +28,9 @@ describe("isNavItemActive", () => {
     ["agents", "/settings", { section: "agents" }, ["agents"]],
     ["project detail", "/projects/blog", {}, ["projects"]],
     ["host vitals", "/host", {}, ["host"]],
+    ["alerts", "/alerts", {}, ["alerts"]],
+    ["alerts rules tab", "/alerts", { tab: "rules" }, ["alerts"]],
+    ["notifications is not settings", "/settings/notifications", {}, ["notifications"]],
   ])("%s", (_name, pathname, search, expected) => {
     expect(activeIds(pathname, search)).toEqual(expected);
   });

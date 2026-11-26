@@ -1,0 +1,432 @@
+syntax = "proto3";
+
+package asterism.v1;
+
+import "asterism/v1/asterism.proto";
+
+// ---------------------------------------------------------------------------
+// Alerting and notifications (docs/BLUEPRINT.md §6.9, §8.9)
+//
+// The hub evaluates a built-in rule catalogue against the service snapshot
+// and the event stream every [alerts] evaluation_interval. Alerts move
+// inactive -> pending -> firing -> resolved, deduplicated by fingerprint
+// (rule + entity [+ key]). Firing and resolved transitions are routed to
+// notification channels (Slack, webhook, email, Web Push, Discord,
+// Telegram) after a short group wait.
+//
+// Reads need the read scope. Every write needs an admin browser session
+// (API tokens are refused, whatever their scopes) and is audited.
+// Channel secrets are write-only: responses never carry them.
+// ---------------------------------------------------------------------------
+
+enum AlertSeverity {
+  ALERT_SEVERITY_UNSPECIFIED = 0;
+  ALERT_SEVERITY_INFO = 1;
+  ALERT_SEVERITY_WARNING = 2;
+  ALERT_SEVERITY_CRITICAL = 3;
+}
+
+enum AlertState {
+  ALERT_STATE_UNSPECIFIED = 0;
+  // The condition holds but has not lasted the rule's `for` duration yet.
+  ALERT_STATE_PENDING = 1;
+  ALERT_STATE_FIRING = 2;
+  ALERT_STATE_RESOLVED = 3;
+}
+
+// How a rule is configured; tells clients which AlertRule fields apply.
+enum AlertRuleKind {
+  ALERT_RULE_KIND_UNSPECIFIED = 0;
+  // A boolean condition per entity (severity, for_seconds).
+  ALERT_RULE_KIND_CONDITION = 1;
+  // A percentage with warning and critical thresholds (for_seconds).
+  ALERT_RULE_KIND_THRESHOLD = 2;
+  // A count within a window (count, window_seconds, severity).
+  ALERT_RULE_KIND_COUNT = 3;
+  // Forwards matching events (event_kinds, min_event_severity).
+  ALERT_RULE_KIND_FORWARD = 4;
+}
+
+message AlertRule {
+  // Stable id, e.g. "disk_usage" or "container_exited".
+  string id = 1;
+  string name = 2;
+  string description = 3;
+  AlertRuleKind kind = 4;
+  bool enabled = 5;
+  // Severity for CONDITION and COUNT rules. THRESHOLD rules derive it from
+  // the threshold crossed; FORWARD rules use the event's severity.
+  AlertSeverity severity = 6;
+  // THRESHOLD rules, in percent (0 disables that level; one must be set).
+  double warning_threshold = 7;
+  double critical_threshold = 8;
+  // COUNT rules: at least `count` occurrences within window_seconds.
+  uint32 count = 9;
+  uint32 window_seconds = 10;
+  // How long the condition must hold before the alert fires (0 = at once).
+  uint32 for_seconds = 11;
+  // Optional project filters (project names or ids). Exclude wins.
+  repeated string include_projects = 12;
+  repeated string exclude_projects = 13;
+  // FORWARD rules: event kinds to forward (empty = every non-audit kind).
+  repeated string event_kinds = 14;
+  AlertSeverity min_event_severity = 15;
+  // True when the settings equal the built-in defaults.
+  bool is_default = 16;
+}
+
+message Alert {
+  // Fingerprint: rule id + entity (+ key such as a mount point).
+  string id = 1;
+  string rule_id = 2;
+  string rule_name = 3;
+  AlertSeverity severity = 4;
+  AlertState state = 5;
+  string entity_id = 6;
+  string entity_name = 7;
+  // Project id ("proj:shop") when the entity belongs to one.
+  string project_id = 8;
+  string summary = 9;
+  // When the condition was first seen (pending since).
+  int64 started_at_ms = 10;
+  int64 firing_at_ms = 11;
+  int64 resolved_at_ms = 12;
+  int64 last_seen_ms = 13;
+  int64 last_notified_ms = 14;
+  // Current value for threshold rules (percent), otherwise 0.
+  double value = 15;
+  // Non-secret context (mount, exit_code, event_kind, ...).
+  map<string, string> labels = 16;
+  // Id of the silence muting this alert, if any.
+  string silenced_by = 17;
+  // Suppressed because it changed state too often in the last hour.
+  bool flapping = 18;
+  // State changes within the flap window.
+  uint32 transitions = 19;
+  // Event-sourced alerts (forwarded events) resolve quietly after a hold.
+  bool one_shot = 20;
+}
+
+message AlertStateCounts {
+  uint32 pending = 1;
+  uint32 firing = 2;
+  uint32 resolved = 3;
+  uint32 silenced = 4;
+}
+
+message ListAlertsRequest {
+  PageRequest page = 1;
+  // Substring over rule, entity, project, and summary.
+  string query = 2;
+  // Empty = every state.
+  repeated AlertState states = 3;
+  repeated AlertSeverity severities = 4;
+  // Fields: since, severity, state, rule, entity (default "state, severity desc, since desc").
+  string order_by = 5;
+}
+
+message ListAlertsResponse {
+  repeated Alert alerts = 1;
+  PageInfo page_info = 2;
+  // Counts ignore the states filter and the page.
+  AlertStateCounts state_counts = 3;
+}
+
+message ListRulesRequest {}
+
+message ListRulesResponse {
+  repeated AlertRule rules = 1;
+}
+
+message UpdateRuleRequest {
+  // The full rule settings; id selects the rule. Name, description, kind,
+  // and is_default are ignored.
+  AlertRule rule = 1;
+  // Restore the built-in defaults instead (rule only needs its id).
+  bool reset = 2;
+}
+
+message Silence {
+  string id = 1;
+  // Matchers; at least one is set. An empty matcher matches anything.
+  string rule_id = 2;
+  string entity_id = 3;
+  string project_id = 4;
+  string reason = 5;
+  string created_by = 6;
+  int64 created_at_ms = 7;
+  int64 ends_at_ms = 8;
+  // False once ends_at_ms has passed or the silence was expired early.
+  bool active = 9;
+}
+
+message ListSilencesRequest {
+  // Also return silences that ended in the last 7 days.
+  bool include_expired = 1;
+}
+
+message ListSilencesResponse {
+  repeated Silence silences = 1;
+}
+
+message CreateSilenceRequest {
+  string rule_id = 1;
+  string entity_id = 2;
+  string project_id = 3;
+  // 60 s to 30 days.
+  uint32 duration_seconds = 4;
+  string reason = 5;
+}
+
+message DeleteSilenceRequest {
+  string id = 1;
+}
+
+message DeleteSilenceResponse {}
+
+service AlertsService {
+  rpc ListAlerts(ListAlertsRequest) returns (ListAlertsResponse);
+  rpc ListRules(ListRulesRequest) returns (ListRulesResponse);
+  rpc UpdateRule(UpdateRuleRequest) returns (AlertRule);
+  rpc ListSilences(ListSilencesRequest) returns (ListSilencesResponse);
+  rpc CreateSilence(CreateSilenceRequest) returns (Silence);
+  // Expires a silence now; it stays listed with include_expired.
+  rpc DeleteSilence(DeleteSilenceRequest) returns (DeleteSilenceResponse);
+}
+
+// ---------------------------------------------------------------------------
+// Notification channels
+// ---------------------------------------------------------------------------
+
+enum ChannelType {
+  CHANNEL_TYPE_UNSPECIFIED = 0;
+  CHANNEL_TYPE_SLACK = 1;
+  CHANNEL_TYPE_WEBHOOK = 2;
+  CHANNEL_TYPE_EMAIL = 3;
+  CHANNEL_TYPE_WEBPUSH = 4;
+  CHANNEL_TYPE_DISCORD = 5;
+  CHANNEL_TYPE_TELEGRAM = 6;
+}
+
+enum SmtpSecurity {
+  SMTP_SECURITY_UNSPECIFIED = 0;
+  // STARTTLS upgrade, required (port 587).
+  SMTP_SECURITY_STARTTLS = 1;
+  // Implicit TLS (port 465).
+  SMTP_SECURITY_TLS = 2;
+  // Plain SMTP; only accepted for loopback relays.
+  SMTP_SECURITY_NONE = 3;
+}
+
+// Fields marked "secret" are write-only: they are accepted on create and
+// update, never returned (see NotificationChannel.secrets), and an update
+// that leaves them empty keeps the stored value.
+message SlackConfig {
+  // Incoming webhook URL (secret), https://hooks.slack.com/services/...
+  string webhook_url = 1;
+}
+
+message WebhookConfig {
+  // Target URL (secret; may embed a token). https required.
+  string url = 1;
+  // HMAC-SHA256 signing secret (secret, optional). When set, requests carry
+  // X-Asterism-Signature: t=<unix seconds>,v1=<hex hmac(t + "." + body)>.
+  string signing_secret = 2;
+  // Extra request headers. Values are secret; names are returned in
+  // header_names.
+  map<string, string> headers = 3;
+  // Output only.
+  repeated string header_names = 4;
+}
+
+message EmailConfig {
+  string host = 1;
+  uint32 port = 2;
+  SmtpSecurity security = 3;
+  string username = 4;
+  // SMTP password (secret).
+  string password = 5;
+  string from = 6;
+  repeated string to = 7;
+}
+
+message DiscordConfig {
+  // Discord webhook URL (secret).
+  string webhook_url = 1;
+}
+
+message TelegramConfig {
+  // Bot token (secret).
+  string bot_token = 1;
+  string chat_id = 2;
+}
+
+// Web Push sends to every browser subscribed with SubscribeWebPush.
+message WebPushConfig {}
+
+message ChannelConfig {
+  oneof kind {
+    SlackConfig slack = 1;
+    WebhookConfig webhook = 2;
+    EmailConfig email = 3;
+    WebPushConfig webpush = 4;
+    DiscordConfig discord = 5;
+    TelegramConfig telegram = 6;
+  }
+}
+
+// SecretStatus describes one stored secret without revealing it.
+message SecretStatus {
+  // Config field name, e.g. "webhook_url" or "headers.Authorization".
+  string field = 1;
+  bool has_value = 2;
+  // Masked hint, e.g. "hooks.slack.com/…" or "••••".
+  string hint = 3;
+}
+
+message DeliveryAttempt {
+  int64 id = 1;
+  string channel_id = 2;
+  int64 ts_ms = 3;
+  // "sent", "retrying", "failed", "rate_limited", or "dropped".
+  string status = 4;
+  // "firing", "resolved", or "test".
+  string notification = 5;
+  // Alert summary line (first alert and count).
+  string subject = 6;
+  repeated string alert_ids = 7;
+  uint32 attempt = 8;
+  // HTTP status for HTTP channels (0 otherwise).
+  uint32 http_status = 9;
+  // Error text with secrets redacted.
+  string error = 10;
+  uint64 duration_ms = 11;
+}
+
+message NotificationChannel {
+  string id = 1;
+  string name = 2;
+  ChannelType type = 3;
+  bool enabled = 4;
+  // Only alerts at or above this severity are sent (default warning).
+  AlertSeverity min_severity = 5;
+  // Optional filters: alert rule ids or forwarded event kinds, and
+  // project names or ids. Empty = everything.
+  repeated string kinds = 6;
+  repeated string projects = 7;
+  bool send_resolved = 8;
+  // Deliveries per hour (0 = unlimited). Excess notifications are dropped
+  // and logged as rate_limited.
+  uint32 rate_limit_per_hour = 9;
+  // Non-secret settings; secret fields are always empty in responses.
+  ChannelConfig config = 10;
+  // Output only.
+  repeated SecretStatus secrets = 11;
+  int64 created_at_ms = 12;
+  int64 updated_at_ms = 13;
+  DeliveryAttempt last_delivery = 14;
+}
+
+message ListChannelsRequest {}
+
+message ListChannelsResponse {
+  repeated NotificationChannel channels = 1;
+}
+
+message CreateChannelRequest {
+  NotificationChannel channel = 1;
+}
+
+message UpdateChannelRequest {
+  // channel.id selects the channel; its type cannot change.
+  NotificationChannel channel = 1;
+  // Secret fields to clear (optional secrets only, e.g. "signing_secret").
+  repeated string clear_secrets = 2;
+}
+
+message DeleteChannelRequest {
+  string id = 1;
+}
+
+message DeleteChannelResponse {}
+
+message TestChannelRequest {
+  string id = 1;
+}
+
+message TestChannelResponse {
+  DeliveryAttempt delivery = 1;
+}
+
+message ListDeliveriesRequest {
+  // Empty = every channel.
+  string channel_id = 1;
+  PageRequest page = 2;
+}
+
+message ListDeliveriesResponse {
+  repeated DeliveryAttempt deliveries = 1;
+  PageInfo page_info = 2;
+}
+
+message GetWebPushConfigRequest {}
+
+message GetWebPushConfigResponse {
+  // VAPID public key (base64url, uncompressed P-256 point).
+  string public_key = 1;
+  bool available = 2;
+  string unavailable_reason = 3;
+  uint32 subscription_count = 4;
+}
+
+message WebPushSubscription {
+  string id = 1;
+  // Push service host only (the endpoint URL is a capability).
+  string endpoint_host = 2;
+  string label = 3;
+  int64 created_at_ms = 4;
+  int64 last_success_ms = 5;
+}
+
+message SubscribeWebPushRequest {
+  string endpoint = 1;
+  // Browser keys from PushSubscription.toJSON().keys.
+  string p256dh = 2;
+  string auth = 3;
+  // Device label, e.g. "Firefox on macOS".
+  string label = 4;
+}
+
+message SubscribeWebPushResponse {
+  WebPushSubscription subscription = 1;
+  // The Web Push channel that delivers to subscribed browsers.
+  string channel_id = 2;
+}
+
+message UnsubscribeWebPushRequest {
+  string endpoint = 1;
+  // Alternatively remove by id (from ListWebPushSubscriptions).
+  string id = 2;
+}
+
+message UnsubscribeWebPushResponse {}
+
+message ListWebPushSubscriptionsRequest {}
+
+message ListWebPushSubscriptionsResponse {
+  repeated WebPushSubscription subscriptions = 1;
+}
+
+service NotificationsService {
+  rpc ListChannels(ListChannelsRequest) returns (ListChannelsResponse);
+  rpc CreateChannel(CreateChannelRequest) returns (NotificationChannel);
+  rpc UpdateChannel(UpdateChannelRequest) returns (NotificationChannel);
+  rpc DeleteChannel(DeleteChannelRequest) returns (DeleteChannelResponse);
+  // Sends a test notification now (one attempt, bypassing filters and rate limits).
+  rpc TestChannel(TestChannelRequest) returns (TestChannelResponse);
+  rpc ListDeliveries(ListDeliveriesRequest) returns (ListDeliveriesResponse);
+  rpc GetWebPushConfig(GetWebPushConfigRequest) returns (GetWebPushConfigResponse);
+  rpc SubscribeWebPush(SubscribeWebPushRequest) returns (SubscribeWebPushResponse);
+  rpc UnsubscribeWebPush(UnsubscribeWebPushRequest) returns (UnsubscribeWebPushResponse);
+  rpc ListWebPushSubscriptions(ListWebPushSubscriptionsRequest) returns (ListWebPushSubscriptionsResponse);
+}

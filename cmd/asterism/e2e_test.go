@@ -126,6 +126,7 @@ func runEndToEnd(t *testing.T, transport string) {
 
 	// --- hub ---
 	cfg := config.Default()
+	cfg.Server.DataDir = t.TempDir()
 	cfg.Collect.Mode = "agent"
 	cfg.Collect.Agent.StaleAfter = 30 * time.Second
 	cfg.Auth.AdminEmail, cfg.Auth.AdminPassword = "admin@example.com", "pw"
