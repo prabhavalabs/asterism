@@ -18,6 +18,7 @@ import (
 	sdk "github.com/modelcontextprotocol/go-sdk/mcp"
 
 	"github.com/prabhavalabs/asterism/internal/auth"
+	asterismv1 "github.com/prabhavalabs/asterism/internal/gen/asterism/v1"
 	"github.com/prabhavalabs/asterism/internal/gen/asterism/v1/asterismv1connect"
 )
 
@@ -31,6 +32,12 @@ type Backend interface {
 	asterismv1connect.EventsServiceClient
 	asterismv1connect.LogsServiceClient
 	asterismv1connect.DockerServiceClient
+	AlertsReader
+}
+
+// AlertsReader is the read-only part of AlertsService the tools use.
+type AlertsReader interface {
+	ListAlerts(context.Context, *connect.Request[asterismv1.ListAlertsRequest]) (*connect.Response[asterismv1.ListAlertsResponse], error)
 }
 
 // Options configures the MCP server.

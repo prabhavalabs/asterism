@@ -26,6 +26,7 @@ type Client struct {
 	asterismv1connect.EventsServiceClient
 	asterismv1connect.LogsServiceClient
 	asterismv1connect.DockerServiceClient
+	asterismv1connect.AlertsServiceClient
 
 	// BaseURL is the hub URL without a trailing slash.
 	BaseURL string
@@ -47,6 +48,7 @@ func New(baseURL, token string) *Client {
 		EventsServiceClient:    asterismv1connect.NewEventsServiceClient(httpClient, baseURL, opts...),
 		LogsServiceClient:      asterismv1connect.NewLogsServiceClient(httpClient, baseURL, opts...),
 		DockerServiceClient:    asterismv1connect.NewDockerServiceClient(httpClient, baseURL, opts...),
+		AlertsServiceClient:    asterismv1connect.NewAlertsServiceClient(httpClient, baseURL, opts...),
 		BaseURL:                baseURL,
 	}
 }
