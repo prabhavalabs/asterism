@@ -1,0 +1,31 @@
+{
+  "admin": {"listen": "localhost:2019"},
+  "apps": {
+    "tls": {"automation": {"policies": [{"issuers": [{"module": "acme", "challenges": {"dns": {"provider": {"name": "cloudflare", "api_token": "s3cr3t-value"}}}}]}]}},
+    "http": {
+      "servers": {
+        "srv0": {
+          "listen": [":443"],
+          "routes": [
+            {
+              "match": [{"host": ["shop.example.com"]}],
+              "handle": [{
+                "handler": "subroute",
+                "routes": [
+                  {"match": [{"path": ["/api/*"]}], "handle": [{"handler": "reverse_proxy", "upstreams": [{"dial": "127.0.0.1:3001"}, {"dial": "127.0.0.1:3002"}], "load_balancing": {"selection_policy": {"policy": "least_conn"}}}]},
+                  {"handle": [{"handler": "reverse_proxy", "upstreams": [{"dial": "localhost:3000"}]}]}
+                ]
+              }],
+              "terminal": true
+            },
+            {
+              "match": [{"host": ["grafana.example.com"]}],
+              "handle": [{"handler": "headers", "response": {"set": {"X-Token": ["s3cr3t-value"]}}}, {"handler": "reverse_proxy", "upstreams": [{"dial": "grafana:3000"}]}]
+            }
+          ]
+        },
+        "srv1": {"listen": [":8080"], "routes": [{"match": [{"path": ["/metrics*"]}], "handle": [{"handler": "reverse_proxy", "upstreams": [{"dial": "127.0.0.1:9100"}]}]}]}
+      }
+    }
+  }
+}

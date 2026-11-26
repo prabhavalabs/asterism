@@ -1,0 +1,42 @@
+# Global options
+{
+	email ops@example.com
+	acme_dns cloudflare {env.CF_API_TOKEN}
+}
+
+(common) {
+	encode gzip
+	header -Server
+}
+
+shop.example.com, www.shop.example.com {
+	import common
+	@api path /api/*
+	reverse_proxy @api 127.0.0.1:3001 127.0.0.1:3002 {
+		lb_policy least_conn
+	}
+	handle_path /static/* {
+		root * /srv/static
+		file_server
+	}
+	handle /admin/* {
+		reverse_proxy http://127.0.0.1:3100
+	}
+	reverse_proxy localhost:3000
+	basicauth /private/* {
+		admin $2a$14$s3cr3t-value-hash
+	}
+}
+
+http://status.example.com {
+	reverse_proxy {
+		to 127.0.0.1:3005
+		to unix//run/kuma.sock
+	}
+}
+
+:8080 {
+	reverse_proxy /metrics* 127.0.0.1:9100
+}
+
+import sites/*.caddy

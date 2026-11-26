@@ -1,0 +1,53 @@
+@@HOST@@
+vps-1
+Linux 6.8.0-49-generic
+x86_64
+4
+ AMD EPYC 7B13
+@@DOCKER@@
+3f2a9c1b7d4e|shop-api-1|ghcr.io/acme/shop-api:1.4|Up 3 hours (healthy)|127.0.0.1:8790->8080/tcp|shop|api|/srv/shop|shop,platform
+9b8c7d6e5f4a|shop-worker-1|ghcr.io/acme/shop-api:1.4|Restarting (1) 5 seconds ago||shop|worker|/srv/shop|shop
+c0ffee000000|backup-cron|alpine:3.20|Exited (137) 2 hours ago||ops|backup||ops
+0123456789ab|paused-thing|busybox:1.36|Up 2 minutes (Paused)|9000/tcp|||bridge
+aaaaaaaaaaaa|shop-migrate-1|ghcr.io/acme/shop-api:1.4|Exited (0) 3 hours ago||shop|migrate|/srv/shop|shop
+bbbbbbbbbbbb|platform-postgres-1|postgres:17.4-alpine|Up 5 days (healthy)|127.0.0.1:5432->5432/tcp|platform|postgres|/srv/platform|platform
+cccccccccccc|platform-garage-1|dxflrs/garage:v1.0|Up 5 days|0.0.0.0:3900->3900/tcp, [::]:3900->3900/tcp|platform|garage|/srv/platform|platform
+dddddddddddd|shop-web-1|ghcr.io/acme/shop-web:2.0|Up 45 seconds|0.0.0.0:3000->3000/tcp, :::3000->3000/tcp|shop|web|/srv/shop|shop,platform
+eeeeeeeeeeee|shop-redis-1|redis:7.4|Up 3 hours|6379/tcp|shop|redis|/srv/shop|shop
+ffffffffffff|staging-api-1|ghcr.io/acme/shop-api:1.5-rc|Up About a minute (unhealthy)|127.0.0.1:18080->8080/tcp|shop-staging|api|/srv/staging|shop-staging
+@@DINSPECT@@
+warning: some stderr noise
+{"Id":"3f2a9c1b7d4e0000000000000000000000000000000000000000000000000000","Name":"/shop-api-1","Created":"2026-11-20T08:00:00.123456789Z","Image":"sha256:ab12cd34ef560000000000000000000000000000000000000000000000000000","RestartCount":0,"State":{"Status":"running","Running":true,"Paused":false,"Restarting":false,"OOMKilled":false,"Dead":false,"Pid":4120,"ExitCode":0,"Error":"","StartedAt":"2026-11-24T09:00:00Z","FinishedAt":"0001-01-01T00:00:00Z","Health":{"Status":"healthy","FailingStreak":0,"Log":[{"Start":"2026-11-24T11:59:30Z","End":"2026-11-24T11:59:30.2Z","ExitCode":0,"Output":"ok token=abc123"}]}},"HostConfig":{"NetworkMode":"shop_default","Privileged":false,"ReadonlyRootfs":true,"RestartPolicy":{"Name":"unless-stopped","MaximumRetryCount":0},"Memory":1073741824,"MemoryReservation":0,"NanoCpus":1500000000,"CpuQuota":0,"CpuPeriod":0,"CpuShares":0,"CpusetCpus":"","PidsLimit":null,"PortBindings":{"8080/tcp":[{"HostIp":"127.0.0.1","HostPort":"18080"}]}},"Mounts":[{"Type":"volume","Name":"shop_uploads","Source":"/var/lib/docker/volumes/shop_uploads/_data","Destination":"/app/uploads","Driver":"local","Mode":"z","RW":true},{"Type":"bind","Source":"/srv/shop/config.yml","Destination":"/app/config.yml","Mode":"ro","RW":false}],"NetworkSettings":{"Networks":{"shop_default":{"IPAddress":"172.20.0.5","Gateway":"172.20.0.1","Aliases":["shop-api-1","api"]},"platform":{"IPAddress":"172.30.0.9","Gateway":"172.30.0.1","Aliases":null}},"Ports":{"8080/tcp":[{"HostIp":"127.0.0.1","HostPort":"18080"}],"9090/tcp":null}},"Config":{"Image":"ghcr.io/acme/shop-api:2.4.1","Labels":{"com.docker.compose.project":"shop","com.docker.compose.service":"api","com.docker.compose.project.working_dir":"/srv/shop","traefik.http.middlewares.auth.basicauth.users":"admin:$apr1$hash","app.dsn":"postgres://shop:hunter2@db:5432/shop","app.upstream":"https://user:s3cret@example.com/x"},"Cmd":["serve","--db-password","hunter2","--listen=:8080","--api-key=XYZ"],"Entrypoint":["/usr/bin/tini","--"],"ExposedPorts":{"8080/tcp":{},"9090/tcp":{}},"User":"app","Healthcheck":{"Test":["CMD","curl","-fsS","http://localhost:8080/healthz"],"Interval":30000000000,"Timeout":5000000000,"Retries":3},"EnvKeys":["DATABASE_URL","PORT","PATH","PORT"]}}
+{"Id":"9b8c7d6e5f4a1111111111111111111111111111111111111111111111111111","Name":"/shop-worker-1","Created":"2026-11-20T08:00:01Z","Image":"sha256:ab12cd34ef560000000000000000000000000000000000000000000000000000","RestartCount":7,"State":{"Status":"restarting","Running":true,"Paused":false,"Restarting":true,"OOMKilled":false,"Dead":false,"Pid":0,"ExitCode":1,"Error":"","StartedAt":"2026-11-24T11:58:00Z","FinishedAt":"2026-11-24T11:59:50Z","Health":{"Status":"unhealthy","FailingStreak":4,"Log":[{"Start":"2026-11-24T11:59:00Z","End":"2026-11-24T11:59:01Z","ExitCode":1,"Output":"connection refused password=pw1"}]}},"HostConfig":{"NetworkMode":"shop_default","Privileged":false,"ReadonlyRootfs":false,"RestartPolicy":{"Name":"always","MaximumRetryCount":0},"Memory":0,"MemoryReservation":0,"NanoCpus":0,"CpuQuota":50000,"CpuPeriod":100000,"CpuShares":512,"CpusetCpus":"0,1","PidsLimit":256,"PortBindings":{}},"Mounts":[],"NetworkSettings":{"Networks":{"shop_default":{"IPAddress":"","Gateway":"","Aliases":null}},"Ports":{}},"Config":{"Image":"ghcr.io/acme/shop-api:2.4.1","Labels":{"com.docker.compose.project":"shop","com.docker.compose.service":"worker"},"Cmd":["worker"],"Entrypoint":null,"ExposedPorts":null,"User":"","Healthcheck":{"Test":["CMD-SHELL","pgrep worker"],"Interval":10000000000,"Timeout":2000000000,"Retries":3},"EnvKeys":["QUEUE_URL"]}}
+{"Id":"c0ffee0000002222222222222222222222222222222222222222222222222222","Name":"/backup-cron","Created":"2026-11-01T00:00:00Z","Image":"sha256:deadbeef00010000000000000000000000000000000000000000000000000000","RestartCount":0,"State":{"Status":"exited","Running":false,"Paused":false,"Restarting":false,"OOMKilled":true,"Dead":false,"Pid":0,"ExitCode":137,"Error":"","StartedAt":"2026-11-24T10:00:00Z","FinishedAt":"2026-11-24T11:00:00Z"},"HostConfig":{"NetworkMode":"host","Privileged":true,"ReadonlyRootfs":false,"RestartPolicy":{"Name":"","MaximumRetryCount":0},"Memory":268435456,"MemoryReservation":134217728,"NanoCpus":0,"CpuQuota":0,"CpuPeriod":0,"CpuShares":0,"CpusetCpus":"","PidsLimit":0,"PortBindings":{"5432/tcp":[{"HostIp":"","HostPort":"5432"}]}},"Mounts":[{"Type":"bind","Source":"/var/run/docker.sock","Destination":"/var/run/docker.sock","Mode":"","RW":true}],"NetworkSettings":{"Networks":{"host":{"IPAddress":"","Gateway":"","Aliases":null}},"Ports":{}},"Config":{"Image":"restic/restic","Labels":null,"Cmd":null,"Entrypoint":["/bin/sh","-c","restic backup --password-file /run/secrets/pw RESTIC_PASSWORD=abc"],"ExposedPorts":{"5432/tcp":{}},"User":"","Healthcheck":null,"EnvKeys":[]}}
+{"Id":"0123456789ab3333333333333333333333333333333333333333333333333333","Name":"/paused-thing","Created":"2026-11-24T00:00:00Z","Image":"sha256:0123456789ab0000000000000000000000000000000000000000000000000000","RestartCount":0,"State":{"Status":"paused","Running":true,"Paused":true,"Restarting":false,"OOMKilled":false,"Dead":false,"Pid":777,"ExitCode":0,"Error":"","StartedAt":"2026-11-24T11:00:00Z","FinishedAt":"0001-01-01T00:00:00Z"},"HostConfig":{"NetworkMode":"bridge","Privileged":false,"ReadonlyRootfs":false,"RestartPolicy":{"Name":"no","MaximumRetryCount":0},"Memory":0,"MemoryReservation":0,"NanoCpus":0,"CpuQuota":0,"CpuPeriod":0,"CpuShares":0,"CpusetCpus":"","PidsLimit":null,"PortBindings":{"80/tcp":[{"HostIp":"","HostPort":"8081"}]}},"Mounts":null,"NetworkSettings":{"Networks":{"bridge":{"IPAddress":"172.17.0.2","Gateway":"172.17.0.1","Aliases":null}},"Ports":{"80/tcp":[{"HostIp":"0.0.0.0","HostPort":"8081"},{"HostIp":"::","HostPort":"8081"}]}},"Config":{"Image":"nginx:1.27-alpine","Labels":{},"Cmd":["nginx","-g","daemon off;"],"Entrypoint":["/docker-entrypoint.sh"],"ExposedPorts":{"80/tcp":{}},"User":"","Healthcheck":{"Test":["NONE"]},"EnvKeys":["NGINX_VERSION"]}}
+@@PORTS@@
+Netid State  Recv-Q Send-Q Local Address:Port  Peer Address:PortProcess
+udp   UNCONN 0      0          127.0.0.53%lo:53         0.0.0.0:*    users:(("systemd-resolve",pid=600,fd=13))
+tcp   LISTEN 0      4096         0.0.0.0:22         0.0.0.0:*    users:(("sshd",pid=900,fd=3))
+tcp   LISTEN 0      4096            [::]:22            [::]:*    users:(("sshd",pid=900,fd=4))
+tcp   LISTEN 0      511          0.0.0.0:80         0.0.0.0:*    users:(("nginx",pid=1200,fd=6))
+tcp   LISTEN 0      511          0.0.0.0:443        0.0.0.0:*    users:(("nginx",pid=1200,fd=7))
+tcp   LISTEN 0      4096       127.0.0.1:8790       0.0.0.0:*    users:(("docker-proxy",pid=3100,fd=4))
+tcp   LISTEN 0      4096         0.0.0.0:3900       0.0.0.0:*    users:(("docker-proxy",pid=3300,fd=4))
+tcp   LISTEN 0      4096    100.64.0.7:41641      0.0.0.0:*    users:(("tailscaled",pid=700,fd=9))
+tcp   ESTAB  0      0          10.0.0.5:22       10.0.0.9:51234 users:(("sshd",pid=901,fd=4))
+@@NGINX_ACTIVE@@
+active
+@@NGINX_SITES@@
+###FILE:/etc/nginx/sites-enabled/shop
+    listen 443 ssl http2;
+    server_name shop.example.com www.shop.example.com;
+    proxy_pass http://127.0.0.1:3000;
+    proxy_pass http://127.0.0.1:8790;
+###FILE:/etc/nginx/sites-enabled/staging
+    listen 80;
+    server_name staging.example.com;
+    proxy_pass http://127.0.0.1:18080;
+###FILE:/etc/nginx/sites-enabled/legacy
+    listen 80;
+    server_name legacy.example.com;
+    proxy_pass http://127.0.0.1:9999;
+###FILE:/etc/nginx/sites-enabled/default
+    listen 80;
+    server_name _;

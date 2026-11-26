@@ -1,0 +1,42 @@
+{
+ "ServerVersion": "29.9.3",
+ "OperatingSystem": "Ubuntu 24.04.3 LTS",
+ "KernelVersion": "6.8.0-88-generic",
+ "Architecture": "aarch64",
+ "Driver": "overlayfs",
+ "CgroupDriver": "systemd",
+ "CgroupVersion": "2",
+ "LoggingDriver": "local",
+ "DockerRootDir": "/var/lib/docker",
+ "NCPU": 10,
+ "MemTotal": 8214786048,
+ "Containers": 3,
+ "ContainersRunning": 2,
+ "ContainersPaused": 0,
+ "ContainersStopped": 1,
+ "Images": 3,
+ "ID": "fixture",
+ "Name": "vps-test-1",
+ "RegistryConfig": {
+  "InsecureRegistryCIDRs": [
+   "127.0.0.0/8",
+   "::1/128"
+  ],
+  "IndexConfigs": {
+   "docker.io": {
+    "Name": "docker.io",
+    "Mirrors": [],
+    "Secure": true,
+    "Official": true
+   },
+   "hubproxy.docker.internal:5555": {
+    "Name": "hubproxy.docker.internal:5555",
+    "Mirrors": [],
+    "Secure": false,
+    "Official": false
+   }
+  },
+  "Mirrors": []
+ },
+ "HttpProxy": "http://proxyuser:s3cr3t-value@proxy:3128"
+}

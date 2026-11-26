@@ -1,0 +1,8 @@
+#4120
+Inter-|   Receive                                                |  Transmit
+ face |bytes    packets errs drop fifo frame compressed multicast|bytes    packets errs drop fifo colls carrier compressed
+    lo:     100       1    0    0    0     0          0         0      100       1    0    0    0     0       0          0
+  eth0: 5000000    3000    0    0    0     0          0         0  7000000    2000    0    0    0     0       0          0
+  eth1:    1000      10    0    0    0     0          0         0     2000      10    0    0    0     0       0          0
+#777
+  eth0:      10       1    0    0    0     0          0         0       20       1    0    0    0     0       0          0

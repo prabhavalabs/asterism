@@ -1,0 +1,2 @@
+{"Name":"shop_uploads","Driver":"local","Scope":"local","CreatedAt":"2026-11-20T08:00:00Z","Mountpoint":"/var/lib/docker/volumes/shop_uploads/_data","Labels":{"com.docker.compose.project":"shop","com.docker.compose.volume":"uploads"}}
+{"Name":"0f1e2d3c4b5a69788796a5b4c3d2e1f00f1e2d3c4b5a69788796a5b4c3d2e1f0","Driver":"local","Scope":"local","CreatedAt":"2026-08-01T00:00:00Z","Mountpoint":"/var/lib/docker/volumes/x/_data","Labels":null}

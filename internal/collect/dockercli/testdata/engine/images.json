@@ -1,0 +1,44 @@
+[
+ {
+  "Containers": 2,
+  "Created": 1795366892,
+  "Id": "sha256:d9e853e87e55526f6b2917df91a2115c36dd7c696a35be12163d44e6e2a4b6bc",
+  "Labels": {
+   "org.opencontainers.image.title": "shop"
+  },
+  "ParentId": "",
+  "RepoDigests": [],
+  "RepoTags": [
+   "ghcr.io/acme/shop-api:2.4.1",
+   "ghcr.io/acme/shop-api:latest"
+  ],
+  "SharedSize": 2000000,
+  "Size": 120000000
+ },
+ {
+  "Containers": 1,
+  "Created": 1795315371,
+  "Id": "sha256:bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
+  "Labels": null,
+  "ParentId": "",
+  "RepoDigests": [],
+  "RepoTags": [
+   "redis:7.4-alpine"
+  ],
+  "SharedSize": 0,
+  "Size": 40000000
+ },
+ {
+  "Containers": 0,
+  "Created": 1795000000,
+  "Id": "sha256:eeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee",
+  "Labels": {},
+  "ParentId": "",
+  "RepoDigests": [
+   "x@sha256:eeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee"
+  ],
+  "RepoTags": [],
+  "SharedSize": 0,
+  "Size": 90000000
+ }
+]
