@@ -1,0 +1,3 @@
+host: {name: prod-1}
+hub:
+  token_file: /nonexistent/asterism/agent.token

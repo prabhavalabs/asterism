@@ -1,0 +1,101 @@
+# Agent integration rig (make e2e-agent). Started and torn down by
+# agent_it_test.go, which writes hub.toml, agent.yaml and agent.token into
+# $ASTERISM_IT_DIR. Every resource carries the label asterism.test=1.
+#
+# Docker Desktop: /proc and /sys/fs/cgroup bind mounts are the Linux VM's,
+# so the agent sees the VM as its host (no systemd there).
+name: asterism-it
+
+x-test-labels: &test-labels
+  asterism.test: "1"
+
+services:
+  hub:
+    build: {context: ../.., dockerfile: scripts/agent-it/hub.Dockerfile, labels: *test-labels}
+    image: asterism-hub:it
+    labels: {asterism.test: "1", asterism.self: "true"}
+    volumes:
+      - ${ASTERISM_IT_DIR:?}/hub.toml:/etc/asterism/hub.toml:ro
+    ports: ["127.0.0.1:${ASTERISM_IT_HUB_PORT:-17710}:7700"]
+
+  socket-proxy:
+    image: wollomatic/socket-proxy:1
+    labels: {asterism.test: "1", asterism.protected: "true"}
+    read_only: true
+    cap_drop: [ALL]
+    security_opt: ["no-new-privileges:true"]
+    # Docker Desktop's socket is root-only inside containers; on a Linux
+    # host run the proxy as 65534 with the docker group instead.
+    user: "0:0"
+    mem_limit: 32m
+    command:
+      - -loglevel=INFO
+      - -listenip=0.0.0.0
+      - -allowfrom=agent
+      - -allowHEAD=^/_ping$
+      - -allowGET=^(/v1\.[0-9]+)?/(_ping|info|events|containers/json|containers/[A-Za-z0-9_.-]+/(json|logs)|images/json|volumes|networks|system/df)$
+      - -allowPOST=^(/v1\.[0-9]+)?/containers/[A-Za-z0-9_.-]+/(start|stop|restart|pause|unpause)$
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock:ro
+
+  agent:
+    build: {context: ../.., dockerfile: deploy/agent/Dockerfile, args: {VERSION: it}, labels: *test-labels}
+    image: asterism-agent:it
+    depends_on: [socket-proxy]
+    labels: {asterism.test: "1", asterism.self: "true", asterism.protected: "true"}
+    read_only: true
+    user: "65532:65532"
+    cap_drop: [ALL]
+    security_opt: ["no-new-privileges:true"]
+    mem_limit: 64m
+    pids_limit: 64
+    environment:
+      ASTERISM_AGENT_TOKEN_FILE: /etc/asterism/agent.token
+      ASTERISM_AGENT_DOCKER_ENDPOINT: tcp://socket-proxy:2375
+    volumes:
+      - /proc:/host/proc:ro
+      - /sys/fs/cgroup:/host/sys/fs/cgroup:ro
+      - ${ASTERISM_IT_DIR:?}/agent.yaml:/etc/asterism/agent.yaml:ro
+      - ${ASTERISM_IT_DIR:?}/agent.token:/etc/asterism/agent.token:ro
+
+  # --- seed workloads ---
+  nginx:
+    image: nginx:1.27-alpine
+    labels: *test-labels
+    ports: ["127.0.0.1:${ASTERISM_IT_NGINX_PORT:-18781}:80"]
+    healthcheck:
+      test: ["CMD-SHELL", "wget -q -O /dev/null http://127.0.0.1/ || exit 1"]
+      interval: 2s
+      timeout: 2s
+      retries: 10
+
+  postgres:
+    image: postgres:17-alpine
+    labels: *test-labels
+    environment:
+      POSTGRES_PASSWORD: it-s3cr3t-value
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres"]
+      interval: 2s
+      timeout: 2s
+      retries: 15
+
+  redis:
+    image: redis:7-alpine
+    labels: *test-labels
+    command: ["sh", "-c", "exec redis-server --requirepass it-s3cr3t-value"]
+    healthcheck:
+      test: ["CMD-SHELL", "redis-cli ping 2>&1 | grep -qE 'PONG|NOAUTH'"]
+      interval: 2s
+      timeout: 2s
+      retries: 10
+
+  crashloop:
+    image: busybox:1.37
+    labels: *test-labels
+    command: ["sh", "-c", "echo crashloop starting; exit 1"]
+    restart: always
+
+networks:
+  default:
+    labels: *test-labels

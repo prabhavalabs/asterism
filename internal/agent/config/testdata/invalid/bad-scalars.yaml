@@ -1,0 +1,12 @@
+hub:
+  url: https://asterism.example.com
+  token: asta_test
+  buffer: {max_bytes: lots, max_events: many}
+  backoff: {initial: soon}
+intervals:
+  host: fast
+  adaptive: maybe
+  idle_factor: [3]
+sources:
+  docker: {enabled: sometimes}
+  logs: {rate_limit: 64KiB/minute}

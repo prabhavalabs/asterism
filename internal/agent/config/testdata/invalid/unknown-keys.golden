@@ -1,0 +1,5 @@
+unknown-keys.yaml:3: hub.tokenfile: unknown key (did you mean "token_file"?); valid keys in hub: backoff, buffer, compression, tls, token, token_file, transport, url
+unknown-keys.yaml:4: hub.tls.pin: unknown key; valid keys in hub.tls: ca_file, client_cert, client_key, insecure_dev, pin_sha256, server_name
+unknown-keys.yaml:5: hots: unknown key (did you mean "host"?); valid keys at the top level: actions, agent, host, hub, intervals, projects, redaction, sources, version
+unknown-keys.yaml:7: sources.docker.endpont: unknown key (did you mean "endpoint"?); valid keys in sources.docker: enabled, endpoint, exclude, group_by, include, stats
+unknown-keys.yaml:9: projects[0].colour: unknown key (did you mean "color"?); valid keys in projects[0]: category, color, icon, members, name

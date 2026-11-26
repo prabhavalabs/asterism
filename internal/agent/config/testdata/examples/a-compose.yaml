@@ -1,0 +1,11 @@
+# Example (a): Docker Compose VPS
+hub: {url: https://asterism.example.com, token_file: /etc/asterism/agent.token}
+host: {name: prod-1, labels: {provider: hetzner}}
+sources:
+  docker: {exclude: {labels: {asterism.ignore: "true"}}}
+  systemd: {enabled: false}
+  proxies: {nginx: {enabled: false}, caddy: {enabled: false}}   # Traefik via labels
+projects:
+  - {name: shop, category: production, icon: nodedotjs, members: {compose: [shop]}}
+  - {name: observability, category: infra, icon: grafana, members: {containers: ["grafana*", "prometheus*", "loki*"]}}
+actions: {enabled: true, allow: [restart], containers: ["shop-*"], protect: ["*postgres*"]}
