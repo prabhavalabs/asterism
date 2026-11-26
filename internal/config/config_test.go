@@ -2,6 +2,7 @@ package config
 
 import (
 	"os"
+	"path/filepath"
 	"testing"
 	"time"
 )
@@ -97,6 +98,46 @@ func TestNormalizePublicURL(t *testing.T) {
 		if got != tt.want {
 			t.Fatalf("normalizePublicURL(%q) = %q, want %q", tt.in, got, tt.want)
 		}
+	}
+}
+
+func TestDataDirAndAlertsConfig(t *testing.T) {
+	d := Default()
+	if d.Server.DataDir != "data" || !d.Alerts.Enabled || d.Alerts.EvaluationInterval != 15*time.Second {
+		t.Fatalf("defaults = %+v / %+v", d.Server, d.Alerts)
+	}
+	dir := filepath.Join(t.TempDir(), "state", "asterism")
+	t.Setenv("ASTERISM_DATA_DIR", dir)
+	t.Setenv("ASTERISM_ALERTS_EVALUATION_INTERVAL", "30s")
+	t.Setenv("ASTERISM_ALERTS_ALLOW_PRIVATE_TARGETS", "true")
+	cfg, _, err := Load(filepath.Join(t.TempDir(), "missing-ok.toml"))
+	if err == nil {
+		t.Fatal("expected error for a missing explicit config path")
+	}
+	path := filepath.Join(t.TempDir(), "a.toml")
+	if err := os.WriteFile(path, []byte("[alerts]\nenabled = false\ngroup_wait = \"10s\"\n"), 0o600); err != nil {
+		t.Fatal(err)
+	}
+	cfg, _, err = Load(path)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if cfg.Alerts.Enabled || cfg.Alerts.EvaluationInterval != 30*time.Second || cfg.Alerts.GroupWait != 10*time.Second || !cfg.Alerts.AllowPrivateTargets || cfg.Alerts.RepeatInterval != 4*time.Hour {
+		t.Fatalf("alerts = %+v", cfg.Alerts)
+	}
+	got, err := cfg.EnsureDataDir()
+	if err != nil || got != dir {
+		t.Fatalf("EnsureDataDir = %q, %v", got, err)
+	}
+	if st, err := os.Stat(dir); err != nil || st.Mode().Perm() != 0o700 {
+		t.Fatalf("data dir mode = %v, %v", st.Mode().Perm(), err)
+	}
+	if err := os.WriteFile(path, []byte("[alerts]\nevaluation_interval = \"1s\"\n"), 0o600); err != nil {
+		t.Fatal(err)
+	}
+	t.Setenv("ASTERISM_ALERTS_EVALUATION_INTERVAL", "")
+	if _, _, err := Load(path); err == nil {
+		t.Fatal("1s evaluation interval accepted")
 	}
 }
 

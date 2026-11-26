@@ -18,6 +18,7 @@ type Config struct {
 	Collect CollectConfig `toml:"collect"`
 	Auth    AuthConfig    `toml:"auth"`
 	Actions ActionsConfig `toml:"actions"`
+	Alerts  AlertsConfig  `toml:"alerts"`
 	// Projects holds optional per-project display settings keyed by project name,
 	// e.g. [projects."shop"] icon = "postgres".
 	Projects ProjectConfigs `toml:"projects"`
@@ -148,28 +149,11 @@ type ServerConfig struct {
 	// It makes link-preview tags (og:url, og:image) absolute; empty keeps them
 	// relative, which most preview crawlers ignore.
 	PublicURL string `toml:"public_url"`
-	// DataDir holds Asterism's own state (uploaded and cached project icons).
-	// Relative paths resolve against the working directory. Env
-	// ASTERISM_DATA_DIR; production uses /var/lib/asterism (systemd
-	// StateDirectory=asterism).
+	// DataDir holds Asterism's own state: the SQLite store, secret.key,
+	// vapid.json and project icons. Relative paths resolve against the
+	// working directory. Env ASTERISM_DATA_DIR; production uses
+	// /var/lib/asterism (systemd StateDirectory=asterism).
 	DataDir string `toml:"data_dir"`
-}
-
-// EnsureDataDir returns the absolute data directory, creating it with mode
-// 0700 when it does not exist.
-func (c Config) EnsureDataDir() (string, error) {
-	dir := c.Server.DataDir
-	if strings.TrimSpace(dir) == "" {
-		dir = "data"
-	}
-	abs, err := filepath.Abs(dir)
-	if err != nil {
-		return "", fmt.Errorf("resolve data_dir %q: %w", dir, err)
-	}
-	if err := os.MkdirAll(abs, 0o700); err != nil {
-		return "", fmt.Errorf("create data_dir %s: %w", abs, err)
-	}
-	return abs, nil
 }
 
 type CollectConfig struct {
@@ -214,6 +198,23 @@ type ActionsConfig struct {
 	DefaultStopTimeoutSeconds int `toml:"default_stop_timeout_seconds"`
 }
 
+// AlertsConfig configures hub-side alert evaluation and notifications ([alerts]).
+type AlertsConfig struct {
+	// Enabled turns rule evaluation and notification delivery on (default true).
+	Enabled bool `toml:"enabled"`
+	// EvaluationInterval is how often rules are evaluated (default 15s, 5s to 5m).
+	EvaluationInterval time.Duration `toml:"evaluation_interval"`
+	// GroupWait batches alerts of one project that fire within this window
+	// into one notification (default 30s, 0 to 5m).
+	GroupWait time.Duration `toml:"group_wait"`
+	// RepeatInterval re-notifies alerts that are still firing (default 4h).
+	RepeatInterval time.Duration `toml:"repeat_interval"`
+	// AllowPrivateTargets lets HTTP channels (Slack, webhook, Discord,
+	// Telegram, Web Push) reach loopback, private, and link-local addresses,
+	// and plain http on them. Leave false unless the receiver is on your LAN.
+	AllowPrivateTargets bool `toml:"allow_private_targets"`
+}
+
 // StopTimeout returns the default graceful stop timeout.
 func (a ActionsConfig) StopTimeout() time.Duration {
 	if a.DefaultStopTimeoutSeconds <= 0 {
@@ -245,7 +246,30 @@ func Default() Config {
 			DefaultStopTimeoutSeconds: 10,
 		},
 		FaviconFetch: true,
+		Alerts: AlertsConfig{
+			Enabled:            true,
+			EvaluationInterval: 15 * time.Second,
+			GroupWait:          30 * time.Second,
+			RepeatInterval:     4 * time.Hour,
+		},
 	}
+}
+
+// EnsureDataDir resolves server.data_dir to an absolute path and creates it
+// with mode 0700 when missing.
+func (c Config) EnsureDataDir() (string, error) {
+	dir := strings.TrimSpace(c.Server.DataDir)
+	if dir == "" {
+		dir = "data"
+	}
+	abs, err := filepath.Abs(dir)
+	if err != nil {
+		return "", fmt.Errorf("resolve data_dir %q: %w", dir, err)
+	}
+	if err := os.MkdirAll(abs, 0o700); err != nil {
+		return "", fmt.Errorf("create data_dir %s: %w", abs, err)
+	}
+	return abs, nil
 }
 
 // Load reads configuration from the given path (or asterism.local.toml / asterism.toml
@@ -307,6 +331,9 @@ func Load(path string) (Config, string, error) {
 		return Config{}, resolvedPath, err
 	}
 	cfg.Server.PublicURL = publicURL
+	if err := cfg.validateAlerts(); err != nil {
+		return Config{}, resolvedPath, err
+	}
 
 	return cfg, resolvedPath, nil
 }
@@ -347,6 +374,28 @@ func (cfg *Config) validateAgents() error {
 	return nil
 }
 
+// validateAlerts fills zero durations with defaults and checks ranges.
+func (cfg *Config) validateAlerts() error {
+	a := &cfg.Alerts
+	def := Default().Alerts
+	if a.EvaluationInterval == 0 {
+		a.EvaluationInterval = def.EvaluationInterval
+	}
+	if a.EvaluationInterval < 5*time.Second || a.EvaluationInterval > 5*time.Minute {
+		return fmt.Errorf("alerts.evaluation_interval = %s is out of range (5s to 5m)", a.EvaluationInterval)
+	}
+	if a.GroupWait < 0 || a.GroupWait > 5*time.Minute {
+		return fmt.Errorf("alerts.group_wait = %s is out of range (0 to 5m)", a.GroupWait)
+	}
+	if a.RepeatInterval == 0 {
+		a.RepeatInterval = def.RepeatInterval
+	}
+	if a.RepeatInterval < 5*time.Minute || a.RepeatInterval > 7*24*time.Hour {
+		return fmt.Errorf("alerts.repeat_interval = %s is out of range (5m to 168h)", a.RepeatInterval)
+	}
+	return nil
+}
+
 func (c AuthConfig) SessionTTL() time.Duration {
 	if c.SessionTTLHours <= 0 {
 		return 24 * time.Hour
@@ -372,6 +421,26 @@ func applyEnv(cfg *Config) {
 	if v := strings.TrimSpace(os.Getenv("ASTERISM_FAVICON_FETCH")); v != "" {
 		if b, err := strconv.ParseBool(v); err == nil {
 			cfg.FaviconFetch = b
+		}
+	}
+	if v := strings.TrimSpace(os.Getenv("ASTERISM_ALERTS_ENABLED")); v != "" {
+		if b, err := strconv.ParseBool(v); err == nil {
+			cfg.Alerts.Enabled = b
+		}
+	}
+	if v := strings.TrimSpace(os.Getenv("ASTERISM_ALERTS_EVALUATION_INTERVAL")); v != "" {
+		if d, err := time.ParseDuration(v); err == nil {
+			cfg.Alerts.EvaluationInterval = d
+		}
+	}
+	if v := strings.TrimSpace(os.Getenv("ASTERISM_ALERTS_GROUP_WAIT")); v != "" {
+		if d, err := time.ParseDuration(v); err == nil {
+			cfg.Alerts.GroupWait = d
+		}
+	}
+	if v := strings.TrimSpace(os.Getenv("ASTERISM_ALERTS_ALLOW_PRIVATE_TARGETS")); v != "" {
+		if b, err := strconv.ParseBool(v); err == nil {
+			cfg.Alerts.AllowPrivateTargets = b
 		}
 	}
 	if v := strings.TrimSpace(os.Getenv("ASTERISM_COLLECT_MODE")); v != "" {
