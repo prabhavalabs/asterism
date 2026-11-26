@@ -1,0 +1,364 @@
+syntax = "proto3";
+
+package asterism.v1;
+
+import "asterism/v1/asterism.proto";
+
+// ---------------------------------------------------------------------------
+// asterism-agent uplink protocol (protocol_version 1)
+//
+// The agent dials the hub; the hub never connects to the agent. Both
+// transports carry the same AgentFrame and HubFrame messages:
+//
+//   * Stream:   one HTTP/2 bidi stream per connection (primary path).
+//   * Push:     unary batches of AgentFrames for HTTP/1.1-only proxies; the
+//               response acks the batch and piggy-backs HubFrames.
+//   * Commands: server stream of HubFrames that accompanies Push.
+//
+// Agents authenticate with "Authorization: Bearer asta_..." tokens that carry
+// the "ingest" scope. Those tokens are accepted only by AgentService.
+//
+// Sequencing: only replayable frames (metrics and events) carry a non-zero
+// seq. seq increases by one per replayable frame for the lifetime of the
+// agent process (session_id), across reconnects. The hub acks the highest
+// seq it has processed; the agent frees buffered frames with seq <= upto_seq
+// and replays the rest, oldest first, after a reconnect. The hub drops
+// frames whose seq it has already processed for that session. Every other
+// frame (hello, inventory, heartbeat, logs, command results) has seq 0 and
+// is never replayed.
+// ---------------------------------------------------------------------------
+
+service AgentService {
+  // Primary transport: requires HTTP/2 end to end.
+  rpc Stream(stream AgentFrame) returns (stream HubFrame);
+  // Fallback transport for HTTP/1.1 proxies. The first Push of a connection
+  // carries exactly one AgentHello frame; its response carries the HelloAck.
+  rpc Push(PushRequest) returns (PushResponse);
+  // Fallback transport: hub-to-agent frames (commands, hints, resync, log
+  // requests, pings) for a session that has completed its Push handshake.
+  rpc Commands(CommandsRequest) returns (stream HubFrame);
+}
+
+// Read-only status of enrolled agents for the Settings view (read scope).
+service AgentAdminService {
+  rpc ListAgents(ListAgentsRequest) returns (ListAgentsResponse);
+}
+
+// ---------------------------------------------------------------------------
+// Agent -> hub
+// ---------------------------------------------------------------------------
+
+message AgentFrame {
+  // Non-zero only for replayable frames (metrics, events); see header.
+  uint64 seq = 1;
+  // Agent wall clock when the frame was created.
+  int64 sent_at_ms = 2;
+  oneof payload {
+    AgentHello hello = 10;
+    AgentMetrics metrics = 11;
+    InventorySnapshot snapshot = 12;
+    InventoryDelta delta = 13;
+    AgentEvents events = 14;
+    LogChunk log_chunk = 15;
+    CommandResult command_result = 16;
+    AgentHeartbeat heartbeat = 17;
+  }
+}
+
+message AgentHello {
+  // Currently 1.
+  uint32 protocol_version = 1;
+  string agent_version = 2;
+  // Random per agent process start; scopes seq numbers and series ids.
+  string session_id = 3;
+  string host_name = 4;
+  // Hex SHA-256 of /etc/machine-id plus host_name; never the raw value.
+  string machine_id_hash = 5;
+  // Static host facts (os, kernel, arch, cpu model, cores, memory total).
+  HostInfo host = 6;
+  // Detected capabilities, e.g. "docker", "podman", "cgroup_v2", "systemd",
+  // "dbus", "pm2", "nginx", "caddy", "haproxy", "cloudflared", "port_owners",
+  // "logs", "action:restart".
+  repeated string capabilities = 7;
+  // Hash of the effective agent configuration (token excluded).
+  string config_hash = 8;
+  // host.labels from agent.yaml.
+  map<string, string> labels = 9;
+  // Inventory version the agent currently holds.
+  uint64 inventory_version = 10;
+  // Actions the agent-side gate allows for at least one container.
+  repeated ContainerAction allowed_actions = 11;
+}
+
+// AgentMetrics carries columnar sample rows.
+//
+// Series are interned once per session: dict announces (series_id, entity,
+// metric) the first time a series is sampled, and the complete dictionary is
+// resent at the start of every connection. Each series belongs to exactly
+// one sampling group (one agent collector); dict_groups names it.
+//
+// Every row is one tick of one group (row_groups[i]). A series of that group
+// that is absent from the row is unchanged since its previous row and is
+// carried forward. A NaN value means the series stopped being sampled: the
+// decoder stops carrying it forward until a later non-NaN value revives it.
+// A keyframe row (keyframe_rows lists row indexes) contains every live
+// series of its group; group members absent from a keyframe are not live.
+message AgentMetrics {
+  repeated SeriesEntry dict = 1;
+  // Parallel to dict: owning sampling group of each entry.
+  repeated uint32 dict_groups = 2;
+  repeated MetricBatch rows = 3;
+  // Parallel to rows: sampling group of each row.
+  repeated uint32 row_groups = 4;
+  // Indexes into rows of keyframe rows.
+  repeated uint32 keyframe_rows = 5;
+}
+
+message InventorySnapshot {
+  uint64 version = 1;
+  HostInfo host = 2;
+  DockerEngine engine = 3;
+  repeated Container containers = 4;
+  repeated DockerImage images = 5;
+  repeated DockerVolume volumes = 6;
+  repeated DockerNetwork networks = 7;
+  DockerDiskUsage disk_usage = 8;
+  // Units, processes and pm2 apps; never containers.
+  repeated Workload workloads = 9;
+  repeated PortBinding listeners = 10;
+  repeated IngressRoute routes = 11;
+  repeated ProjectRule project_rules = 12;
+  repeated FilesystemUsage filesystems = 13;
+}
+
+message InventoryDelta {
+  // The version this delta applies to; a mismatch means the hub sends a
+  // ResyncRequest and the agent answers with a snapshot.
+  uint64 base_version = 1;
+  uint64 version = 2;
+  repeated Container upsert_containers = 3;
+  // Container entity ids ("ctr:<name>").
+  repeated string removed_container_ids = 4;
+  repeated Workload upsert_workloads = 5;
+  // Workload entity ids ("unit:<name>", "proc:<name>").
+  repeated string removed_workload_ids = 6;
+  ReplaceSet replace = 7;
+}
+
+// Small, rarely-changing sets, replaced whole when present. Message fields
+// are present when set; a repeated field is replaced when its *_set flag is
+// true (so an empty list can clear the set).
+message ReplaceSet {
+  HostInfo host = 1;
+  DockerEngine engine = 2;
+  repeated DockerImage images = 3;
+  bool images_set = 4;
+  repeated DockerVolume volumes = 5;
+  bool volumes_set = 6;
+  repeated DockerNetwork networks = 7;
+  bool networks_set = 8;
+  DockerDiskUsage disk_usage = 9;
+  repeated PortBinding listeners = 10;
+  bool listeners_set = 11;
+  repeated IngressRoute routes = 12;
+  bool routes_set = 13;
+  repeated ProjectRule project_rules = 14;
+  bool project_rules_set = 15;
+  repeated FilesystemUsage filesystems = 16;
+  bool filesystems_set = 17;
+}
+
+// A project resolved on the agent from agent.yaml "projects:".
+message ProjectRule {
+  string name = 1;
+  string category = 2;
+  // Simple Icons slug.
+  string icon = 3;
+  // Design-token colour name, never a hex value.
+  string color = 4;
+  // Entity ids that matched the member globs.
+  repeated string member_ids = 5;
+}
+
+message FilesystemUsage {
+  string mount = 1;
+  string fstype = 2;
+  uint64 total_bytes = 3;
+  uint64 used_bytes = 4;
+}
+
+// Non-Docker events only (unit.failed, process.exit, agent.*); the hub
+// derives Docker lifecycle events from inventory changes.
+message AgentEvents {
+  repeated Event events = 1;
+}
+
+message LogChunk {
+  string request_id = 1;
+  repeated LogLine lines = 2;
+  bool eof = 3;
+  string error = 4;
+}
+
+message CommandResult {
+  string request_id = 1;
+  bool ok = 2;
+  // Connect code name on failure: "permission_denied", "not_found",
+  // "deadline_exceeded", "already_exists", "unavailable", "internal", ...
+  string code = 3;
+  string error = 4;
+  // The container after the action, when known.
+  Container container = 5;
+  uint64 duration_ms = 6;
+  // Id of the agent-side audit log line.
+  string audit_id = 7;
+}
+
+message AgentHeartbeat {
+  AgentStats stats = 1;
+}
+
+message AgentStats {
+  uint64 rss_bytes = 1;
+  // Fraction of one core since the previous heartbeat (0-1).
+  double cpu_util = 2;
+  uint64 frames_sent = 3;
+  uint64 frames_dropped = 4;
+  // Encoded (pre-compression) bytes sent.
+  uint64 bytes_sent = 5;
+  uint64 buffer_bytes = 6;
+  uint32 reconnects = 7;
+  map<string, uint32> collector_errors = 8;
+  uint32 series = 9;
+  uint32 goroutines = 10;
+  uint64 events_dropped = 11;
+  string transport = 12;
+}
+
+// ---------------------------------------------------------------------------
+// Hub -> agent
+// ---------------------------------------------------------------------------
+
+message HubFrame {
+  oneof payload {
+    HelloAck hello_ack = 1;
+    Ack ack = 2;
+    AgentHints hints = 3;
+    ResyncRequest resync = 4;
+    LogRequest log_request = 5;
+    LogCancel log_cancel = 6;
+    CommandRequest command = 7;
+    Heartbeat ping = 8;
+  }
+}
+
+message HelloAck {
+  string host_id = 1;
+  string hub_version = 2;
+  int64 server_time_ms = 3;
+  // Inventory version the hub holds for this session_id (0 when none). When
+  // it equals the agent's last sent version the agent sends only a delta.
+  uint64 known_inventory_version = 4;
+  // Force a full inventory snapshot.
+  bool resync = 5;
+  AgentHints hints = 6;
+}
+
+message Ack {
+  uint64 upto_seq = 1;
+}
+
+// Sampling hints derived from live subscribers. The agent clamps every
+// interval to its local [intervals.min, intervals.max].
+message AgentHints {
+  bool live_viewers = 1;
+  uint32 host_interval_ms = 2;
+  uint32 container_interval_ms = 3;
+  repeated string focus_entity_ids = 4;
+  uint32 flush_interval_ms = 5;
+}
+
+message ResyncRequest {
+  string reason = 1;
+}
+
+message LogRequest {
+  string request_id = 1;
+  string workload_id = 2;
+  // At most 500 lines.
+  uint32 tail = 3;
+  int64 since_ms = 4;
+  bool follow = 5;
+  // At most 600 (10 minutes).
+  uint32 max_seconds = 6;
+  string grep = 7;
+}
+
+message LogCancel {
+  string request_id = 1;
+}
+
+message CommandRequest {
+  string request_id = 1;
+  ContainerAction action = 2;
+  // Docker container id (short or full) or container entity id "ctr:<name>".
+  string container_id = 3;
+  uint32 timeout_seconds = 4;
+  // Hub wall clock after which the agent refuses the command.
+  int64 deadline_ms = 5;
+  // Hub-side actor for the agent audit log, e.g. "admin@example.com".
+  string actor = 6;
+}
+
+message PushRequest {
+  string session_id = 1;
+  repeated AgentFrame frames = 2;
+}
+
+message PushResponse {
+  uint64 acked_seq = 1;
+  // Piggy-backed hub frames (hello_ack, hints, resync).
+  repeated HubFrame frames = 2;
+}
+
+message CommandsRequest {
+  string session_id = 1;
+}
+
+// ---------------------------------------------------------------------------
+// Admin
+// ---------------------------------------------------------------------------
+
+message ListAgentsRequest {}
+
+message ListAgentsResponse {
+  repeated AgentStatus agents = 1;
+  string primary_host_id = 2;
+}
+
+message AgentStatus {
+  string host_id = 1;
+  string name = 2;
+  // "connected", "stale", "offline", or "never".
+  string state = 3;
+  int64 last_seen_ms = 4;
+  int64 connected_since_ms = 5;
+  string agent_version = 6;
+  // "bidi" or "unary".
+  string transport = 7;
+  string remote_addr = 8;
+  int64 lag_ms = 9;
+  int64 clock_skew_ms = 10;
+  AgentStats stats = 11;
+  repeated string capabilities = 12;
+  string config_hash = 13;
+  string last_error = 14;
+  bool actions_enabled = 15;
+  uint64 bytes_received = 16;
+  // Inventory version the hub holds for the current agent session.
+  uint64 inventory_version = 17;
+  // Frames the hub refused (rate, size, or series caps).
+  uint64 frames_rejected = 18;
+  // Actions the agent-side gate allows (from Hello).
+  repeated ContainerAction allowed_actions = 19;
+}
