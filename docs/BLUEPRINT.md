@@ -794,8 +794,8 @@ annotations (`readOnlyHint`, `idempotentHint`, `openWorldHint: false`). A golden
 
 ## 10. CLI
 
-Single binary calling the local API (with in-process collector fallback for one-shot commands
-when the daemon is stopped):
+Single binary. The view commands call the running daemon's ConnectRPC API through
+`internal/apiclient` (the same client `asterism mcp` uses) with a read-scoped bearer token:
 
 ```text
 asterism serve [--config /etc/asterism/asterism.toml]
@@ -805,14 +805,19 @@ asterism top [--by cpu|mem]             # live bubbletea TUI (1 s refresh)
 asterism ps [--project shop]
 asterism ports [--exposure public]      # open ports and owning workloads
 asterism ingress                        # Nginx/Caddy/Traefik/Cloudflare routing table
-asterism logs <workload> [-f] [--grep ERR]
-asterism topo [--around svc:shop/api]   # ASCII topology graph
-asterism events [--since 1h]
-asterism token create|list|revoke
+asterism logs <workload> [-f] [--grep ERR] [--tail N]
+asterism topo [--around ctr:api|proj:shop]   # ASCII topology tree
+asterism events [--since 1h] [--severity warning]
+asterism token generate
 asterism version
 ```
 
-Human-readable output by default; `--json` on every command for scripting.
+Human-readable output by default (lipgloss tables; colour only on a terminal without
+`NO_COLOR`); `--json` on every command for scripting (protojson of the API response with proto
+field names, list pages merged into one response). `logs -f` polls `TailLogs` once a second
+because the logs API is a backwards timestamp cursor, not a stream. The in-process collector
+fallback for one-shot commands is deferred (D31): with the daemon stopped, the views print an
+actionable "daemon not reachable" error.
 
 ---
 
@@ -1286,3 +1291,4 @@ GoReleaser, demo media, public release.
 | D28 | Agent budgets: binary ≤ 11 MiB, image ≤ 12 MB, steady RSS ≤ 15 MB at default intervals, CPU ≤ 0.5% of a core, ≤ 2 KB/s, all measured (§16); gzip at `BestSpeed`; `net/http/pprof` only with `-tags pprof` | connect, protobuf and TLS alone are ~9.6 MB of binary; `BestSpeed` saves ~0.3 MB of encoder state per pooled writer for ~10% more bytes on a ~100 B/s stream; release binaries must never listen | Steady RSS at default intervals exceeds 15 MB on reference hardware, or a cheaper compressor appears in connect |
 | D29 | One shared, program-aware redaction rule set for arguments and text (§8.6), applied on the agent and again on the hub, with shell strings tokenized rather than split on whitespace | Short flags (`redis-cli -a`, `mysql -p`, `curl -u`, `sshpass -p`) and env args (`-e KEY=VALUE`) leaked through name-only rules; program context keeps `-p` as a port for `docker run`, `ssh` and `psql` | A credential form escapes the golden tables, or false positives hide information operators need |
 | D30 | MCP tools are adapters over the ConnectRPC surface: in the hub the backend is `api.Handler`; `asterism mcp` uses ConnectRPC clients against the running hub with a read token instead of running collectors in-process. `/mcp` accepts bearer tokens only. Results are a one-line summary plus compact JSON (units in names, RFC 3339 times) and the same value as structured content | One code path for UI, API and MCP; no second set of collectors competing for Docker and `/proc`; cookie-free MCP removes CSRF risk; clients that ignore `structuredContent` still get the data | A client needs MCP while the hub is down, or per-connection MCP state becomes necessary |
+| D31 | CLI views are API clients only: no in-process collector fallback when the daemon is stopped; `top` refreshes by polling `GetOverview` + `ListWorkloads` and `logs -f` by polling `TailLogs`, both at 1 s; the shared `internal/apiclient` serves the CLI and `asterism mcp` | A fallback would duplicate the hub's collector wiring in the CLI and could disagree with the daemon; polling reuses existing RPCs and needs no new streaming contract | Users routinely run one-shot views on hosts without a running daemon, or a server-streaming logs RPC lands |
