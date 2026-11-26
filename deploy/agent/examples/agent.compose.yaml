@@ -1,0 +1,28 @@
+# /etc/asterism/agent.yaml for a Docker Compose VPS, with the agent running
+# as a container (docker-compose.agent.yml). The token file, host root
+# (/host) and Docker endpoint (the socket proxy) come from the container's
+# environment, so they are not repeated here.
+version: 1
+hub:
+  url: https://asterism.example.com          # http:// only for loopback hubs
+host:
+  name: prod-1                               # must match the token's host
+  labels: {provider: hetzner, env: production}
+sources:
+  docker:
+    exclude: {labels: {asterism.ignore: "true"}}
+  systemd: {enabled: false}                  # no systemd inside the container
+  proxies:
+    nginx: {enabled: false}
+    caddy: {enabled: false}                  # Traefik routes come from Docker labels
+projects:
+  - {name: shop, category: production, icon: nodedotjs, members: {compose: [shop]}}
+  - {name: observability, category: infra, icon: grafana, members: {containers: ["grafana*", "prometheus*", "loki*"]}}
+# Read-only by default. Restarts also need the hub's [actions] allow_actions,
+# allow_actions on this agent's [[agents]] entry, and the socket proxy's
+# -allowPOST line.
+actions:
+  enabled: false
+  allow: [restart]
+  containers: ["shop-*"]
+  protect: ["*postgres*"]

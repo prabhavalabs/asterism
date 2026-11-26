@@ -1,0 +1,80 @@
+# asterism-agent on a Docker host, hardened, behind a read-only Docker
+# socket proxy. Merge into an existing compose project or run on its own:
+#
+#   install -m 0640 /dev/stdin ./agent.token   # paste the asta_ token, then Ctrl-D
+#   cp examples/agent.compose.yaml ./agent.yaml  # edit hub.url and host.name
+#   docker compose -f docker-compose.agent.yml up -d
+#
+# The agent never listens on a port; it dials hub.url. It runs as uid 65532
+# with no capabilities, a read-only root filesystem and read-only mounts.
+# It reaches Docker only through socket-proxy, which forwards the read
+# endpoints the agent uses and nothing else.
+#
+# Container actions (restart and friends) need, besides the hub-side gates,
+# actions.enabled in agent.yaml AND the -allowPOST line below; leave it
+# commented out for a read-only agent.
+name: asterism-agent
+
+services:
+  socket-proxy:
+    image: wollomatic/socket-proxy:1
+    restart: unless-stopped
+    read_only: true
+    cap_drop: [ALL]
+    security_opt: ["no-new-privileges:true"]
+    # The proxy needs read access to docker.sock: run it as nobody with the
+    # host's docker group (getent group docker | cut -d: -f3).
+    user: "65534:${DOCKER_GID:-999}"
+    mem_limit: 32m
+    labels: {asterism.protected: "true"}
+    command:
+      - -loglevel=WARN
+      - -listenip=0.0.0.0
+      - -allowfrom=asterism-agent
+      - -watchdoginterval=0
+      - -allowHEAD=^/_ping$
+      - -allowGET=^(/v1\.[0-9]+)?/(_ping|info|events|containers/json|containers/[A-Za-z0-9_.-]+/(json|logs)|images/json|volumes|networks|system/df)$
+      # - -allowPOST=^(/v1\.[0-9]+)?/containers/[A-Za-z0-9_.-]+/(start|stop|restart|pause|unpause)$
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock:ro
+    networks: [agent]
+
+  asterism-agent:
+    image: ghcr.io/prabhavalabs/asterism-agent:0.2
+    restart: unless-stopped
+    depends_on: [socket-proxy]
+    read_only: true
+    user: "65532:65532"
+    cap_drop: [ALL]
+    # Optional, for port owners (/proc/*/fd) and root-only proxy configs:
+    # cap_add: [SYS_PTRACE, DAC_READ_SEARCH]
+    security_opt: ["no-new-privileges:true"]
+    mem_limit: 32m
+    cpus: 0.1
+    pids_limit: 64
+    labels: {asterism.self: "true", asterism.protected: "true"}
+    environment:
+      ASTERISM_AGENT_TOKEN_FILE: /run/secrets/asterism_agent_token
+      ASTERISM_AGENT_DOCKER_ENDPOINT: tcp://socket-proxy:2375
+    secrets: [asterism_agent_token]
+    volumes:
+      - /proc:/host/proc:ro
+      - /sys/fs/cgroup:/host/sys/fs/cgroup:ro
+      - /etc/os-release:/host/etc/os-release:ro
+      - /etc/machine-id:/host/etc/machine-id:ro
+      # Per proxy, only if present on the host:
+      # - /etc/nginx:/host/etc/nginx:ro
+      # - /etc/caddy:/host/etc/caddy:ro
+      # - /etc/haproxy:/host/etc/haproxy:ro
+      # - /etc/cloudflared:/host/etc/cloudflared:ro
+      # Optional, unit state for systemd services:
+      # - /run/dbus/system_bus_socket:/run/dbus/system_bus_socket:ro
+      - ./agent.yaml:/etc/asterism/agent.yaml:ro
+    networks: [agent]
+
+networks:
+  agent: {}
+
+secrets:
+  asterism_agent_token:
+    file: ./agent.token
