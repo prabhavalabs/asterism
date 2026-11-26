@@ -3,6 +3,7 @@ package mcp
 import (
 	"slices"
 	"strconv"
+	"strings"
 
 	asterismv1 "github.com/prabhavalabs/asterism/internal/gen/asterism/v1"
 )
@@ -106,6 +107,29 @@ type ProjectView struct {
 	Workloads     uint32  `json:"workloads"`
 	WorkingDir    string  `json:"working_dir,omitempty"`
 	Icon          string  `json:"icon,omitempty"`
+	// IconKind is how the icon was chosen: uploaded, configured, label,
+	// favicon, detected or monogram. Image bytes are never returned.
+	IconKind string `json:"icon_kind,omitempty"`
+	// IconSource says where an uploaded or favicon image came from.
+	IconSource string `json:"icon_source,omitempty"`
+}
+
+// iconSource describes the origin of an image icon ("" for glyphs).
+func iconSource(ic *asterismv1.ProjectIcon) string {
+	switch ic.GetKind() {
+	case asterismv1.ProjectIconKind_PROJECT_ICON_KIND_UPLOADED:
+		return "uploaded by an admin"
+	case asterismv1.ProjectIconKind_PROJECT_ICON_KIND_FAVICON:
+		switch ic.GetFaviconSource() {
+		case asterismv1.FaviconSource_FAVICON_SOURCE_DIRECTORY:
+			return "project directory: " + ic.GetFaviconOrigin()
+		case asterismv1.FaviconSource_FAVICON_SOURCE_DOMAIN:
+			return "public domain: " + ic.GetFaviconOrigin()
+		case asterismv1.FaviconSource_FAVICON_SOURCE_GENERATED:
+			return "generated (showcase)"
+		}
+	}
+	return ""
 }
 
 func projectView(p *asterismv1.Project) ProjectView {
@@ -123,6 +147,8 @@ func projectView(p *asterismv1.Project) ProjectView {
 		Workloads:     p.GetWorkloadCount(),
 		WorkingDir:    p.GetWorkingDir(),
 		Icon:          p.GetIcon().GetSlug(),
+		IconKind:      iconKind(p.GetIcon().GetKind()),
+		IconSource:    iconSource(p.GetIcon()),
 	}
 }
 
@@ -486,3 +512,10 @@ func truncate(s string, n int) string {
 }
 
 func itoa(n int32) string { return strconv.Itoa(int(n)) }
+
+func iconKind(k asterismv1.ProjectIconKind) string {
+	if k == asterismv1.ProjectIconKind_PROJECT_ICON_KIND_UNSPECIFIED {
+		return ""
+	}
+	return strings.ToLower(strings.TrimPrefix(k.String(), "PROJECT_ICON_KIND_"))
+}
