@@ -126,7 +126,7 @@ export function ProjectIconSheet({ project, open, onOpenChange }: ProjectIconShe
                 <span className="truncate font-mono text-small text-muted-foreground" title={origin}>
                   {origin}
                 </span>
-              ) : icon?.faviconStatus ? (
+              ) : icon?.faviconStatus && !icon.hasUpload ? (
                 <span className="text-small text-muted-foreground">
                   {icon.faviconStatus}
                   {icon.faviconCheckedMs ? ` · checked ${formatRelativeTime(icon.faviconCheckedMs)}` : ""}

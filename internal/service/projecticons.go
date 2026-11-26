@@ -460,7 +460,7 @@ func (o *Observatory) discoverFavicon(ctx context.Context, proj *asterismv1.Proj
 	status := "no favicon found"
 	switch {
 	case m.opts.Fetcher == nil:
-		status = "no favicon in the project directory; domain fetching is off ([projects] favicon_fetch)"
+		status = "no favicon in the project directory; domain fetching is off"
 	case !m.opts.FetchAllowed(proj.Name):
 		status = "no favicon in the project directory; domain fetching is off for this project"
 	case len(projHosts) == 0:
