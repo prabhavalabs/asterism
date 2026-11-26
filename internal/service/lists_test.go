@@ -485,6 +485,15 @@ func TestListImagesVolumesNetworks(t *testing.T) {
 	if len(imgs.Images) != 1 || !imgs.Images[0].Dangling {
 		t.Fatalf("dangling images = %v", imgs.Images)
 	}
+	imgs, _ = o.ListImages(&asterismv1.ListImagesRequest{UnusedOnly: true})
+	if len(imgs.Images) != 2 || imgs.Counts.Unused != 2 || imgs.TotalSizeBytes != 400 {
+		t.Fatalf("unused images = %v counts=%+v size=%d", imgs.Images, imgs.Counts, imgs.TotalSizeBytes)
+	}
+	for _, img := range imgs.Images {
+		if img.Containers != 0 {
+			t.Fatalf("unused filter returned an image in use: %+v", img)
+		}
+	}
 
 	vols, err := o.ListVolumes(&asterismv1.ListVolumesRequest{UnusedOnly: true})
 	if err != nil {
