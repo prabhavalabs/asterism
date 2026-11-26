@@ -1,0 +1,5 @@
+[
+ {"entryPoints":["websecure"],"service":"shop-api","rule":"Host(`api.example.com`) && PathPrefix(`/v1`)","tls":{"certResolver":"le"},"status":"enabled","using":["websecure"],"name":"api@docker","provider":"docker"},
+ {"entryPoints":["web"],"service":"api@internal","rule":"Host(`traefik.example.com`)","status":"enabled","name":"dashboard@docker","provider":"docker"},
+ {"entryPoints":["web"],"service":"broken","rule":"Host(`x.example.com`)","status":"disabled","name":"x@docker","provider":"docker"}
+]

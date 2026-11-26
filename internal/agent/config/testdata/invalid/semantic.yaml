@@ -1,0 +1,29 @@
+version: 2
+hub:
+  url: http://asterism.example.com
+  token: asta_test
+  transport: grpc
+  compression: zstd
+  tls: {pin_sha256: ["kq8…base64…="], client_cert: /etc/asterism/client.crt}
+  backoff: {initial: 10s, max: 5s}
+host: {root: host}
+intervals:
+  min: 2m
+  max: 60s
+  idle_factor: 0.5
+  docker_disk_usage: 10s
+sources:
+  docker: {endpoint: /var/run/docker.sock, group_by: project}
+  systemd: {discover: some}
+  processes:
+    match:
+      - {name: Billing}
+  routes:
+    - {proxy: apache, hostnames: [], upstream: "not a url"}
+  ports: {protocols: [tcp, sctp]}
+projects:
+  - {name: shop, color: "#ff0000", members: {}}
+  - {name: shop, members: {compose: ["[shop"]}}
+redaction: {extra_secret_keys: ["(unclosed"]}
+actions: {enabled: true, allow: [restart, exec], containers: []}
+agent: {log_level: verbose, log_format: xml, gc_percent: 0}

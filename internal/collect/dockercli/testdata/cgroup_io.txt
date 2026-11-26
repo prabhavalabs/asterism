@@ -1,0 +1,4 @@
+#/sys/fs/cgroup/system.slice/docker-3f2a9c1b7d4e0000000000000000000000000000000000000000000000000000.scope/io.stat
+8:0 rbytes=1000 wbytes=2000 rios=10 wios=20 dbytes=0 dios=0
+253:0 rbytes=500 wbytes=500 rios=1 wios=1 dbytes=0 dios=0
+#/sys/fs/cgroup/docker/0123456789ab3333333333333333333333333333333333333333333333333333/io.stat

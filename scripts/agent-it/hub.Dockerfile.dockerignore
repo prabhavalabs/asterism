@@ -1,0 +1,8 @@
+*
+!go.mod
+!go.sum
+!cmd/**
+!internal/**
+internal/web/dist
+**/*_test.go
+**/testdata

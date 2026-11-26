@@ -1,0 +1,95 @@
+# Asterism configuration example.
+# Copy to asterism.local.toml (git-ignored) for local development,
+# or pass --config /etc/asterism/asterism.toml in production.
+
+[server]
+# Always bind to loopback by default; place Nginx or Caddy in front for TLS.
+listen = "127.0.0.1:7700"
+# Set true when served behind HTTPS so session cookies carry the Secure flag.
+behind_tls = false
+# External origin (no path), used to make link-preview tags absolute so shared
+# links show the Asterism card. Also ASTERISM_PUBLIC_URL.
+# public_url = "https://monitor.example.com"
+
+[collect]
+# Modes: "local" (host metrics only), "showcase" (live host + demo VPS topology),
+# "ssh" (read-only remote VPS bridge over system ssh), or "agent" (asterism-agent
+# processes push telemetry to this hub; see [[agents]] below).
+mode = "local"
+# Used when mode = "ssh", e.g. "ubuntu@vps.example.com" or an ~/.ssh/config alias.
+ssh_target = ""
+# Showcase mode only: add this many generated compose projects (3-4 containers
+# each) to exercise paging at scale. 0 keeps the curated demo; maximum 40.
+# Also ASTERISM_SHOWCASE_FLEET.
+showcase_fleet = 0
+
+# Agent mode only.
+# [collect.agent]
+# Agent whose data the UI shows; empty = the only (or first) enrolled agent.
+# primary_host = "prod-1"
+# Silence after which an agent is shown offline and agent.offline is raised (5s-10m).
+# stale_after = "30s"
+
+[auth]
+# Admin login credentials. In production prefer password_hash (Argon2id) or
+# environment variables ASTERISM_ADMIN_EMAIL / ASTERISM_ADMIN_PASSWORD_HASH.
+admin_email = "admin@example.com"
+admin_password = "change-me-before-running"
+session_ttl_hours = 24
+
+# API bearer tokens for CLI, MCP, and scripts. Generate one with
+#   asterism token generate --name ci --scope read
+# which prints the token once and the entry to paste here (only the SHA-256 digest is stored).
+# Scopes: "read" (all read-only RPCs) and "actions" (container start/stop/restart/pause/unpause,
+# which additionally requires [actions] allow_actions = true).
+# [[auth.tokens]]
+# name = "ci"
+# sha256 = "<64-character hex digest printed by asterism token generate>"
+# scopes = ["read"]
+
+[actions]
+# Read-only by default. Mutating workload actions require explicit opt-in.
+# When false, every ActionsService RPC returns FailedPrecondition and the UI hides or
+# disables action buttons (GetOverview.capabilities.can_perform_actions = false).
+# When true, the admin web session gains the "actions" scope; API tokens still need an
+# explicit "actions" scope. Every attempt (including refusals) is recorded as an audit event
+# on the Events page. Env override: ASTERISM_ALLOW_ACTIONS=true.
+allow_actions = false
+# Containers that actions must never touch. Asterism also always protects itself
+# (label asterism.self=true or the asterism image) and containers labelled
+# asterism.protected=true.
+protected_containers = []
+# Set true only if you really want Asterism to be able to stop or restart protected containers.
+allow_protected = false
+# Graceful stop timeout used by stop/restart when the caller does not pass one (1-300 s).
+default_stop_timeout_seconds = 10
+
+# Optional per-project display settings, keyed by the project (compose) name.
+# Each project gets an icon automatically: a compose label `asterism.icon` (and
+# optional `asterism.color`) on any of its containers wins over detection from
+# the project's dominant technology (postgres, nginx, grafana, ...); projects
+# with nothing recognisable get a two-letter monogram on a palette colour.
+# Settings here override both.
+#   icon  = technology slug, e.g. postgres, timescale, mysql, mariadb, mongodb,
+#           redis, valkey, nginx, caddy, traefik, cloudflared, node, python, go,
+#           php, rabbitmq, nats, kafka, minio, garage, grafana, prometheus,
+#           wordpress, ghost, nextcloud, gitea, n8n, docker (unknown slugs are ignored)
+#   color = design token: chart-1..chart-5, role-proxy, role-app, role-db,
+#           role-cache, role-worker, or primary
+# [projects."shop"]
+# icon = "wordpress"
+# color = "chart-3"
+
+# Enrolled asterism-agents (collect.mode = "agent"). Create an entry with
+#   asterism agent token create --host prod-1 [--allow-actions]
+# which prints the token once (store it on the agent host) and this entry; only the
+# SHA-256 digest is kept here. Agent tokens carry the "ingest" scope: they are accepted
+# only by AgentService, are bound to one host name, and cannot read anything.
+# Container actions through an agent need all of: [actions] allow_actions, the caller's
+# "actions" scope, allow_actions on the agent entry, and the agent's own agent.yaml
+# actions allow-list.
+# [[agents]]
+# name = "prod-1"
+# sha256 = "<64-character hex digest printed by asterism agent token create>"
+# machine_id = ""        # optional pin; the hub logs the observed value on first connect
+# allow_actions = false  # hub-side per-agent gate

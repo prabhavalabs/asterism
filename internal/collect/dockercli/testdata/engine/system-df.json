@@ -1,0 +1,120 @@
+{
+ "LayersSize": 250000000,
+ "Images": [
+  {
+   "Containers": 2,
+   "Created": 1795366892,
+   "Id": "sha256:d9e853e87e55526f6b2917df91a2115c36dd7c696a35be12163d44e6e2a4b6bc",
+   "Labels": {
+    "org.opencontainers.image.title": "shop"
+   },
+   "ParentId": "",
+   "RepoDigests": [],
+   "RepoTags": [
+    "ghcr.io/acme/shop-api:2.4.1",
+    "ghcr.io/acme/shop-api:latest"
+   ],
+   "SharedSize": 2000000,
+   "Size": 120000000
+  },
+  {
+   "Containers": 1,
+   "Created": 1795315371,
+   "Id": "sha256:bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
+   "Labels": null,
+   "ParentId": "",
+   "RepoDigests": [],
+   "RepoTags": [
+    "redis:7.4-alpine"
+   ],
+   "SharedSize": 0,
+   "Size": 40000000
+  },
+  {
+   "Containers": 0,
+   "Created": 1795000000,
+   "Id": "sha256:eeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee",
+   "Labels": {},
+   "ParentId": "",
+   "RepoDigests": [
+    "x@sha256:eeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee"
+   ],
+   "RepoTags": [],
+   "SharedSize": 0,
+   "Size": 90000000
+  }
+ ],
+ "Containers": [
+  {
+   "Id": "317e4d06ef07a1453738080b7345f935f359dd2c0521ffffcf9bb62ab05fed25",
+   "Names": [
+    "/shop-api-1"
+   ],
+   "SizeRw": 4096,
+   "State": "running"
+  },
+  {
+   "Id": "a1b2c3d4e5f60718293a4b5c6d7e8f90a1b2c3d4e5f60718293a4b5c6d7e8f90",
+   "Names": [
+    "/cache-redis"
+   ],
+   "SizeRw": 1048576,
+   "State": "exited"
+  }
+ ],
+ "Volumes": [
+  {
+   "Name": "shop_data",
+   "Driver": "local",
+   "Labels": {},
+   "Mountpoint": "/x",
+   "Scope": "local",
+   "UsageData": {
+    "RefCount": 1,
+    "Size": 402935167
+   }
+  },
+  {
+   "Name": "ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff",
+   "Driver": "local",
+   "Labels": {},
+   "Mountpoint": "/y",
+   "Scope": "local",
+   "UsageData": {
+    "RefCount": 0,
+    "Size": 1000
+   }
+  },
+  {
+   "Name": "unknown",
+   "Driver": "local",
+   "UsageData": {
+    "RefCount": -1,
+    "Size": -1
+   }
+  }
+ ],
+ "BuildCache": [
+  {
+   "ID": "a",
+   "Type": "regular",
+   "InUse": false,
+   "Shared": true,
+   "Size": 39675959
+  },
+  {
+   "ID": "b",
+   "Type": "exec.cachemount",
+   "InUse": false,
+   "Shared": false,
+   "Size": 144134144
+  },
+  {
+   "ID": "c",
+   "Type": "regular",
+   "InUse": true,
+   "Shared": false,
+   "Size": 1000
+  }
+ ]
+}

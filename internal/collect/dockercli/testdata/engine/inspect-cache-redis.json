@@ -1,0 +1,173 @@
+{
+ "Id": "a1b2c3d4e5f60718293a4b5c6d7e8f90a1b2c3d4e5f60718293a4b5c6d7e8f90",
+ "Created": "2026-11-24T22:03:09.69185293Z",
+ "Path": "sh",
+ "Args": [
+  "-c",
+  "sleep 600"
+ ],
+ "State": {
+  "Status": "exited",
+  "Running": false,
+  "Paused": false,
+  "Restarting": false,
+  "OOMKilled": true,
+  "Dead": false,
+  "Pid": 0,
+  "ExitCode": 137,
+  "Error": "",
+  "StartedAt": "2026-11-24T20:00:00Z",
+  "FinishedAt": "2026-11-24T21:00:00Z"
+ },
+ "Image": "sha256:bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
+ "ResolvConfPath": "/var/lib/docker/containers/317e4d06ef07a1453738080b7345f935f359dd2c0521ffffcf9bb62ab05fed25/resolv.conf",
+ "HostnamePath": "/var/lib/docker/containers/317e4d06ef07a1453738080b7345f935f359dd2c0521ffffcf9bb62ab05fed25/hostname",
+ "HostsPath": "/var/lib/docker/containers/317e4d06ef07a1453738080b7345f935f359dd2c0521ffffcf9bb62ab05fed25/hosts",
+ "LogPath": "",
+ "Name": "/cache-redis",
+ "RestartCount": 0,
+ "Driver": "overlayfs",
+ "Platform": "linux",
+ "MountLabel": "",
+ "ProcessLabel": "",
+ "AppArmorProfile": "",
+ "ExecIDs": null,
+ "HostConfig": {
+  "Binds": null,
+  "ContainerIDFile": "",
+  "LogConfig": {
+   "Type": "json-file",
+   "Config": {
+    "splunk-token": "s3cr3t-value"
+   }
+  },
+  "NetworkMode": "host",
+  "PortBindings": {},
+  "RestartPolicy": {
+   "Name": "unless-stopped",
+   "MaximumRetryCount": 0
+  },
+  "AutoRemove": false,
+  "VolumeDriver": "",
+  "VolumesFrom": null,
+  "ConsoleSize": [
+   0,
+   0
+  ],
+  "CapAdd": null,
+  "CapDrop": null,
+  "CgroupnsMode": "private",
+  "Dns": null,
+  "DnsOptions": [],
+  "DnsSearch": [],
+  "ExtraHosts": null,
+  "GroupAdd": null,
+  "IpcMode": "private",
+  "Cgroup": "",
+  "Links": null,
+  "OomScoreAdj": 0,
+  "PidMode": "",
+  "Privileged": false,
+  "PublishAllPorts": false,
+  "ReadonlyRootfs": false,
+  "SecurityOpt": null,
+  "UTSMode": "",
+  "UsernsMode": "",
+  "ShmSize": 67108864,
+  "Runtime": "runc",
+  "Isolation": "",
+  "CpuShares": 0,
+  "Memory": 0,
+  "NanoCpus": 0,
+  "CgroupParent": "",
+  "BlkioWeight": 0,
+  "BlkioWeightDevice": [],
+  "BlkioDeviceReadBps": [],
+  "BlkioDeviceWriteBps": [],
+  "BlkioDeviceReadIOps": [],
+  "BlkioDeviceWriteIOps": [],
+  "CpuPeriod": 0,
+  "CpuQuota": 0,
+  "CpuRealtimePeriod": 0,
+  "CpuRealtimeRuntime": 0,
+  "CpusetCpus": "",
+  "CpusetMems": "",
+  "Devices": [],
+  "DeviceCgroupRules": null,
+  "DeviceRequests": null,
+  "MemoryReservation": 0,
+  "MemorySwap": 0,
+  "MemorySwappiness": null,
+  "OomKillDisable": null,
+  "PidsLimit": null,
+  "Ulimits": null,
+  "CpuCount": 0,
+  "CpuPercent": 0,
+  "IOMaximumIOps": 0,
+  "IOMaximumBandwidth": 0,
+  "MaskedPaths": [
+   "/proc/acpi",
+   "/proc/asound",
+   "/proc/interrupts",
+   "/proc/kcore",
+   "/proc/keys",
+   "/proc/latency_stats",
+   "/proc/sched_debug",
+   "/proc/scsi",
+   "/proc/timer_list",
+   "/proc/timer_stats",
+   "/sys/devices/virtual/powercap",
+   "/sys/firmware"
+  ],
+  "ReadonlyPaths": [
+   "/proc/bus",
+   "/proc/fs",
+   "/proc/irq",
+   "/proc/sys",
+   "/proc/sysrq-trigger"
+  ]
+ },
+ "GraphDriver": {
+  "Data": null,
+  "Name": "overlayfs"
+ },
+ "Mounts": [],
+ "Config": {
+  "Hostname": "317e4d06ef07",
+  "Domainname": "",
+  "User": "",
+  "AttachStdin": false,
+  "AttachStdout": false,
+  "AttachStderr": false,
+  "ExposedPorts": {
+   "6379/tcp": {}
+  },
+  "Tty": false,
+  "OpenStdin": false,
+  "StdinOnce": false,
+  "Env": [
+   "REDIS_PASSWORD=s3cr3t-value",
+   "PATH=/usr/bin"
+  ],
+  "Cmd": "redis-server --requirepass s3cr3t-value",
+  "Healthcheck": null,
+  "Image": "redis:7.4-alpine",
+  "Volumes": null,
+  "WorkingDir": "/",
+  "Entrypoint": null,
+  "Labels": {
+   "asterism.role": "cache"
+  }
+ },
+ "NetworkSettings": {
+  "SandboxID": "be5c779797c0ea9f19fdbad0a7c1d04bdaeb804b8db784358d47b83168157a81",
+  "SandboxKey": "/var/run/docker/netns/be5c779797c0",
+  "Ports": {},
+  "Networks": {
+   "host": {
+    "IPAddress": "",
+    "Gateway": ""
+   }
+  }
+ }
+}

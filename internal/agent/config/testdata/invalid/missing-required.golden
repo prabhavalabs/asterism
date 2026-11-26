@@ -1,0 +1,2 @@
+missing-required.yaml: hub.url: required: set hub.url (e.g. https://asterism.example.com) or ASTERISM_AGENT_HUB_URL
+missing-required.yaml:3: hub.token_file: cannot read token file /nonexistent/asterism/agent.token: no such file or directory (create it with `asterism agent token create` on the hub, or set ASTERISM_AGENT_TOKEN)

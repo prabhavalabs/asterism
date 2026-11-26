@@ -1,0 +1,8 @@
+bad-scalars.yaml:4: hub.buffer.max_bytes: invalid size "lots" (want e.g. 64KiB, 1MiB, 12MiB)
+bad-scalars.yaml:4: hub.buffer.max_events: invalid value "many" (want a whole number)
+bad-scalars.yaml:5: hub.backoff.initial: invalid duration "soon" (want e.g. 2s, 5m, 1h, or 0)
+bad-scalars.yaml:7: intervals.host: invalid duration "fast" (want e.g. 2s, 5m, 1h, or 0)
+bad-scalars.yaml:8: intervals.adaptive: invalid value "maybe" (want true or false)
+bad-scalars.yaml:9: intervals.idle_factor: want a single value, got a list
+bad-scalars.yaml:11: sources.docker.enabled: invalid value "sometimes" (want auto, true or false)
+bad-scalars.yaml:12: sources.logs.rate_limit: invalid rate "64KiB/minute" (want e.g. 64KiB/s)

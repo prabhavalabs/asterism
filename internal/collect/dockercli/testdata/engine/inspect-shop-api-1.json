@@ -1,0 +1,252 @@
+{
+ "Id": "317e4d06ef07a1453738080b7345f935f359dd2c0521ffffcf9bb62ab05fed25",
+ "Created": "2026-11-24T22:03:09.69185293Z",
+ "Path": "sh",
+ "Args": [
+  "-c",
+  "sleep 600"
+ ],
+ "State": {
+  "Status": "running",
+  "Running": true,
+  "Paused": false,
+  "Restarting": false,
+  "OOMKilled": false,
+  "Dead": false,
+  "Pid": 4242,
+  "ExitCode": 0,
+  "Error": "",
+  "StartedAt": "2026-11-24T22:03:09.801777555Z",
+  "FinishedAt": "0001-01-01T00:00:00Z",
+  "Health": {
+   "Status": "healthy",
+   "FailingStreak": 0,
+   "Log": [
+    {
+     "Start": "2026-11-24T22:03:11Z",
+     "End": "2026-11-24T22:03:11.1Z",
+     "ExitCode": 0,
+     "Output": "ok token=s3cr3t-value\n"
+    }
+   ]
+  }
+ },
+ "Image": "sha256:d9e853e87e55526f6b2917df91a2115c36dd7c696a35be12163d44e6e2a4b6bc",
+ "ResolvConfPath": "/var/lib/docker/containers/317e4d06ef07a1453738080b7345f935f359dd2c0521ffffcf9bb62ab05fed25/resolv.conf",
+ "HostnamePath": "/var/lib/docker/containers/317e4d06ef07a1453738080b7345f935f359dd2c0521ffffcf9bb62ab05fed25/hostname",
+ "HostsPath": "/var/lib/docker/containers/317e4d06ef07a1453738080b7345f935f359dd2c0521ffffcf9bb62ab05fed25/hosts",
+ "LogPath": "",
+ "Name": "/shop-api-1",
+ "RestartCount": 0,
+ "Driver": "overlayfs",
+ "Platform": "linux",
+ "MountLabel": "",
+ "ProcessLabel": "",
+ "AppArmorProfile": "",
+ "ExecIDs": null,
+ "HostConfig": {
+  "Binds": null,
+  "ContainerIDFile": "",
+  "LogConfig": {
+   "Type": "json-file",
+   "Config": {
+    "splunk-token": "s3cr3t-value"
+   }
+  },
+  "NetworkMode": "bridge",
+  "PortBindings": {
+   "8080/tcp": [
+    {
+     "HostIp": "127.0.0.1",
+     "HostPort": "18080"
+    }
+   ]
+  },
+  "RestartPolicy": {
+   "Name": "unless-stopped",
+   "MaximumRetryCount": 0
+  },
+  "AutoRemove": false,
+  "VolumeDriver": "",
+  "VolumesFrom": null,
+  "ConsoleSize": [
+   0,
+   0
+  ],
+  "CapAdd": null,
+  "CapDrop": null,
+  "CgroupnsMode": "private",
+  "Dns": null,
+  "DnsOptions": [],
+  "DnsSearch": [],
+  "ExtraHosts": null,
+  "GroupAdd": null,
+  "IpcMode": "private",
+  "Cgroup": "",
+  "Links": null,
+  "OomScoreAdj": 0,
+  "PidMode": "",
+  "Privileged": false,
+  "PublishAllPorts": false,
+  "ReadonlyRootfs": false,
+  "SecurityOpt": null,
+  "UTSMode": "",
+  "UsernsMode": "",
+  "ShmSize": 67108864,
+  "Runtime": "runc",
+  "Isolation": "",
+  "CpuShares": 0,
+  "Memory": 536870912,
+  "NanoCpus": 1500000000,
+  "CgroupParent": "",
+  "BlkioWeight": 0,
+  "BlkioWeightDevice": [],
+  "BlkioDeviceReadBps": [],
+  "BlkioDeviceWriteBps": [],
+  "BlkioDeviceReadIOps": [],
+  "BlkioDeviceWriteIOps": [],
+  "CpuPeriod": 0,
+  "CpuQuota": 0,
+  "CpuRealtimePeriod": 0,
+  "CpuRealtimeRuntime": 0,
+  "CpusetCpus": "",
+  "CpusetMems": "",
+  "Devices": [],
+  "DeviceCgroupRules": null,
+  "DeviceRequests": null,
+  "MemoryReservation": 0,
+  "MemorySwap": 0,
+  "MemorySwappiness": null,
+  "OomKillDisable": null,
+  "PidsLimit": null,
+  "Ulimits": null,
+  "CpuCount": 0,
+  "CpuPercent": 0,
+  "IOMaximumIOps": 0,
+  "IOMaximumBandwidth": 0,
+  "MaskedPaths": [
+   "/proc/acpi",
+   "/proc/asound",
+   "/proc/interrupts",
+   "/proc/kcore",
+   "/proc/keys",
+   "/proc/latency_stats",
+   "/proc/sched_debug",
+   "/proc/scsi",
+   "/proc/timer_list",
+   "/proc/timer_stats",
+   "/sys/devices/virtual/powercap",
+   "/sys/firmware"
+  ],
+  "ReadonlyPaths": [
+   "/proc/bus",
+   "/proc/fs",
+   "/proc/irq",
+   "/proc/sys",
+   "/proc/sysrq-trigger"
+  ]
+ },
+ "GraphDriver": {
+  "Data": null,
+  "Name": "overlayfs"
+ },
+ "Mounts": [
+  {
+   "Type": "volume",
+   "Name": "shop_data",
+   "Source": "/var/lib/docker/volumes/shop_data/_data",
+   "Destination": "/data",
+   "Driver": "local",
+   "Mode": "z",
+   "RW": true,
+   "Propagation": ""
+  },
+  {
+   "Type": "bind",
+   "Source": "/var/run/docker.sock",
+   "Destination": "/var/run/docker.sock",
+   "Mode": "",
+   "RW": false,
+   "Propagation": "rprivate"
+  }
+ ],
+ "Config": {
+  "Hostname": "317e4d06ef07",
+  "Domainname": "",
+  "User": "",
+  "AttachStdin": false,
+  "AttachStdout": false,
+  "AttachStderr": false,
+  "ExposedPorts": {
+   "8080/tcp": {}
+  },
+  "Tty": false,
+  "OpenStdin": false,
+  "StdinOnce": false,
+  "Env": [
+   "DB_PASSWORD=s3cr3t-value",
+   "PORT=8080",
+   "PATH=/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin",
+   "WEIRD\\u003dKEY=s3cr3t-value"
+  ],
+  "Cmd": [
+   "node",
+   "server.js",
+   "--db-password=s3cr3t-value"
+  ],
+  "Healthcheck": {
+   "Test": [
+    "CMD-SHELL",
+    "redis-cli -a s3cr3t-value ping \u0026\u0026 mysqladmin ping -uroot -ps3cr3t-value \u0026\u0026 curl -fsu admin:s3cr3t-value http://localhost:8080/health \u0026\u0026 sshpass -p s3cr3t-value ssh -p 2222 probe@db true"
+   ],
+   "Interval": 2000000000
+  },
+  "Image": "alpine:3.20",
+  "Volumes": null,
+  "WorkingDir": "/",
+  "Entrypoint": null,
+  "Labels": {
+   "com.docker.compose.project": "shop",
+   "com.docker.compose.service": "api",
+   "com.example.api_token": "s3cr3t-value",
+   "com.docker.compose.project.working_dir": "/srv/shop",
+   "traefik.http.routers.api.rule": "Host(`api.example.com`)",
+   "com.example.dsn": "postgres://shop:s3cr3t-value@db:5432/shop",
+   "com.example.upstream": "https://user:s3cr3t-value@example.com/x"
+  }
+ },
+ "NetworkSettings": {
+  "SandboxID": "be5c779797c0ea9f19fdbad0a7c1d04bdaeb804b8db784358d47b83168157a81",
+  "SandboxKey": "/var/run/docker/netns/be5c779797c0",
+  "Ports": {
+   "8080/tcp": [
+    {
+     "HostIp": "127.0.0.1",
+     "HostPort": "18080"
+    }
+   ]
+  },
+  "Networks": {
+   "shop_default": {
+    "IPAMConfig": null,
+    "Links": null,
+    "Aliases": [
+     "shop-api-1",
+     "api"
+    ],
+    "DriverOpts": null,
+    "GwPriority": 0,
+    "NetworkID": "52255360856b26f492148bef0eadce0400d363e7e138234d764d29b5342f19d3",
+    "EndpointID": "e6ad451cce8fd16474460f768e8d083533bc878eef9dac76aeec7ec5aa2ab1a1",
+    "Gateway": "172.20.0.1",
+    "IPAddress": "172.20.0.3",
+    "MacAddress": "ba:bb:f4:d0:6f:a7",
+    "IPPrefixLen": 16,
+    "IPv6Gateway": "",
+    "GlobalIPv6Address": "",
+    "GlobalIPv6PrefixLen": 0,
+    "DNSNames": null
+   }
+  }
+ }
+}

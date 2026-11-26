@@ -1,0 +1,120 @@
+[
+ {
+  "Name": "none",
+  "Id": "1177849e9aaad911bc881053e48bffb1706e4009a6e44fd6497b2a88abad61ae",
+  "Created": "2026-05-20T17:08:18.73865975Z",
+  "Scope": "local",
+  "Driver": "null",
+  "EnableIPv4": true,
+  "EnableIPv6": false,
+  "IPAM": {
+   "Driver": "default",
+   "Options": null,
+   "Config": null
+  },
+  "Internal": false,
+  "Attachable": false,
+  "Ingress": false,
+  "ConfigFrom": {
+   "Network": ""
+  },
+  "ConfigOnly": false,
+  "Options": {},
+  "Labels": {},
+  "Containers": {}
+ },
+ {
+  "Name": "bridge",
+  "Id": "52255360856b26f492148bef0eadce0400d363e7e138234d764d29b5342f19d3",
+  "Created": "2026-11-23T12:25:15.597125292Z",
+  "Scope": "local",
+  "Driver": "bridge",
+  "EnableIPv4": true,
+  "EnableIPv6": false,
+  "IPAM": {
+   "Driver": "default",
+   "Options": null,
+   "Config": [
+    {
+     "Subnet": "172.17.0.0/16",
+     "Gateway": "172.17.0.1"
+    }
+   ]
+  },
+  "Internal": false,
+  "Attachable": false,
+  "Ingress": false,
+  "ConfigFrom": {
+   "Network": ""
+  },
+  "ConfigOnly": false,
+  "Options": {
+   "com.docker.network.bridge.default_bridge": "true",
+   "com.docker.network.bridge.enable_icc": "true",
+   "com.docker.network.bridge.enable_ip_masquerade": "true",
+   "com.docker.network.bridge.host_binding_ipv4": "0.0.0.0",
+   "com.docker.network.bridge.name": "docker0",
+   "com.docker.network.driver.mtu": "65535"
+  },
+  "Labels": {},
+  "Containers": {}
+ },
+ {
+  "Name": "host",
+  "Id": "6bbd712986ac0c6a8c12da60ab22b731edf55ca699afaeaa33b822d9b1ec3e8c",
+  "Created": "2026-05-20T17:08:18.741708417Z",
+  "Scope": "local",
+  "Driver": "host",
+  "EnableIPv4": true,
+  "EnableIPv6": false,
+  "IPAM": {
+   "Driver": "default",
+   "Options": null,
+   "Config": null
+  },
+  "Internal": false,
+  "Attachable": false,
+  "Ingress": false,
+  "ConfigFrom": {
+   "Network": ""
+  },
+  "ConfigOnly": false,
+  "Options": {},
+  "Labels": {},
+  "Containers": {}
+ },
+ {
+  "Name": "shop_default",
+  "Id": "9999999999999999999999999999999999999999999999999999999999999999",
+  "Created": "2026-05-20T17:08:18.73865975Z",
+  "Scope": "local",
+  "Driver": "null",
+  "EnableIPv4": true,
+  "EnableIPv6": false,
+  "IPAM": {
+   "Driver": "default",
+   "Options": null,
+   "Config": [
+    {
+     "Subnet": "172.20.0.0/16",
+     "Gateway": "172.20.0.1"
+    }
+   ]
+  },
+  "Internal": false,
+  "Attachable": false,
+  "Ingress": false,
+  "ConfigFrom": {
+   "Network": ""
+  },
+  "ConfigOnly": false,
+  "Options": {
+   "com.docker.network.secret": "s3cr3t-value"
+  },
+  "Labels": {
+   "com.docker.compose.project": "shop",
+   "com.docker.compose.network": "default"
+  },
+  "Containers": {}
+ }
+]

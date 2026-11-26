@@ -1,0 +1,1095 @@
+syntax = "proto3";
+
+package asterism.v1;
+
+enum WorkloadKind {
+  WORKLOAD_KIND_UNSPECIFIED = 0;
+  WORKLOAD_KIND_CONTAINER = 1;
+  WORKLOAD_KIND_SYSTEMD_UNIT = 2;
+  WORKLOAD_KIND_PROCESS = 3;
+}
+
+enum WorkloadRole {
+  WORKLOAD_ROLE_UNSPECIFIED = 0;
+  WORKLOAD_ROLE_PROXY = 1;
+  WORKLOAD_ROLE_APP = 2;
+  WORKLOAD_ROLE_WORKER = 3;
+  WORKLOAD_ROLE_DATABASE = 4;
+  WORKLOAD_ROLE_CACHE = 5;
+  WORKLOAD_ROLE_QUEUE = 6;
+  WORKLOAD_ROLE_STORAGE = 7;
+}
+
+enum HealthStatus {
+  HEALTH_STATUS_UNSPECIFIED = 0;
+  HEALTH_STATUS_HEALTHY = 1;
+  HEALTH_STATUS_DEGRADED = 2;
+  HEALTH_STATUS_DOWN = 3;
+}
+
+enum PortExposure {
+  PORT_EXPOSURE_UNSPECIFIED = 0;
+  PORT_EXPOSURE_PUBLIC = 1;
+  PORT_EXPOSURE_LOOPBACK = 2;
+  PORT_EXPOSURE_INTERNAL = 3;
+}
+
+enum EdgeKind {
+  EDGE_KIND_UNSPECIFIED = 0;
+  EDGE_KIND_INGRESS = 1;
+  EDGE_KIND_APP = 2;
+  EDGE_KIND_DATABASE = 3;
+  EDGE_KIND_CACHE = 4;
+  EDGE_KIND_NETWORK = 5;
+}
+
+enum EdgeSource {
+  EDGE_SOURCE_UNSPECIFIED = 0;
+  EDGE_SOURCE_STATIC = 1;
+  EDGE_SOURCE_PROXY = 2;
+  EDGE_SOURCE_OBSERVED = 3;
+}
+
+enum ProxyKind {
+  PROXY_KIND_UNSPECIFIED = 0;
+  PROXY_KIND_NGINX = 1;
+  PROXY_KIND_CADDY = 2;
+  PROXY_KIND_TRAEFIK = 3;
+  PROXY_KIND_CLOUDFLARED = 4;
+  PROXY_KIND_HAPROXY = 5;
+}
+
+message HostInfo {
+  string id = 1;
+  string hostname = 2;
+  string os = 3;
+  string kernel = 4;
+  string arch = 5;
+  string cpu_model = 6;
+  uint32 cores = 7;
+  uint64 mem_total_bytes = 8;
+  uint64 mem_used_bytes = 9;
+  uint64 swap_total_bytes = 10;
+  uint64 swap_used_bytes = 11;
+  uint64 disk_total_bytes = 12;
+  uint64 disk_used_bytes = 13;
+  uint64 uptime_seconds = 14;
+  int64 boot_time_ms = 15;
+  double cpu_util = 16;
+  double cpu_steal_util = 17;
+  double load_1 = 18;
+  double load_5 = 19;
+  double load_15 = 20;
+  double net_rx_bps = 21;
+  double net_tx_bps = 22;
+  string source_mode = 23;
+  string ssh_target = 24;
+}
+
+message PortBinding {
+  string id = 1;
+  string workload_id = 2;
+  string workload_name = 3;
+  string project_id = 4;
+  string host_ip = 5;
+  uint32 host_port = 6;
+  uint32 container_port = 7;
+  string proto = 8;
+  PortExposure exposure = 9;
+  string process_name = 10;
+}
+
+message UpstreamTarget {
+  string workload_id = 1;
+  string address = 2;
+  uint32 weight = 3;
+  bool backup = 4;
+  bool healthy = 5;
+}
+
+message IngressRoute {
+  string id = 1;
+  ProxyKind proxy_kind = 2;
+  string proxy_workload_id = 3;
+  repeated string hostnames = 4;
+  uint32 listen_port = 5;
+  bool tls = 6;
+  string path_prefix = 7;
+  string strategy = 8;
+  repeated UpstreamTarget upstreams = 9;
+}
+
+message Workload {
+  string id = 1;
+  WorkloadKind kind = 2;
+  WorkloadRole role = 3;
+  string name = 4;
+  string project_id = 5;
+  string service_name = 6;
+  string image = 7;
+  int32 pid = 8;
+  string state = 9;
+  HealthStatus health = 10;
+  uint32 restart_count = 11;
+  int64 started_at_ms = 12;
+  double cpu_util = 13;
+  uint64 mem_used_bytes = 14;
+  uint64 mem_limit_bytes = 15;
+  double net_rx_bps = 16;
+  double net_tx_bps = 17;
+  uint32 replicas = 18;
+  repeated PortBinding ports = 19;
+  repeated string networks = 20;
+  map<string, string> labels = 21;
+  repeated string env_keys = 22;
+  // Technology slug detected from the image (e.g. "postgres", "nginx"); empty when unknown.
+  string tech = 23;
+}
+
+// Where a project's icon came from, in order of precedence.
+enum ProjectIconKind {
+  PROJECT_ICON_KIND_UNSPECIFIED = 0;
+  // Set in asterism.toml: [projects."<name>"] icon = "<slug>".
+  PROJECT_ICON_KIND_CONFIGURED = 1;
+  // Set by the compose label asterism.icon on one of the project's containers.
+  PROJECT_ICON_KIND_LABEL = 2;
+  // Detected from the project's dominant technology (images such as postgres or nginx).
+  PROJECT_ICON_KIND_DETECTED = 3;
+  // Fallback: letters from the project name on a deterministic palette colour.
+  PROJECT_ICON_KIND_MONOGRAM = 4;
+}
+
+// ProjectIcon is resolved by the service layer; clients only render it.
+message ProjectIcon {
+  ProjectIconKind kind = 1;
+  // Technology slug (e.g. "postgres", "nginx", "grafana"); empty for monograms.
+  string slug = 2;
+  // Design-token colour name without the leading dashes, e.g. "chart-3" or "role-db".
+  string color_token = 3;
+  // One or two uppercase letters from the project name; always set.
+  string monogram = 4;
+  // Human-readable name of the technology (e.g. "PostgreSQL"); empty for monograms.
+  string label = 5;
+}
+
+message Project {
+  string id = 1;
+  string name = 2;
+  string kind = 3;
+  string category = 4;
+  string working_dir = 5;
+  HealthStatus status = 6;
+  uint32 health_score = 7;
+  double cpu_util = 8;
+  uint64 mem_used_bytes = 9;
+  uint64 mem_limit_bytes = 10;
+  double mem_share_pct = 11;
+  uint32 workload_count = 12;
+  repeated Workload workloads = 13;
+  map<string, string> labels = 14;
+  ProjectIcon icon = 15;
+}
+
+message TopologyNode {
+  string id = 1;
+  string label = 2;
+  string subtitle = 3;
+  string project_id = 4;
+  string category = 5;
+  WorkloadRole role = 6;
+  WorkloadKind kind = 7;
+  HealthStatus status = 8;
+  double cpu_util = 9;
+  uint64 mem_used_bytes = 10;
+  uint64 mem_limit_bytes = 11;
+  uint32 replicas = 12;
+  repeated PortBinding ports = 13;
+  repeated string hostnames = 14;
+  ProxyKind proxy_kind = 15;
+  string strategy = 16;
+}
+
+message TopologyEdge {
+  string id = 1;
+  string source_id = 2;
+  string target_id = 3;
+  string proto = 4;
+  uint32 port = 5;
+  EdgeKind edge_kind = 6;
+  EdgeSource source = 7;
+  string label = 8;
+  uint32 conn_count = 9;
+  double bytes_per_sec = 10;
+  uint32 weight = 11;
+}
+
+message Graph {
+  repeated TopologyNode nodes = 1;
+  repeated TopologyEdge edges = 2;
+  repeated Project projects = 3;
+  repeated IngressRoute ingress_routes = 4;
+}
+
+message MetricPoint {
+  int64 ts_ms = 1;
+  double value = 2;
+}
+
+message MetricSeries {
+  string entity_id = 1;
+  string metric = 2;
+  repeated MetricPoint points = 3;
+}
+
+message Event {
+  string id = 1;
+  int64 ts_ms = 2;
+  string entity_id = 3;
+  string entity_name = 4;
+  string kind = 5;
+  string severity = 6;
+  string message = 7;
+  // Free-form, non-secret key/value context (e.g. exit_code, restart_count).
+  map<string, string> attrs = 8;
+  // Set only for audit events (kind "audit.container.<action>").
+  ActionAudit audit = 9;
+}
+
+// ActionAudit records who performed a mutating action, on what, and the outcome.
+message ActionAudit {
+  // Admin email for sessions, "token:<name>" for API tokens.
+  string actor = 1;
+  // "session" or "token".
+  string actor_kind = 2;
+  // "start", "stop", "restart", "pause", or "unpause".
+  string action = 3;
+  // Entity id of the target, e.g. "ctr:shop-api-1".
+  string target_id = 4;
+  string target_name = 5;
+  // Short (12 hex) Docker container id.
+  string container_id = 6;
+  // "success", "failure", "denied", "not_found", or "invalid".
+  string result = 7;
+  string error = 8;
+  uint64 duration_ms = 9;
+  // ContainerState names before and after the action, e.g. "running" -> "exited".
+  string state_before = 10;
+  string state_after = 11;
+  string remote_addr = 12;
+}
+
+message LogLine {
+  int64 ts_ms = 1;
+  string workload_id = 2;
+  string stream = 3;
+  string text = 4;
+}
+
+// ---------------------------------------------------------------------------
+// Pagination, ordering, and facets shared by every List RPC
+// ---------------------------------------------------------------------------
+
+// PageRequest selects one numbered page of a server-side filtered and sorted list.
+// Omitting it returns the first page with page_size 200 (the maximum).
+message PageRequest {
+  // Items per page; 0 means 25. Values are clamped to 10..200.
+  int32 page_size = 1;
+  // 1-based page number; 0 or negative means 1. A page past the end returns
+  // no items with a correct PageInfo.
+  int32 page = 2;
+}
+
+// PageInfo describes the page that was returned.
+message PageInfo {
+  int32 page = 1;
+  // Effective (clamped) page size.
+  int32 page_size = 2;
+  // Number of items matching every filter and the query, across all pages.
+  int32 total_size = 3;
+  // Always at least 1, even when total_size is 0.
+  int32 total_pages = 4;
+}
+
+// FacetCount is one value of a free-form facet (e.g. a project category) and
+// the number of items carrying it. Facets ignore pagination and their own filter.
+message FacetCount {
+  string value = 1;
+  uint32 count = 2;
+}
+
+message RoleCount {
+  WorkloadRole role = 1;
+  uint32 count = 2;
+}
+
+message PortExposureCounts {
+  uint32 total = 1;
+  uint32 public = 2;
+  uint32 loopback = 3;
+  uint32 internal = 4;
+}
+
+message EventSeverityCounts {
+  uint32 total = 1;
+  uint32 info = 2;
+  uint32 warning = 3;
+  // "critical" and "error" severities.
+  uint32 critical = 4;
+}
+
+message EventKindCounts {
+  uint32 total = 1;
+  // Kinds starting with "container.".
+  uint32 lifecycle = 2;
+  // Kinds starting with "audit.".
+  uint32 audit = 3;
+  // Everything else (alerts, ingress reloads, TLS renewals, ...).
+  uint32 other = 4;
+}
+
+message ImageCounts {
+  uint32 total = 1;
+  uint32 in_use = 2;
+  uint32 dangling = 3;
+  uint32 unused = 4;
+}
+
+message VolumeCounts {
+  uint32 total = 1;
+  uint32 in_use = 2;
+  uint32 unused = 3;
+  uint32 anonymous = 4;
+}
+
+message GetOverviewRequest {}
+
+message GetOverviewResponse {
+  HostInfo host = 1;
+  repeated Project projects = 2;
+  uint32 public_port_count = 3;
+  uint32 ingress_route_count = 4;
+  uint32 active_alert_count = 5;
+  repeated Event recent_events = 6;
+  Capabilities capabilities = 7;
+  // Docker container counts (all states); empty when Docker inventory is unavailable.
+  ContainerCounts container_counts = 8;
+}
+
+// Capabilities tells clients which optional features are available to the caller.
+message Capabilities {
+  // True when the server config has [actions] allow_actions = true.
+  bool actions_enabled = 1;
+  // True when actions are enabled AND the caller holds the "actions" scope.
+  // Clients should show action buttons only when this is true.
+  bool can_perform_actions = 2;
+  // Human-readable reason when can_perform_actions is false.
+  string actions_disabled_reason = 3;
+  // Container actions the server implements for the current collector mode.
+  repeated ContainerAction container_actions = 4;
+  // Scopes held by the caller, e.g. ["read", "actions"].
+  repeated string scopes = 5;
+  // True when a Docker inventory source is active (ssh or showcase mode).
+  bool docker_available = 6;
+  // Collector mode: "local", "showcase", "ssh", or "agent".
+  string source_mode = 7;
+}
+
+message ListProjectsRequest {
+  // "" or "all" for every category.
+  string category = 1;
+  PageRequest page = 2;
+  // Case-insensitive substring over name, id, category, kind, and working directory.
+  string query = 3;
+  // AIP-132 order: name, category, memory, cpu, workloads, health. Default "memory desc".
+  string order_by = 4;
+}
+
+message ListProjectsResponse {
+  repeated Project projects = 1;
+  PageInfo page_info = 2;
+  // Projects per category after the query, ignoring the category filter; sorted by value.
+  repeated FacetCount category_counts = 3;
+}
+
+message GetProjectRequest {
+  string id = 1;
+}
+
+message GetProjectResponse {
+  Project project = 1;
+}
+
+message ListWorkloadsRequest {
+  string project_id = 1;
+  WorkloadRole role = 2;
+  PageRequest page = 3;
+  // Case-insensitive substring over name, id, image, service name, and state.
+  string query = 4;
+  // AIP-132 order: name, project, role, state, cpu, memory, restarts. Default "project, name".
+  string order_by = 5;
+}
+
+message ListWorkloadsResponse {
+  repeated Workload workloads = 1;
+  PageInfo page_info = 2;
+  // Workloads per role after project and query, ignoring the role filter; sorted by role.
+  repeated RoleCount role_counts = 3;
+  // Workloads per project id after role and query, ignoring the project filter; sorted by value.
+  repeated FacetCount project_counts = 4;
+}
+
+message GetWorkloadRequest {
+  string id = 1;
+}
+
+message GetWorkloadResponse {
+  Workload workload = 1;
+  repeated IngressRoute ingress_routes = 2;
+  repeated TopologyEdge edges = 3;
+  repeated Event recent_events = 4;
+}
+
+message ListPortsRequest {
+  PortExposure exposure = 1;
+  PageRequest page = 2;
+  // Case-insensitive substring over workload, process, host IP, project, and protocol;
+  // a number matches the host or container port exactly.
+  string query = 3;
+  // AIP-132 order: exposure, port, workload, project, proto. Default "exposure, port".
+  string order_by = 4;
+}
+
+message ListPortsResponse {
+  repeated PortBinding ports = 1;
+  PageInfo page_info = 2;
+  // Ports per exposure after the query, ignoring the exposure filter.
+  PortExposureCounts exposure_counts = 3;
+}
+
+message ListIngressRequest {
+  PageRequest page = 1;
+  // Case-insensitive substring over hostnames, path prefix, strategy, proxy workload,
+  // and upstream addresses and workloads.
+  string query = 2;
+  // AIP-132 order: hostname, port, proxy, upstreams. Default "hostname".
+  string order_by = 3;
+}
+
+message ListIngressResponse {
+  repeated IngressRoute routes = 1;
+  PageInfo page_info = 2;
+}
+
+message QueryRangeRequest {
+  string entity_id = 1;
+  repeated string metrics = 2;
+  int64 from_ms = 3;
+  int64 to_ms = 4;
+}
+
+message QueryRangeResponse {
+  repeated MetricSeries series = 1;
+}
+
+message TopNRequest {
+  string metric = 1;
+  uint32 limit = 2;
+}
+
+message TopNItem {
+  string entity_id = 1;
+  string name = 2;
+  string project_id = 3;
+  double value = 4;
+}
+
+message TopNResponse {
+  repeated TopNItem items = 1;
+}
+
+message GetGraphRequest {
+  string category = 1;
+}
+
+message GetGraphResponse {
+  Graph graph = 1;
+}
+
+message ListEventsRequest {
+  string entity_id = 1;
+  // Legacy page size, used only when page is omitted (clamped like page_size).
+  uint32 limit = 2;
+  PageRequest page = 3;
+  // Case-insensitive substring over message, kind, entity name, and entity id.
+  string query = 4;
+  // AIP-132 order: ts, severity, kind, entity. Default "ts desc".
+  string order_by = 5;
+  // Any of "info", "warning", "critical" ("error" counts as critical); empty means all.
+  repeated string severities = 6;
+  // "lifecycle" (container.*), "audit" (audit.*), "other"; empty or "all" means all.
+  string kind_group = 7;
+}
+
+message ListEventsResponse {
+  repeated Event events = 1;
+  PageInfo page_info = 2;
+  // Events per severity after entity, kind group, and query, ignoring the severity filter.
+  EventSeverityCounts severity_counts = 3;
+  // Events per kind group after entity, severities, and query, ignoring the kind filter.
+  EventKindCounts kind_counts = 4;
+}
+
+// TailLogsRequest pages backwards through a workload's log with a timestamp cursor.
+message TailLogsRequest {
+  string workload_id = 1;
+  // Lines per page; 0 means 200, maximum 500.
+  uint32 limit = 2;
+  // Case-insensitive substring filter.
+  string grep = 3;
+  // Exclusive cursor: return lines strictly older than this; 0 means the newest lines.
+  int64 before_ts_ms = 4;
+}
+
+message TailLogsResponse {
+  // Oldest first.
+  repeated LogLine lines = 1;
+  // True when older matching lines exist.
+  bool has_more = 2;
+  // Pass as before_ts_ms to load the next older page; 0 when has_more is false.
+  int64 next_before_ts_ms = 3;
+}
+
+message SubscribeRequest {
+  repeated string topics = 1;
+  uint32 interval_ms = 2;
+}
+
+message SeriesEntry {
+  uint32 series_id = 1;
+  string entity_id = 2;
+  string metric = 3;
+}
+
+message SeriesDict {
+  repeated SeriesEntry entries = 1;
+}
+
+message MetricBatch {
+  int64 ts_ms = 1;
+  repeated uint32 series_ids = 2;
+  repeated float values = 3;
+}
+
+message Heartbeat {
+  int64 ts_ms = 1;
+}
+
+message SubscribeResponse {
+  oneof payload {
+    SeriesDict series_dict = 1;
+    MetricBatch metric_batch = 2;
+    Event event = 3;
+    Heartbeat heartbeat = 4;
+  }
+}
+
+// ---------------------------------------------------------------------------
+// Docker inventory, host resources, and container actions
+// ---------------------------------------------------------------------------
+
+enum ContainerState {
+  CONTAINER_STATE_UNSPECIFIED = 0;
+  CONTAINER_STATE_CREATED = 1;
+  CONTAINER_STATE_RUNNING = 2;
+  CONTAINER_STATE_PAUSED = 3;
+  CONTAINER_STATE_RESTARTING = 4;
+  CONTAINER_STATE_REMOVING = 5;
+  CONTAINER_STATE_EXITED = 6;
+  CONTAINER_STATE_DEAD = 7;
+}
+
+enum ContainerHealth {
+  CONTAINER_HEALTH_UNSPECIFIED = 0;
+  // The container has no healthcheck configured.
+  CONTAINER_HEALTH_NONE = 1;
+  CONTAINER_HEALTH_STARTING = 2;
+  CONTAINER_HEALTH_HEALTHY = 3;
+  CONTAINER_HEALTH_UNHEALTHY = 4;
+}
+
+enum ContainerAction {
+  CONTAINER_ACTION_UNSPECIFIED = 0;
+  CONTAINER_ACTION_START = 1;
+  CONTAINER_ACTION_STOP = 2;
+  CONTAINER_ACTION_RESTART = 3;
+  CONTAINER_ACTION_PAUSE = 4;
+  CONTAINER_ACTION_UNPAUSE = 5;
+}
+
+message ContainerPort {
+  // Empty when the port is exposed but not published.
+  string host_ip = 1;
+  // 0 when the port is exposed but not published.
+  uint32 host_port = 2;
+  uint32 container_port = 3;
+  // "tcp", "udp", or "sctp".
+  string proto = 4;
+  bool published = 5;
+  PortExposure exposure = 6;
+}
+
+message ContainerMount {
+  // "bind", "volume", "tmpfs", "npipe", or "cluster".
+  string type = 1;
+  // Volume name (type "volume" only).
+  string name = 2;
+  // Host path for binds, volume mountpoint for volumes. Contents are never read.
+  string source = 3;
+  string destination = 4;
+  bool read_write = 5;
+  string mode = 6;
+  string driver = 7;
+  // True when the Docker socket is mounted (root-equivalent access to the host).
+  bool docker_socket = 8;
+}
+
+message ContainerNetwork {
+  string name = 1;
+  string ip_address = 2;
+  string gateway = 3;
+  repeated string aliases = 4;
+}
+
+message ContainerResources {
+  // 0 means unlimited.
+  uint64 mem_limit_bytes = 1;
+  uint64 mem_reservation_bytes = 2;
+  // CPU limit in cores (NanoCpus or quota/period); 0 means unlimited.
+  double cpu_limit_cores = 3;
+  uint64 cpu_shares = 4;
+  string cpuset_cpus = 5;
+  // 0 means unlimited.
+  int64 pids_limit = 6;
+}
+
+// Live resource usage sampled from Docker stats / cgroup v2 counters.
+message ContainerStats {
+  int64 ts_ms = 1;
+  // Docker CPU% / 100: 1.0 means one full core (can exceed 1 on multi-core hosts).
+  double cpu_util = 2;
+  uint64 mem_used_bytes = 3;
+  uint64 mem_limit_bytes = 4;
+  // Memory used as a fraction (0-1) of mem_limit_bytes.
+  double mem_util = 5;
+  double net_rx_bps = 6;
+  double net_tx_bps = 7;
+  double blk_read_bps = 8;
+  double blk_write_bps = 9;
+  // Cumulative counters since container start.
+  uint64 net_rx_bytes = 10;
+  uint64 net_tx_bytes = 11;
+  uint64 blk_read_bytes = 12;
+  uint64 blk_write_bytes = 13;
+  uint32 pids = 14;
+}
+
+message ContainerHealthcheck {
+  ContainerHealth status = 1;
+  uint32 failing_streak = 2;
+  // Last probe output, secret-redacted and truncated.
+  string last_output = 3;
+  int32 last_exit_code = 4;
+  int64 last_check_at_ms = 5;
+  // Healthcheck command, secret-redacted.
+  repeated string test = 6;
+  uint32 interval_seconds = 7;
+  uint32 timeout_seconds = 8;
+  uint32 retries = 9;
+}
+
+// Derived observation about a container, e.g. a restart loop or a privileged flag.
+message ContainerInsight {
+  // "info", "warning", or "critical".
+  string severity = 1;
+  // Stable machine code, e.g. "oom_killed", "restart_loop", "docker_socket".
+  string code = 2;
+  string message = 3;
+}
+
+message Container {
+  // Entity id "ctr:<name>" shared with Workload, metrics, events, and logs.
+  string id = 1;
+  // Short (12 hex) Docker container id.
+  string container_id = 2;
+  string name = 3;
+  // Image reference as configured, e.g. "postgres:17.4-alpine".
+  string image = 4;
+  string image_repo = 5;
+  string image_tag = 6;
+  // Short image id, e.g. "sha256:1a2b3c4d5e6f".
+  string image_id = 7;
+  ContainerState state = 8;
+  // Human status as shown by `docker ps`, e.g. "Up 3 hours (healthy)".
+  string status = 9;
+  ContainerHealth health = 10;
+  ContainerHealthcheck healthcheck = 11;
+  int64 created_at_ms = 12;
+  int64 started_at_ms = 13;
+  int64 finished_at_ms = 14;
+  // Seconds since start for running/paused containers, otherwise 0.
+  uint64 uptime_seconds = 15;
+  int32 exit_code = 16;
+  // Docker runtime error message, if any.
+  string error = 17;
+  uint32 restart_count = 18;
+  // "no", "always", "unless-stopped", or "on-failure".
+  string restart_policy = 19;
+  uint32 restart_max_retries = 20;
+  bool oom_killed = 21;
+  int32 pid = 22;
+  // Project entity id, e.g. "proj:shop" ("proj:standalone" without compose labels).
+  string project_id = 23;
+  string compose_project = 24;
+  string compose_service = 25;
+  string compose_working_dir = 26;
+  WorkloadRole role = 27;
+  // Aggregate health used across the portal (healthy/degraded/down).
+  HealthStatus status_level = 28;
+  repeated ContainerNetwork networks = 29;
+  string network_mode = 30;
+  // Published and exposed-but-unpublished ports.
+  repeated ContainerPort ports = 31;
+  repeated ContainerMount mounts = 32;
+  // Labels with secret-looking keys removed and URL credentials redacted.
+  map<string, string> labels = 33;
+  uint32 redacted_label_count = 34;
+  // Command and entrypoint with secret-looking arguments redacted.
+  repeated string command = 35;
+  repeated string entrypoint = 36;
+  // Environment variable names only; values are never collected or returned.
+  repeated string env_keys = 37;
+  string user = 38;
+  bool privileged = 39;
+  bool read_only_rootfs = 40;
+  ContainerResources resources = 41;
+  // Present only while the container is running or paused.
+  ContainerStats stats = 42;
+  // True when actions are refused for this container (e.g. Asterism itself).
+  bool protected = 43;
+  string protected_reason = 44;
+  repeated ContainerInsight insights = 45;
+  // Technology slug detected from the image (e.g. "postgres", "nginx"); empty when unknown.
+  string tech = 46;
+}
+
+message ContainerCounts {
+  uint32 total = 1;
+  uint32 running = 2;
+  uint32 paused = 3;
+  uint32 restarting = 4;
+  uint32 exited = 5;
+  uint32 created = 6;
+  uint32 dead = 7;
+  uint32 unhealthy = 8;
+  // Unhealthy, restarting, dead, or exited after an OOM kill.
+  uint32 attention = 9;
+}
+
+message DockerEngine {
+  bool available = 1;
+  string unavailable_reason = 2;
+  string server_version = 3;
+  string operating_system = 4;
+  string kernel_version = 5;
+  string architecture = 6;
+  string storage_driver = 7;
+  string cgroup_driver = 8;
+  string cgroup_version = 9;
+  string logging_driver = 10;
+  string docker_root_dir = 11;
+  uint32 ncpu = 12;
+  uint64 mem_total_bytes = 13;
+  uint32 containers = 14;
+  uint32 containers_running = 15;
+  uint32 containers_paused = 16;
+  uint32 containers_stopped = 17;
+  uint32 images = 18;
+  int64 collected_at_ms = 19;
+}
+
+message DockerImage {
+  // Short image id, e.g. "sha256:1a2b3c4d5e6f".
+  string id = 1;
+  repeated string repo_tags = 2;
+  // First repo tag split into repository and tag ("<none>" when dangling).
+  string repository = 3;
+  string tag = 4;
+  uint64 size_bytes = 5;
+  int64 created_at_ms = 6;
+  bool dangling = 7;
+  // Number of containers (any state) using this image.
+  uint32 containers = 8;
+  // Names of containers using this image (capped at 20).
+  repeated string used_by = 9;
+}
+
+message DockerVolume {
+  string name = 1;
+  string driver = 2;
+  string scope = 3;
+  string mountpoint = 4;
+  int64 created_at_ms = 5;
+  // -1 when the size is unknown (not yet measured or not reported).
+  int64 size_bytes = 6;
+  // Number of containers (any state) mounting this volume.
+  uint32 containers = 7;
+  repeated string used_by = 8;
+  // Owning compose project, if any.
+  string compose_project = 9;
+  // True for 64-hex anonymous volumes.
+  bool anonymous = 10;
+}
+
+message NetworkAttachment {
+  string container_id = 1;
+  string name = 2;
+  string ipv4_address = 3;
+  string ipv6_address = 4;
+  string mac_address = 5;
+}
+
+message DockerNetwork {
+  string id = 1;
+  string name = 2;
+  string driver = 3;
+  string scope = 4;
+  bool internal = 5;
+  bool attachable = 6;
+  bool ipv6 = 7;
+  repeated string subnets = 8;
+  repeated string gateways = 9;
+  int64 created_at_ms = 10;
+  repeated NetworkAttachment containers = 11;
+  string compose_project = 12;
+  // True for Docker's built-in bridge, host, and none networks.
+  bool builtin = 13;
+}
+
+message DiskUsageCategory {
+  // "images", "containers", "volumes", or "build_cache".
+  string kind = 1;
+  uint32 total_count = 2;
+  uint32 active_count = 3;
+  uint64 size_bytes = 4;
+  uint64 reclaimable_bytes = 5;
+}
+
+message DockerDiskUsage {
+  repeated DiskUsageCategory categories = 1;
+  uint64 total_size_bytes = 2;
+  uint64 total_reclaimable_bytes = 3;
+  int64 collected_at_ms = 4;
+}
+
+message ListContainersRequest {
+  // Optional project filter, e.g. "proj:shop".
+  string project_id = 1;
+  // Optional state filter; empty means all states (running and stopped).
+  repeated ContainerState states = 2;
+  // Optional case-insensitive substring match on name, image, or compose service,
+  // a container id prefix, or an exact host or container port number.
+  string query = 3;
+  PageRequest page = 4;
+  // AIP-132 order: name, project, state, image, cpu, memory, uptime, restarts, created.
+  // Default "project, name".
+  string order_by = 5;
+  // Only containers that need attention (see ContainerCounts.attention).
+  bool attention_only = 6;
+}
+
+message ListContainersResponse {
+  repeated Container containers = 1;
+  // State and health counts after project and query, ignoring states and attention_only.
+  ContainerCounts counts = 2;
+  DockerEngine engine = 3;
+  Capabilities capabilities = 4;
+  int64 collected_at_ms = 5;
+  PageInfo page_info = 6;
+  // Containers per project id after states, attention_only, and query, ignoring the
+  // project filter; sorted by value.
+  repeated FacetCount project_counts = 7;
+  // Sum of live memory over every matching container (all pages).
+  uint64 mem_used_bytes = 8;
+}
+
+message GetContainerRequest {
+  // Entity id ("ctr:<name>"), container name, or container id (prefix of at least 4 hex chars).
+  string id = 1;
+}
+
+message GetContainerResponse {
+  Container container = 1;
+  repeated Event recent_events = 2;
+  Capabilities capabilities = 3;
+}
+
+message ListImagesRequest {
+  bool dangling_only = 1;
+  PageRequest page = 2;
+  // Case-insensitive substring over repo tags, repository, tag, id, and users.
+  string query = 3;
+  // AIP-132 order: size, created, repository, containers. Default "size desc".
+  string order_by = 4;
+  // Only images used by at least one container.
+  bool in_use_only = 5;
+}
+
+message ListImagesResponse {
+  repeated DockerImage images = 1;
+  // Sum over every matching image (all pages).
+  uint64 total_size_bytes = 2;
+  int64 collected_at_ms = 3;
+  PageInfo page_info = 4;
+  // Counts after the query, ignoring dangling_only and in_use_only.
+  ImageCounts counts = 5;
+}
+
+message ListVolumesRequest {
+  bool unused_only = 1;
+  PageRequest page = 2;
+  // Case-insensitive substring over name, driver, compose project, and users.
+  string query = 3;
+  // AIP-132 order: name, size, created, containers, project. Default "name".
+  string order_by = 4;
+  // Only volumes mounted by at least one container.
+  bool in_use_only = 5;
+}
+
+message ListVolumesResponse {
+  repeated DockerVolume volumes = 1;
+  int64 collected_at_ms = 2;
+  PageInfo page_info = 3;
+  // Counts after the query, ignoring unused_only and in_use_only.
+  VolumeCounts counts = 4;
+  // Sum of known sizes over every matching volume (all pages).
+  uint64 total_size_bytes = 5;
+}
+
+message ListNetworksRequest {
+  PageRequest page = 1;
+  // Case-insensitive substring over name, id, driver, scope, compose project, subnets,
+  // and attached container names.
+  string query = 2;
+  // AIP-132 order: name, driver, containers, created. Default "name".
+  string order_by = 3;
+  // Hide Docker's built-in bridge, host, and none networks. Default false
+  // returns every network.
+  bool user_defined_only = 4;
+}
+
+message ListNetworksResponse {
+  repeated DockerNetwork networks = 1;
+  int64 collected_at_ms = 2;
+  PageInfo page_info = 3;
+  // Facet counts over every page; they ignore user_defined_only so a
+  // "User-defined / All" toggle can show both totals.
+  NetworkCounts counts = 4;
+}
+
+message NetworkCounts {
+  uint32 total = 1;
+  uint32 builtin = 2;
+  uint32 user_defined = 3;
+}
+
+message GetDiskUsageRequest {}
+
+message GetDiskUsageResponse {
+  DockerDiskUsage usage = 1;
+  DockerEngine engine = 2;
+}
+
+message StartContainerRequest {
+  string id = 1;
+}
+
+message StopContainerRequest {
+  string id = 1;
+  // Seconds to wait for graceful shutdown before SIGKILL (default 10, max 300).
+  optional uint32 timeout_seconds = 2;
+}
+
+message RestartContainerRequest {
+  string id = 1;
+  // Seconds to wait for graceful shutdown before SIGKILL (default 10, max 300).
+  optional uint32 timeout_seconds = 2;
+}
+
+message PauseContainerRequest {
+  string id = 1;
+}
+
+message UnpauseContainerRequest {
+  string id = 1;
+}
+
+message ContainerActionResponse {
+  ContainerAction action = 1;
+  // Container state observed right after the action completed.
+  Container container = 2;
+  // The audit event recorded for this action (also listed by EventsService).
+  Event audit_event = 3;
+  uint64 duration_ms = 4;
+}
+
+service InventoryService {
+  rpc GetOverview(GetOverviewRequest) returns (GetOverviewResponse);
+  rpc ListProjects(ListProjectsRequest) returns (ListProjectsResponse);
+  rpc GetProject(GetProjectRequest) returns (GetProjectResponse);
+  rpc ListWorkloads(ListWorkloadsRequest) returns (ListWorkloadsResponse);
+  rpc GetWorkload(GetWorkloadRequest) returns (GetWorkloadResponse);
+  rpc ListPorts(ListPortsRequest) returns (ListPortsResponse);
+  rpc ListIngress(ListIngressRequest) returns (ListIngressResponse);
+}
+
+service MetricsService {
+  rpc QueryRange(QueryRangeRequest) returns (QueryRangeResponse);
+  rpc TopN(TopNRequest) returns (TopNResponse);
+}
+
+service TopologyService {
+  rpc GetGraph(GetGraphRequest) returns (GetGraphResponse);
+}
+
+service EventsService {
+  rpc ListEvents(ListEventsRequest) returns (ListEventsResponse);
+}
+
+service LogsService {
+  rpc TailLogs(TailLogsRequest) returns (TailLogsResponse);
+}
+
+service LiveService {
+  rpc Subscribe(SubscribeRequest) returns (stream SubscribeResponse);
+}
+
+// DockerService exposes read-only Docker inventory and host resources.
+service DockerService {
+  rpc ListContainers(ListContainersRequest) returns (ListContainersResponse);
+  rpc GetContainer(GetContainerRequest) returns (GetContainerResponse);
+  rpc ListImages(ListImagesRequest) returns (ListImagesResponse);
+  rpc ListVolumes(ListVolumesRequest) returns (ListVolumesResponse);
+  rpc ListNetworks(ListNetworksRequest) returns (ListNetworksResponse);
+  rpc GetDiskUsage(GetDiskUsageRequest) returns (GetDiskUsageResponse);
+}
+
+// ActionsService performs mutating container actions. Every call requires
+// [actions] allow_actions = true, a caller with the "actions" scope, and the
+// Connect-Protocol-Version header; every attempt is recorded as an audit event.
+service ActionsService {
+  rpc StartContainer(StartContainerRequest) returns (ContainerActionResponse);
+  rpc StopContainer(StopContainerRequest) returns (ContainerActionResponse);
+  rpc RestartContainer(RestartContainerRequest) returns (ContainerActionResponse);
+  rpc PauseContainer(PauseContainerRequest) returns (ContainerActionResponse);
+  rpc UnpauseContainer(UnpauseContainerRequest) returns (ContainerActionResponse);
+}

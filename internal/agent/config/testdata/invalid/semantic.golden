@@ -1,0 +1,30 @@
+semantic.yaml:1: version: unsupported version 2 (this agent understands version 1)
+semantic.yaml:3: hub.url: http:// is allowed only for 127.0.0.1, ::1 or localhost; use https:// or set hub.tls.insecure_dev: true for a development hub
+semantic.yaml:5: hub.transport: invalid value "grpc" (want auto, bidi or unary)
+semantic.yaml:6: hub.compression: invalid value "zstd" (want gzip or none)
+semantic.yaml:7: hub.tls: client_cert and client_key must be set together for mTLS
+semantic.yaml:7: hub.tls.pin_sha256[0]: invalid pin "kq8…base64…=" (want the base64 SHA-256 of the hub certificate's public key; get it with: openssl x509 -in hub.crt -pubkey -noout | openssl pkey -pubin -outform der | openssl dgst -sha256 -binary | base64)
+semantic.yaml:8: hub.backoff.max: 5s is shorter than hub.backoff.initial (10s)
+semantic.yaml:9: host.root: must be an absolute path such as / or /host, got "host"
+semantic.yaml:11: intervals.min: 2m is longer than intervals.max (1m)
+semantic.yaml:13: intervals.idle_factor: 0.5 is out of range (want 1 to 20)
+semantic.yaml:14: intervals.docker_disk_usage: 10s is too short (want 0 to disable, or at least 1m: system df walks every volume)
+semantic.yaml:16: sources.docker.endpoint: invalid endpoint "/var/run/docker.sock" (want unix:///path/to.sock or tcp://host:port)
+semantic.yaml:16: sources.docker.group_by: invalid value "project" (want compose, none or label:<key>)
+semantic.yaml:17: sources.systemd.discover: invalid value "some" (want listening, include-only or all)
+semantic.yaml:20: sources.processes.match[0]: set exe or cmdline so the rule matches specific processes
+semantic.yaml:20: sources.processes.match[0].name: invalid name "Billing" (use lowercase letters, digits, '.', '_' and '-')
+semantic.yaml:22: sources.routes[0].hostnames: required: list at least one hostname
+semantic.yaml:22: sources.routes[0].proxy: invalid value "apache" (want nginx, caddy, traefik, cloudflared or haproxy)
+semantic.yaml:22: sources.routes[0].upstream: invalid upstream "not a url" (want e.g. http://127.0.0.1:3001)
+semantic.yaml:23: sources.ports.protocols[1]: invalid value "sctp" (want tcp or udp)
+semantic.yaml:25: projects[0].color: invalid colour "#ff0000" (want a design-token name such as teal or violet, not a hex value)
+semantic.yaml:25: projects[0].members: list at least one of compose, containers, units, pm2 or processes
+semantic.yaml:26: projects[1].members.compose[0]: invalid glob "[shop": syntax error in pattern
+semantic.yaml:26: projects[1].name: duplicate project "shop"
+semantic.yaml:27: redaction.extra_secret_keys[0]: invalid regular expression "(unclosed": error parsing regexp: missing closing ): `(unclosed`
+semantic.yaml:28: actions.allow[1]: invalid value "exec" (want start, stop, restart, pause or unpause)
+semantic.yaml:29: agent.gc_percent: 0 is out of range (want -1 to disable, or 1 to 1000)
+semantic.yaml:29: agent.log_format: invalid value "xml" (want text or json)
+semantic.yaml:29: agent.log_level: invalid value "verbose" (want debug, info, warn or error)
+semantic.yaml:28: warning: actions.containers: actions.enabled is true but containers is empty, so every container is refused; use ["*"] to allow all

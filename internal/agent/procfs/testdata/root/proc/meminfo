@@ -1,0 +1,9 @@
+MemTotal:        8130000 kB
+MemFree:          812000 kB
+MemAvailable:    5130000 kB
+Buffers:          120000 kB
+Cached:          3500000 kB
+SwapCached:            0 kB
+SReclaimable:     300000 kB
+SwapTotal:       2097148 kB
+SwapFree:        1048574 kB

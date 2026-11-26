@@ -1,0 +1,1 @@
+env-ref.yaml:3: hub.token: environment variable ASTERISM_TEST_UNSET_TOKEN referenced as ${ASTERISM_TEST_UNSET_TOKEN} is not set

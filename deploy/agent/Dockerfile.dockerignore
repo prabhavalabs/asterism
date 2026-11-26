@@ -1,0 +1,9 @@
+# Allow-list: the agent image needs only the Go module and its sources.
+*
+!go.mod
+!go.sum
+!cmd/asterism-agent/**
+!internal/**
+internal/web/dist
+**/*_test.go
+**/testdata

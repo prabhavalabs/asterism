@@ -1,0 +1,25 @@
+# /etc/asterism/agent.yaml for a mixed host: Docker reached through a
+# socket proxy, Caddy and cloudflared as systemd units, and a hub on a
+# private network with a pinned certificate. The agent runs from the
+# systemd unit.
+version: 1
+hub:
+  url: https://asterism.tailnet.example.ts.net
+  token_file: /etc/asterism/agent.token
+  tls:
+    # SPKI pin of the hub certificate (base64 SHA-256); see BLUEPRINT §4.
+    pin_sha256: ["/HGJZsEB2BqPxAXFaS5wieyk9zmV2qq7Yn2opHrncf8="]
+host:
+  name: edge-2
+sources:
+  docker:
+    endpoint: tcp://127.0.0.1:2375           # a read-only socket proxy on loopback
+  systemd:
+    include: [caddy.service, cloudflared.service]
+  proxies:
+    caddy: {admin_api: "http://127.0.0.1:2019"}
+    cloudflared: {config: /etc/cloudflared/config.yml}
+  routes:                                    # a token-managed tunnel has no local ingress file
+    - {proxy: cloudflared, hostnames: [status.example.com], upstream: "http://127.0.0.1:3001"}
+projects:
+  - {name: edge, category: infra, icon: cloudflare, members: {units: [caddy.service, cloudflared.service]}}

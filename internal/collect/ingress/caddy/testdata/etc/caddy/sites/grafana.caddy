@@ -1,0 +1,4 @@
+grafana.example.com {
+	tls /etc/caddy/certs/grafana.pem /etc/caddy/certs/grafana.key
+	reverse_proxy "grafana:3000"
+}

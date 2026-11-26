@@ -1,0 +1,18 @@
+# Example (b): bare metal with systemd, nginx and pm2 Node apps
+hub: {url: https://asterism.example.com, token_file: /etc/asterism/agent.token}
+host: {name: legacy-1}
+sources:
+  docker: {enabled: false}
+  systemd: {discover: include-only, include: [nginx.service, postgresql@16-main.service, redis-server.service, shop-worker.service]}
+  pm2: {homes: [/home/deploy/.pm2]}
+  processes:
+    match:
+      - {name: billing, exe: /usr/bin/node, cmdline: "*billing/server.js*", user: deploy, role: app}
+  proxies: {nginx: {config: /etc/nginx/nginx.conf}}
+  logs: {files: [{workload: "proc:billing", path: /var/log/billing/app.log}]}
+projects:
+  - name: shop
+    category: production
+    icon: nodedotjs
+    members: {pm2: ["shop-*"], units: [shop-worker.service]}
+  - {name: data, category: infra, icon: postgresql, members: {units: ["postgresql@*", redis-server.service]}}

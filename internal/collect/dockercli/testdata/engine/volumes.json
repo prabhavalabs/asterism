@@ -1,0 +1,28 @@
+{
+ "Volumes": [
+  {
+   "CreatedAt": "2026-11-02T12:12:05Z",
+   "Driver": "local",
+   "Labels": {
+    "com.docker.compose.project": "shop",
+    "com.docker.compose.volume": "data"
+   },
+   "Mountpoint": "/var/lib/docker/volumes/shop_data/_data",
+   "Name": "shop_data",
+   "Options": {
+    "password": "s3cr3t-value"
+   },
+   "Scope": "local"
+  },
+  {
+   "CreatedAt": "2026-11-03T12:12:05Z",
+   "Driver": "local",
+   "Labels": null,
+   "Mountpoint": "/var/lib/docker/volumes/ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff/_data",
+   "Name": "ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff",
+   "Options": null,
+   "Scope": "local"
+  }
+ ],
+ "Warnings": null
+}

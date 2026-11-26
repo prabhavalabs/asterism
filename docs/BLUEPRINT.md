@@ -121,10 +121,44 @@ Coroot (eBPF service maps). Asterism stands out in five ways:
 | `asterism serve` | Runs collectors, storage, API, embedded web UI, and the HTTP MCP endpoint |
 | `asterism mcp` | MCP over **stdio**. Talks to the local `serve` daemon via its API (or runs collectors in-process if no daemon is running) |
 | `asterism status / top / logs / topo / ports …` | CLI views that call the same API |
-| `asterism agent` *(later, multi-host)* | Collector-only mode that streams to a remote hub |
+| `asterism agent token create --host <name>` | Enrols an `asterism-agent` host: prints its ingest token once and the `[[agents]]` entry |
+| `asterism-agent run` *(separate binary)* | Collects on a VPS and pushes outbound to a hub (D22–D25) |
 
 Layering rule: **collectors → bus → store → services → (api | mcp | cli)**. The API, MCP, and
 CLI are thin adapters over a shared `service` layer. No business logic goes in handlers.
+
+**Collector modes** (`[collect] mode` in `asterism.toml`; the UI reads it from
+`Capabilities.source_mode`):
+
+| Mode | Where data comes from | Use it when |
+|---|---|---|
+| `agent` (**recommended for new installs**) | One `asterism-agent` per VPS dials the hub and pushes facts and metrics; the hub assembles projects, roles and edges | Any real deployment, including a hub on the same VPS (the agent pushes to `http://127.0.0.1:7700`, h2c allowed on loopback), so there is one code path |
+| `ssh` | The hub runs read-only commands over the system `ssh` client against one VPS | You cannot install anything on the VPS; kept and supported |
+| `local` | Host metrics of the machine running the hub, no Docker inventory | Trying the UI on a laptop |
+| `showcase` | Live host metrics plus a generated demo VPS (`showcase_fleet` scales it) | Demos, screenshots, UI and pagination tests |
+
+**Hub and agent.** In agent mode the hub (`asterism serve`) treats agent data as "just another
+collector": `internal/collect/agentingest` keeps one session per enrolled host, expands metric
+rows onto the bus, and exposes a `HostView` that implements the same provider interfaces the
+SSH bridge does, so the service, API, MCP, CLI and UI need no agent-specific read paths. The
+agent never listens on a port; the hub never holds SSH keys or VPS credentials.
+
+```text
+ VPS                                          Hub (asterism serve, collect.mode = "agent")
+ ┌───────────────────────────────┐  HTTPS/h2   ┌─────────────────────────────────────────┐
+ │ asterism-agent (static, ~10MB)│ outbound    │ api/agent.go (ingest-token auth only)   │
+ │  scheduler: host · cgroup ·   │ ──────────► │  └► agentingest.Registry (per host)     │
+ │  docker · listeners · systemd │ AgentFrame  │      ├► bus.Publish(samples) → ring/live │
+ │  · processes · pm2 · proxies  │ ◄────────── │      ├► assemble.Build(facts) → inventory│
+ │  uplink: ring, backoff, acks  │ HubFrame    │      └► HostView → service providers    │
+ │  actions: local allow-list    │             │ AgentAdminService.ListAgents (Settings) │
+ └───────────────────────────────┘             └─────────────────────────────────────────┘
+```
+
+The protocol is host-aware (every hub structure is keyed by host id) while the UI stays
+single-host: the primary host (`[collect.agent] primary_host`, default the only or first
+enrolled agent) keeps unqualified entity ids; other hosts are ingested under
+`@<host>/<entity>` until a host switcher lands.
 
 ---
 
@@ -163,7 +197,9 @@ avoiding a Node runtime on the VPS keeps deployment and memory overhead minimal.
 | Visual portal & topology canvas | **React Flow (`@xyflow/react` v12)** + crisp 2.5D isometric SVG/CSS block nodes & animated edges | Sharp vector geometry, crisp port badges and typography, pan/zoom/selection, no WebGL/Three.js overhead |
 | Graph layout | `elkjs` (layered / isometric grid) + `d3-force` (constellation view) | Structured architectural tiers for isometric blocks; organic starfield for 2D constellation |
 | Motion | `motion` (Framer Motion v12) | Layout transitions, number tickers |
-| Icons | `lucide-react` | Matches shadcn |
+| Icons | Hugeicons (`@hugeicons/react` + `@hugeicons/core-free-icons`) | Matches the shadcn lyra preset; per-icon ESM imports tree-shake |
+| Technology glyphs | `simple-icons` (CC0), named imports in one lazily loaded module | Monochrome brand marks for project and container icons, tinted with design tokens; kept out of the initial bundle |
+| Toasts | `sonner`, restyled with tokens and lazy-mounted | Action results (container start/stop/restart) without a custom notification system |
 | Tables | TanStack Table | Containers, open ports, processes, routes |
 | Forms/validation | `zod` | URL search-param and form schema validation |
 
@@ -179,14 +215,16 @@ Host            id, hostname, os, kernel, arch, cpu_model, cores, mem_total, upt
 Project         id ("compose:<name>" | "systemd:<unit>" | "manual:<name>"), name, kind,
                 category ("production" | "staging" | "infra" | "personal" | custom),
                 working_dir, services[], mem_used_bytes, mem_limit_bytes, cpu_util,
-                status (healthy|degraded|down), labels
+                status (healthy|degraded|down), labels,
+                icon (kind configured|label|detected|monogram, slug, color_token, monogram, label)
 Service         id, project_id, name, role (proxy|app|worker|database|cache|queue|storage|unknown),
                 replicas[], ports[], networks[], depends_on[]
 Workload        id, kind (container|systemd_unit|process), role, name, service_id?, image?,
-                pid, state, health, restart_count, started_at, cgroup_path, labels
+                pid, state, health, restart_count, started_at, cgroup_path, labels,
+                tech (technology slug detected from the image, e.g. "postgres"; also on Container)
 PortBinding     id, workload_id?, host_ip, host_port, container_port?, proto (tcp|udp),
                 exposure (public|loopback|internal), process_name?
-IngressRoute    id, proxy_kind (nginx|caddy|traefik|cloudflared), proxy_workload_id?,
+IngressRoute    id, proxy_kind (nginx|caddy|traefik|cloudflared|haproxy), proxy_workload_id?,
                 hostnames[], listen_port, tls, path_prefix, strategy (round_robin|least_conn|ip_hash|single),
                 upstreams[] (target_workload_id?, address, weight, backup, healthy)
 Edge            id, src (workload|ingress|external), dst (workload|external), proto, port,
@@ -199,15 +237,34 @@ Event           ts, entity_id, kind (container.start|die|oom|restart|health|depl
                 message, attrs
 LogLine         ts, workload_id, stream (stdout|stderr), text
 Alert           id, rule, entity_id, severity, state (firing|resolved), since, summary
+AgentStatus     host_id, name, state (connected|stale|offline|never), last_seen, connected_since,
+                agent_version, transport (bidi|unary), remote_addr, lag_ms, clock_skew_ms,
+                stats (rss, cpu, frames sent/dropped, buffer, reconnects, series, transport),
+                capabilities[], config_hash, last_error, actions_enabled, allowed_actions[],
+                inventory_version, frames_rejected, bytes_received
 ```
 
+Agent wire messages (`proto/asterism/v1/agent.proto`) reuse the existing types: the agent sends
+normalised `Container`, `Workload` (systemd units and plain or pm2 processes, never
+containers), `PortBinding`, `IngressRoute`, the Docker resource messages, `HostInfo`,
+`FilesystemUsage`, and `ProjectRule` (resolved member ids from the agent's `projects:` YAML).
+Metrics travel as `AgentMetrics` rows against a per-connection series dictionary (§8.8).
+
 **Entity IDs** must be stable and readable: `host`, `proj:shop`, `svc:shop/api`,
-`ctr:shop-api-1`, `unit:nginx.service`, `ingress:nginx/vps.example.com`.
+`ctr:shop-api-1`, `unit:nginx.service`, `proc:billing` (agent process and pm2 workloads),
+`ingress:nginx/vps.example.com`. Non-primary agent hosts prefix ids with `@<host>/`; `@` is
+reserved.
 
 **Metric names** (dot-separated, unit in suffix where ambiguous):
 `cpu.util` (0–1), `cpu.throttled_ratio`, `mem.used_bytes`, `mem.rss_bytes`,
 `mem.limit_bytes`, `io.read_bps`, `io.write_bps`, `net.rx_bps`, `net.tx_bps`,
 `disk.used_ratio{mount}`, `load.1`, `pids.count`, `oom.count`.
+
+Per-container live series (entity `ctr:<name>`, emitted only while the container runs):
+`cpu.util` (Docker CPU% / 100, so 1.0 = one full core and values can exceed 1),
+`mem.used_bytes`, `net.rx_bps`, `net.tx_bps`, `blk.read_bps`, `blk.write_bps`, `pids.count`.
+Container block I/O uses the `blk.*` prefix (matching Docker's "Block I/O") rather than the
+host-level `io.*` names.
 
 ---
 
@@ -269,6 +326,11 @@ First-class discovery of how external traffic enters the VPS and balances across
   upstreams, load-balancing policy (`lb_policy`), and TLS status.
 - **Traefik** (Docker labels `traefik.http.routers.*` and `traefik.http.services.*`): extract
   `Host(...)` rules, entrypoints, and backend ports.
+- **HAProxy** (`haproxy.cfg`, `PROXY_KIND_HAPROXY`, ids `ingress:haproxy/...`): `frontend`,
+  `backend` and `listen` sections; hostnames from `hdr(host)`, `hdr_dom(host)`,
+  `req.hdr(host)` and `ssl_fc_sni` ACLs used by `use_backend`, `default_backend`, `bind`
+  ports, `server` targets and the `balance` strategy. The UI labels it "HAProxy" with the
+  HAProxy glyph wherever proxy kinds are shown.
 - **Cloudflare Tunnel (`cloudflared`)**: detect running `cloudflared` container or systemd
   unit and parse non-secret ingress rules from `config.yml` (`hostname` → `service` target)
   when readable, showing Cloudflare Edge → Tunnel → local service/proxy edges.
@@ -326,6 +388,35 @@ appear as first-class workloads and projects alongside Docker stacks.
 - Per-project memory cost share (% of total VPS RAM and % of container limits).
 - Built-in alert rules (TOML-configurable): disk > 85%, mem > 90% for 5 min, container restart
   loop, OOM kill, health check failing, CPU steal > 20% (noisy-neighbour indicator on VPSes).
+- **Active alert count** (`GetOverview.active_alert_count`, the sidebar Events badge): warning
+  and critical events over the whole retained event log that fall in the `alerts` kind group,
+  the same rule as `ListEvents(kind_group = "alerts")`. Audit records and container lifecycle
+  events (start, die, restart, health, …) are not alerts, even at warning severity.
+
+### 6.10 Agent collectors (`asterism-agent`)
+The agent is a separate static binary (`cmd/asterism-agent`, D22) with its own collectors in
+`internal/agent/collect/*`. It links neither gopsutil nor the Docker SDK: `/proc` and cgroup
+files are parsed directly and the Docker Engine API is reached over its unix socket with a
+compiled-in endpoint allow-list. One scheduler goroutine runs every collector from a timer
+heap; the Docker events stream is the only other collector goroutine.
+
+| Collector | Reads | Default interval | Sends |
+|---|---|---|---|
+| host | `/proc/{stat,meminfo,loadavg,uptime,net/dev,diskstats}`, statfs; static `os-release`, `cpuinfo`, `uname` | 2 s | `HostInfo`, `FilesystemUsage`, host series (`cpu.util`, `cpu.steal`, `mem.*`, `swap.*`, `load.*`, `net.*_bps`, `disk.*`) |
+| cgroup | per container or unit: `cpu.stat`, `memory.current`, `memory.stat`, `io.stat`, `pids.current`, `memory.events`; `/proc/<pid>/net/dev` | 5 s | `ctr:*` / `unit:*` series (`cpu.util`, `mem.*`, `net.*_bps`, `blk.*_bps`, `pids.count`) |
+| docker | `/_ping`, `/info`, `/events`, `/containers/json`, `/containers/{id}/json`, `/images/json`, `/volumes`, `/networks`, `/system/df` | events, plus 5 min list and 1 h `system df` | `Container`, `DockerEngine`, images, volumes, networks, disk usage (env reduced to names on the agent) |
+| listeners | `<root>/proc/1/net/{tcp,tcp6,udp,udp6}`; inode owners via `/proc/*/fd` for new inodes only | 15 s | raw `PortBinding` with a workload hint |
+| systemd | `system.slice` cgroup tree, optional D-Bus | 30 s | `Workload{kind: SYSTEMD_UNIT}`, `unit.failed` events |
+| processes / pm2 | `/proc/*/{stat,cmdline,exe}` against match rules; pm2 `pids/*.pid` only | 30 s | `Workload{kind: PROCESS, id: proc:<name>}` with redacted cmdlines |
+| proxies | nginx (with includes), Caddy admin API or Caddyfile, HAProxy, cloudflared `ingress:`, manual `routes:` | 30 s when mtime or hash changes | `IngressRoute` with upstream addresses; the hub resolves targets |
+| self | `/proc/self/stat`, `runtime/metrics` | heartbeat (10 s) | `AgentStats` |
+
+Rates are computed on the agent from counter deltas. A series not set during a successful tick
+is retired; a failed tick keeps its series. Hub hints (`AgentHints`) shorten intervals while a
+browser watches and stretch them by `idle_factor` otherwise, always clamped to the YAML
+`[min, max]`. Role, category, icon, edge and upstream resolution stay on the hub in
+`internal/collect/assemble`, shared with the SSH bridge, so classifier changes never need an
+agent upgrade (D24).
 
 ---
 
@@ -390,7 +481,27 @@ service LiveService {
   // One multiplexed stream per browser tab.
   rpc Subscribe(SubscribeRequest) returns (stream LiveFrame);
 }
+service DockerService {                                             // read-only Docker inventory
+  rpc ListContainers(ListContainersRequest) returns (ListContainersResponse); // running AND stopped
+  rpc GetContainer(GetContainerRequest) returns (GetContainerResponse);
+  rpc ListImages(ListImagesRequest) returns (ListImagesResponse);
+  rpc ListVolumes(ListVolumesRequest) returns (ListVolumesResponse);
+  rpc ListNetworks(ListNetworksRequest) returns (ListNetworksResponse);
+  rpc GetDiskUsage(GetDiskUsageRequest) returns (GetDiskUsageResponse);   // docker system df
+}
+service ActionsService {                                            // mutating, opt-in, audited
+  rpc StartContainer(StartContainerRequest) returns (ContainerActionResponse);
+  rpc StopContainer(StopContainerRequest) returns (ContainerActionResponse);
+  rpc RestartContainer(RestartContainerRequest) returns (ContainerActionResponse);
+  rpc PauseContainer(PauseContainerRequest) returns (ContainerActionResponse);
+  rpc UnpauseContainer(UnpauseContainerRequest) returns (ContainerActionResponse);
+}
 ```
+
+`DockerService` is separate from `InventoryService` because its unit is the Docker object
+(container, image, volume, network) with full inspect detail, while `InventoryService` models
+the classified topology (projects, workloads, ports, ingress). Both share entity IDs
+(`ctr:<name>`), so the UI links a `Workload` to its `Container` directly.
 
 ### 8.3 Live stream (`LiveService.Subscribe`)
 - Topics: `metrics:host`, `metrics:proj:<name>`, `metrics:ctr:*`, `graph`, `ports`, `events`,
@@ -410,6 +521,211 @@ Streaming responses must not be buffered:
 
 ### 8.5 Auth
 See §13. All API calls require a session cookie (web) or a bearer token (CLI/MCP).
+
+### 8.6 Docker inventory and container actions
+**Collection (SSH bridge).** Every 30 s inventory poll runs `docker ps -aq --no-trunc` followed
+by **one** batched `docker inspect` over all ids. The inspect `--format` template selects only
+the fields Asterism needs and reduces `Config.Env` to variable *names* on the Docker host, so
+environment values never cross the wire. The 5 s metrics poll runs `docker stats --no-stream`
+(CPU, memory, PIDs) and reads exact byte counters from cgroup v2 `io.stat` and
+`/proc/<pid>/net/dev` (falling back to Docker's rounded totals) to derive per-second rates.
+Engine info, images, volumes, and networks are polled every 60 s on a separate goroutine;
+`docker system df` (summary plus verbose volume sizes) every ~5 minutes. Showcase mode serves
+matching in-memory data, including exited, OOM-killed, unhealthy, and crash-looping
+containers.
+
+**Redaction.** Labels with secret-looking keys are dropped (`redacted_label_count` reports how
+many), URL credentials in label values are masked, and healthcheck output is redacted and
+truncated. Volume and network driver options are never fetched. Command, entrypoint and
+healthcheck arguments go through one shared rule set (`internal/collect/dockercli`:
+`RedactArgs`, `RedactShellArgs`, `RedactText`), used by the SSH bridge, by the agent before it
+encodes a frame and again by the hub on everything an agent sends. Rules are idempotent and
+golden-tested in exec form and as shell strings (`sh -c "..."`, `CMD-SHELL`), which are
+tokenized with POSIX quoting, rewritten only where a word changes, and reset program context
+at `;`, `&&`, `||` and `|`:
+
+| Rule | Example → result |
+|---|---|
+| Program-aware short flags (active after the program name, also behind `exec`, `sudo`, `sshpass`) | `redis-cli -a pw` → `-a [REDACTED]`; `mysql -ppw` / `-p pw` → `-p[REDACTED]` / `-p [REDACTED]` (all mysql/mariadb tools); `mongosh -p pw`; `sshpass -p pw ssh -p 22` → only the first `-p`; `docker login -p pw` (only after `login`) |
+| User:password values | `curl -u bob:pw`, `-ubob:pw`, `-su bob:pw`, `--user=bob:pw`, `-U`/`--proxy-user` → `bob:[REDACTED]`; `curl -b`/`--cookie` → `[REDACTED]` |
+| Secret-looking long flags | `--password x`, `--pass=x`, `--db-pass x`, `-password x`, `wget --http-password x` |
+| Secret-looking `KEY=VALUE`, also inside option values | `-e DB_PASSWORD=x`, `--env=API_TOKEN=x`, `-eSECRET_KEY_BASE=x`, `--build-arg NPM_TOKEN=x`, `-Ddb.password=x`, `PGPASSWORD=x psql` |
+| URL userinfo anywhere | `postgres://app:pw@db` → `app:[REDACTED]@db`; `redis://:pw@cache`; token-like users (`https://ghp_…@github.com`, 20+ characters) |
+| Free text | `Authorization: Basic …`, `Bearer …`, `Cookie:` / `Set-Cookie:` values, `password=…`, `"password": "…"`, `token: …` |
+
+Values that are only a variable reference (`$REDIS_PASSWORD`, `${PW}`) are kept, since they
+name the secret without revealing it. Deliberately untouched: `-p` for `docker run`, `ssh`,
+`ps`, PostgreSQL tools and `wget` (ports, pids, page requisites), `tail -n`, and flags whose
+value is not a secret (`--password-file`, `--password-stdin`, `--no-auth`, `--auth-source`,
+`TOKEN_URL`, `*_FILE`). A secret flag followed by another option (`--auth -v`) does not consume
+it. Trade-off: `mysql -p db` redacts `db`, because mysql's prompting `-p` cannot be told apart
+from a spaced password.
+
+**Derived insights** (service layer): `oom_killed`, `restart_loop`, `unhealthy`,
+`nonzero_exit`, `privileged`, `docker_socket`, `host_network`, `public_datastore`,
+`no_memory_limit`, `no_restart_policy`. A 5 s watcher diffs Docker snapshots and records
+lifecycle events (`container.start|die|oom|restart|restarting|health|pause|unpause|create|destroy`).
+
+**Actions.** `ActionsService` enforces, in order:
+1. `[actions] allow_actions = true`, otherwise `FailedPrecondition` with how to enable it.
+2. The caller holds the `actions` scope (`PermissionDenied` otherwise).
+3. The target resolves from `ctr:<name>`, a name, or a hex id prefix against current inventory
+   (strict regex; `InvalidArgument`/`NotFound`). Docker commands only ever receive the
+   inventory's validated 12-hex id, single-quoted; user input is never interpolated.
+4. The target is not protected: the Asterism container itself (`asterism.self=true` label or
+   the `asterism` image), `asterism.protected=true`, or `[actions] protected_containers`
+   (`PermissionDenied`; `allow_protected = true` overrides).
+5. State preconditions (pause needs running, unpause needs paused) and timeout ≤ 300 s.
+6. One action per container at a time (`Aborted` if busy). The command runs detached from the
+   client connection with a hard deadline, then the container is re-inspected and returned.
+
+Every attempt by an authenticated caller (success, failure, or refusal) is recorded as an
+`Event` with kind `audit.container.<action>` and a structured `ActionAudit` (actor, actor kind,
+action, target, container id, result, error, duration, state before/after, remote address),
+pushed on the live stream, and logged via `slog`. Audit and lifecycle events are excluded
+from the active alert count (§6.9). Until the M4 SQLite store lands, audit and lifecycle events live in a bounded
+in-memory log (2 000 entries) and do not survive restarts.
+
+**Project icons** (service layer, `internal/service/projecticon.go`). Every `Project` carries a
+resolved `ProjectIcon`; clients only render it. Precedence:
+1. `[projects."<name>"] icon = "<slug>"` (and optional `color = "<token>"`) in `asterism.toml`.
+2. The compose label `asterism.icon` (optional `asterism.color`) on any of the project's
+   containers, running or stopped; the first by container id wins.
+3. The project's dominant technology, detected from images by a slug catalogue
+   (`internal/service/tech.go`): a project named after a technology wins, otherwise the highest
+   category priority (apps > monitoring > runtimes > databases > queues > storage > proxies >
+   caches), then container count, then memory.
+4. A one- or two-letter monogram on a palette colour chosen by an FNV hash of the name.
+
+Colours are design-token names only (`chart-1`…`chart-5`, `role-proxy|app|db|cache|worker`,
+`primary`); anything else is ignored, so configuration can never inject CSS. Unknown slugs fall
+through to the next source. `Workload.tech` and `Container.tech` carry the same detection per
+image for per-container glyphs. The web UI maps slugs to `simple-icons` paths in one lazily
+loaded chunk (`web/src/components/common/techGlyphs.ts`) and falls back to a category glyph.
+`GetOverviewResponse.container_counts` feeds the sidebar's running/total badge.
+
+**Capabilities.** `GetOverviewResponse.capabilities`, `ListContainersResponse.capabilities`, and
+`GetContainerResponse.capabilities` carry `actions_enabled`, `can_perform_actions` (enabled and
+caller has the scope), `actions_disabled_reason`, `container_actions`, `scopes`,
+`docker_available`, and `source_mode`. Clients render action buttons only when
+`can_perform_actions` is true.
+
+### 8.7 Pagination, search, ordering, and facets
+Every list is paged, searched, filtered, and sorted **on the server**, so a page is always
+correct for the whole data set and the browser never holds an unbounded list.
+
+**Messages.** `PageRequest { page_size, page }` and `PageInfo { page, page_size, total_size,
+total_pages }`. `page_size` defaults to 25 and is clamped to 10–200; `page` is 1-based (values
+below 1 mean 1). A page past the end returns no items with a correct `PageInfo`;
+`total_pages` is at least 1. A request that omits `page` gets the first page at the maximum
+size (200), so non-table callers such as the topology map and project lookups stay bounded
+without changes.
+
+**Requests.** Each List RPC takes `page`, a `query` (case-insensitive substring over the
+obvious fields; for containers and ports a number also matches a port exactly), an AIP-132
+`order_by`, and its filters:
+
+| RPC | Filters | `order_by` fields (default) | Facets in the response |
+|---|---|---|---|
+| `ListProjects` | `category` | `name`, `category`, `memory`, `cpu`, `workloads`, `health` (`memory desc`) | `category_counts` |
+| `ListWorkloads` | `project_id`, `role` | `name`, `project`, `role`, `state`, `cpu`, `memory`, `restarts` (`project, name`) | `role_counts`, `project_counts` |
+| `ListContainers` | `project_id`, `states`, `attention_only` | `name`, `project`, `state`, `image`, `cpu`, `memory`, `uptime`, `restarts`, `created` (`project, name`) | `counts` (`ContainerCounts`), `project_counts`, `mem_used_bytes` |
+| `ListImages` | `dangling_only`, `in_use_only` | `size`, `created`, `repository`, `containers` (`size desc`) | `counts` (`ImageCounts`), `total_size_bytes` |
+| `ListVolumes` | `unused_only`, `in_use_only` | `name`, `size`, `created`, `containers`, `project` (`name`) | `counts` (`VolumeCounts`), `total_size_bytes` |
+| `ListNetworks` | `user_defined_only` (hides `bridge`, `host`, `none`) | `name`, `driver`, `containers`, `created` (`name`) | `counts` (`NetworkCounts`: `total`, `builtin`, `user_defined`; they ignore `user_defined_only`) |
+| `ListPorts` | `exposure` | `exposure`, `port`, `workload`, `project`, `proto` (`exposure, port`) | `exposure_counts` |
+| `ListIngress` | — | `hostname`, `port`, `proxy`, `upstreams` (`hostname`) | — |
+| `ListEvents` | `entity_id`, `severities`, `kind_group` | `ts`, `severity`, `kind`, `entity` (`ts desc`) | `severity_counts`, `kind_counts` |
+
+`order_by` is a comma-separated list of `<field> [asc|desc]`; field names are case-insensitive.
+Unknown fields, unknown directions, empty terms, and repeated fields return `InvalidArgument`
+naming the allowed fields. Ordering is stable: every sort ends with an ascending tie-break on
+the entity id, so items never move between pages on refetch. `ListEvents.limit` remains as a
+legacy page size used only when `page` is omitted.
+
+**Facets.** A facet count is computed over the items that pass every filter and the query
+*except its own filter*, and ignores the page, so filter chips show what selecting them would
+return. Sums such as `total_size_bytes` and `mem_used_bytes` cover every matching item, not
+just the page. `ContainerCounts.attention` counts unhealthy, restarting, dead, and OOM-exited
+containers (the `attention_only` filter).
+
+**Logs.** `TailLogs` pages backwards with a timestamp cursor instead of numbered pages:
+`before_ts_ms` (exclusive; 0 = newest) and `limit` (default 200, maximum 500). Lines come back
+oldest first with `has_more` and `next_before_ts_ms`. A page never splits lines that share a
+millisecond, so the exclusive cursor cannot skip lines (a single millisecond with more lines
+than `limit` is returned whole).
+
+**Implementation.** The generic helpers live in `internal/service/paging.go`: `paginate[T]`,
+a per-resource `sorter[T]` (allow-listed fields, AIP-132 parser, id tie-break), named
+`filter[T]` predicates with `matching` (all filters except one, for facets), and `countBy`.
+Handlers in `internal/api` only forward the request message. Showcase mode serves ~32
+containers, ~65 images, ~35 volumes, 15 networks, 185 events, and ~360 log lines per container
+by default; `[collect] showcase_fleet = N` (or `ASTERISM_SHOWCASE_FLEET`, max 40) adds N
+generated compose projects with containers, ports, ingress routes, volumes, and networks.
+The web Networks tab defaults to user-defined networks (`netFilter=all` shows Docker's built-in
+ones) and labels its toggle with `NetworkCounts`. Settings → Agents pages `ListAgents`
+client-side because that RPC returns every enrolled agent (configuration order, a handful per
+hub); it gains `PageRequest` if hubs ever enrol hundreds.
+
+### 8.8 Agent transport (`AgentService`, `AgentAdminService`)
+
+```proto
+service AgentService {                       // agent token (scope "ingest") only
+  rpc Stream(stream AgentFrame) returns (stream HubFrame);   // HTTP/2 bidi, primary
+  rpc Push(PushRequest) returns (PushResponse);              // HTTP/1.1 fallback: frames up, acks down
+  rpc Commands(CommandsRequest) returns (stream HubFrame);   // HTTP/1.1 fallback: hub → agent
+}
+service AgentAdminService {                  // read scope (session or API token)
+  rpc ListAgents(ListAgentsRequest) returns (ListAgentsResponse);  // agents + primary_host_id
+}
+```
+
+- **Frames.** `AgentFrame` carries `AgentHello`, `AgentMetrics`, `InventorySnapshot`,
+  `InventoryDelta`, `AgentEvents`, `LogChunk`, `CommandResult` or `AgentHeartbeat`;
+  `HubFrame` carries `HelloAck`, `Ack`, `AgentHints`, `ResyncRequest`, log requests,
+  `CommandRequest` and pings. Bidi and unary share the same messages and hub session code.
+- **Hello.** The hub answers with the inventory version it already holds for that agent
+  session, so an agent that survived a hub restart sends only a delta; otherwise it sends a
+  snapshot. The hub measures clock offset at Hello and rewrites timestamps when the skew
+  exceeds 2 s (shown as a warning in Settings → Agents).
+- **Metrics.** `AgentMetrics{dict, dict_groups, rows, row_groups, keyframe_rows}`: a row is one
+  tick of one source group against a series dictionary resent in full on every connection;
+  an absent series carries forward, `NaN` retires it, and a keyframe row lists every live
+  series of its group. Columnar protobuf plus gzip keeps idle traffic around 100 B/s. The agent
+  compresses at `gzip.BestSpeed` rather than connect's default level: a pooled writer holds
+  about 0.8 MB of encoder state instead of about 1.1 MB, and on 2–6 KB frames the ratio loss
+  is about 10% of a stream that is already ~100 B/s.
+- **Sequence and acks.** Only metrics and events frames carry `seq`, monotonic per agent
+  process across reconnects. The hub acks `upto_seq` (every 5 s or 32 frames; in unary mode
+  the `Push` response is the ack), drops already-seen rows, and the agent frees buffered
+  frames only after an ack. Inventory is state, not a log: it is never queued and is resent
+  as a snapshot or delta on reconnect. Commands are never replayed; if the stream drops
+  mid-command the hub returns `Unavailable` ("result unknown; inventory will refresh").
+- **Buffering.** Bounded in-memory rings on the agent (metrics by bytes, 1 MiB; events, 500);
+  overflow drops the oldest and increments `frames_dropped` / `events_dropped` (golden rule
+  5). Buffered metrics replay oldest first.
+- **Transport selection.** `hub.transport: auto` tries bidi first and falls back to unary on
+  `Unimplemented`, HTTP/1.1 or a 502/505. The fallback is locked in for the process lifetime
+  only after a unary handshake succeeds. Failures that say nothing about HTTP/2 support never
+  trigger it: network-level errors (connection refused, DNS failure, dial timeout: the hub is
+  down or restarting), `Unauthenticated`, `PermissionDenied`, an SPKI pin mismatch, or
+  shutdown. Without this rule, a hub that came back between the bidi and unary attempts would
+  lock a healthy agent to unary. Reconnects use full-jitter exponential backoff (1 s → 60 s
+  cap).
+- **Liveness.** Heartbeat every 10 s; an agent is `connected` while its stream is up,
+  `stale` once it drops (within `[collect.agent] stale_after`, default 30 s, range 5 s–10 min),
+  then `offline`, which raises one `agent.offline` event (and `agent.online` on recovery). A
+  newer connection for the same host replaces the old one.
+- **Caps per agent.** Frames over 1 MiB are skipped and acked (an oversized snapshot closes the
+  session), more than 50 frames/s (burst 500) returns `ResourceExhausted`, and a session may
+  hold at most 5,000 series; refused frames count as `frames_rejected`.
+- **Logs** are on demand: the hub asks for the last 200 lines over the session with a 5 s
+  timeout; follow is not wired yet.
+- **Actions** need both gates (§13). `Capabilities.container_actions` is the intersection of
+  the hub's actions and the agent's advertised `allowed_actions`; when none can run,
+  `actions_disabled_reason` says why (agent offline, per-agent gate off, empty allow-list),
+  and the UI shows it in the disabled-action tooltips. Audit attrs add
+  `executed_by = agent:<name>`, `agent_audit_id` and `agent_request_id`.
 
 ---
 
@@ -461,7 +777,9 @@ descriptions, and MCP annotations (`readOnlyHint`, `destructiveHint`, `idempoten
 ### 9.5 Output rules
 - Return structured JSON plus a concise text summary.
 - Include units in field names (`cpu_pct`, `mem_bytes`), ISO-8601 timestamps, and reusable IDs.
-- Cap lists with `truncated: true` and a narrowing hint.
+- Cap lists with `truncated: true` and a narrowing hint. List tools map their optional `page`,
+  `page_size`, `query`, and `order_by` arguments onto the same service calls and `PageRequest`
+  rules as the API (§8.7), and report `total_size` so agents can tell how much was left out.
 - Return actionable errors (e.g. `"unknown entity 'ctr:api'; did you mean 'ctr:shop-api-1'?"`).
 
 ---
@@ -494,17 +812,70 @@ Human-readable output by default; `--json` on every command for scripting.
 
 ### 11.1 Routes (TanStack Router, file-based)
 ```text
-/                         Portal (home): 2.5D Isometric Architecture Map (with 2D Constellation toggle) + host vitals rail
+/                         Dashboard (home): KPI tiles, host telemetry, 2.5D Isometric Architecture Map
+                          (with 2D Constellation toggle), project tiles, memory allocation, recent events
+/topology                 The same PortalCanvas full width and window height (`?view=constellation`,
+                          `?project=<name>` focuses one project; back/forward step between levels)
 /projects                 Categorized project grid with memory & CPU cost breakdown
 /projects/$projectId      Project detail: isometric mini-map, services, DB links, live charts, events
-/workloads/$workloadId    Workload detail: resources, open ports, logs, inspect, neighbours
-/ports                    Live Open Ports & Ingress/Load-Balancer routing table (Nginx, Caddy, Traefik, Cloudflare)
+/containers               Docker containers (state/project filters, search, sortable table grouped by
+                          project, live CPU/memory sparklines, row actions) plus Images, Volumes,
+                          Networks, and Disk usage tabs (`?tab=images|volumes|networks|disk`)
+/containers/$containerId  Container detail (name or id): actions, live CPU/memory/network/block-I/O
+                          charts, facts, ports, networks, mounts, labels, command, env names,
+                          healthcheck, insights, events, logs (`?tab=overview|config|events|logs`)
+/workloads/$workloadId    Workload detail: resources, open ports, logs, inspect, neighbours (today the
+                          workload inspector sheet; container workloads link to /containers/$id)
+/ports                    Listening ports by exposure (default tab) and Ingress & domains
+                          (`?tab=ingress`: hostname table + Nginx, Caddy, Traefik, Cloudflare routes)
 /host                     Host deep-dive: CPU per core + steal, memory, disks, network, processes
-/events                   Event and audit timeline
-/settings                 Auth tokens, project categories, alert rules, retention, MCP connection snippets
+/events                   Event timeline (`?kind=lifecycle|audit|alerts`, `?severity=critical|warning|info`);
+                          `?kind=audit` is the audit log
+/settings                 Appearance, session, collector, Agents, API & MCP (`?section=agents|mcp`
+                          scrolls to and outlines that card), deployment; later auth tokens,
+                          categories, alert rules
 ```
-Time range, view mode (`?view=isometric|constellation`), category filter, and selections live
-in **URL search params** validated with `zod`.
+Tabs, filters and sections that the sidebar links to live in **URL search params**, validated
+in `web/src/lib/routeSearch.ts` (outside the lazy page chunks) so deep links, back and forward
+work; unknown values fall back to the default view and defaults are omitted from the URL.
+Time range, view mode, category filter, and selections follow the same rule as they move into
+the URL.
+
+**Navigation (sidebar).** Five labelled groups separated by hairlines: **Overview** (Dashboard,
+Topology map, Events with the active-alert count), **Workloads** (Projects with count,
+Containers with running/total, Images, Volumes, Networks), **Network** (Ports with the public
+port count, Ingress & domains with the route count), **Host** (Host vitals, Disk usage) and
+**Administration** (Audit log, Agents in agent mode only with a connected/enrolled badge,
+Settings, API & MCP). Items that share a path are told apart by
+the search param they own (`isNavItemActive` in `web/src/components/layout/nav.ts`); nested
+detail routes keep their parent item active. Counts come from `GetOverview` only. The footer
+keeps the live host card and the user menu (theme, documentation link to the public
+repository, sign-out). Collapsed, the sidebar is a 48px icon rail with a tooltip on every item
+and the separators between groups; below `md` it is a sheet. Breadcrumbs add a trailing crumb
+for a non-default tab or section (`breadcrumbSearch` route static data), for example
+`Containers / Images` or `Events / Audit log`. The whole expanded sidebar fits a 900px-tall
+window without scrolling; in agent mode the host card drops its cores/uptime row (memory on one
+line) to make room for the Agents item.
+
+**Agent mode surfaces** (`web/src/components/agents/`). One shared `ListAgents` query (10 s
+refetch, low-rate data, so not routed through `LiveStore`) feeds: a "via agent `<name>` ·
+`<lag>`" chip in the topbar and the host card status, amber while stale and red while offline
+(the topbar "Live" pill turns neutral "No data" then); an Overview banner ("Agent `<name>`
+offline since …; data is stale"); and Settings → Agents, a paged table (status with last seen,
+version and transport, lag with a clock-skew warning above 2 s, inventory version,
+dropped/rejected frames, agent RSS and CPU, allowed actions, capability chips) with an "Add
+agent" panel (token command, hub TOML, systemd install script or compose snippet, `validate`).
+Outside agent mode Settings shows a short "switch to agent mode" explainer. The agent client
+(`lib/agentRpc.ts`) is loaded with a dynamic import so its descriptors stay out of the initial
+bundle.
+
+Container actions (`web/src/components/containers/useContainerActions.tsx`) are not optimistic:
+Start/Pause/Unpause run at once, Stop/Restart open a confirmation (AlertDialog) naming the
+container with a graceful-timeout choice; the row shows a spinner while the RPC runs, the cache
+is updated from the returned container and then invalidated, and the result (or the mapped
+Connect error) is shown as a toast. Disabled buttons stay visible with a tooltip carrying
+`actions_disabled_reason` or the container's `protected_reason`. Table sparklines and live
+numbers read the LiveStore imperatively (no per-second React state).
 
 ### 11.2 Data flow
 ```text
@@ -573,13 +944,31 @@ web/src/
     audited actions.
   - One-click toggle switches between **Isometric Blocks** and **2D Constellation** (organic
     starfield graph).
-- **Colour & Tokens:** deep blue-black canvas (`oklch(0.16 0.02 260)`), lifted surfaces,
-  hairline borders (`oklch(1 0 0 / 0.06)`), perceptually even OKLCH data palette (ice blue,
-  violet, teal, amber, rose), and dedicated status tokens (healthy = teal, warning = amber,
-  critical = rose) always paired with icons/labels. All colours live in `styles/tokens.css`
-  CSS variables (no hard-coded hex in components).
-- **Typography:** Geist Sans / Inter for UI, Geist Mono / JetBrains Mono for metrics, ports,
-  IDs, and logs, with `font-variant-numeric: tabular-nums` everywhere values update.
+- **Colour & Tokens:** shadcn "lyra" style on the "stone" neutral base: warm near-black
+  canvas (`oklch(0.147 0.004 49.25)`) and stone-900 surfaces in dark, white cards on a warm
+  off-white page in light, slightly rounded corners, 1px rings (`foreground / 10%`) instead of
+  shadows, and a subtle menu accent. The accent is Asterism blue (`oklch(0.53 0.2 260)` light,
+  `oklch(0.56 0.2 260)` dark); the data palette runs blue → sky → teal → mint → green;
+  dedicated status tokens (healthy = green, warning = amber, critical = red, info = blue) are
+  always paired with icons/labels, and role accents stay distinct (proxy blue, app teal,
+  worker pink, database violet, cache amber). All colours live in `styles/tokens.css` CSS
+  variables (no hard-coded hex in components).
+- **Corners:** one `--radius` knob (8px) drives the Tailwind scale (`xs` 2, `sm` 4, `md` 6,
+  `lg` 8, `xl` 10px) and semantic radii used by components: `rounded-card` 8px (cards, KPI
+  tiles, table frames, sheets on their inner edge, dialogs, menus, toasts, the topology canvas
+  and nodes, the sidebar host card), `rounded-tile` 6px (inner tiles, code and log blocks,
+  tooltips), `rounded-control` 8px with `rounded-control-item` 6px (inputs, search, segmented
+  controls and tab lists, and their items and sliding indicators), `rounded-button` 10px and
+  `rounded-button-sm` 9px (every button, icon buttons and the sidebar trigger included),
+  `rounded-chip` 6px (badges, status pills, port/domain chips, count chips), `rounded-nav` 8px
+  (sidebar items and their active tint), `rounded-menu-item` 6px (menu items inset 4px in the
+  menu), `rounded-bar` 4px (meters and exposure bars; stacked segments are clipped by the track
+  so only the outer ends round) and `rounded-avatar` 8px (avatars, logo tile, 32px+ project
+  icons; smaller icon tiles use 2–4px). Status dots stay round. Focus rings are box shadows,
+  so they follow each radius.
+- **Typography:** Outfit for UI, Oxanium for headings (page, card and sheet titles) and KPI
+  values (its digits are fixed-width), Geist Mono for metrics, ports, IDs, and logs, with
+  `font-variant-numeric: tabular-nums` everywhere values update. No visible text below 12px.
 - **Charts:** 1.5 px lines, vertical gradient fills fading to 0 opacity, subtle dotted gridlines
   (6% opacity), synchronized crosshairs across charts on a page (`uPlot` `cursor.sync`).
 - **Motion & Accessibility:** 150–250 ms ease-out transitions, full `prefers-reduced-motion`
@@ -597,18 +986,57 @@ A monitor with access to `docker.sock` is effectively root. Treat it accordingly
   plus TLS.
 - **Auth:** first-run setup creates an admin password (argon2id). Web uses `HttpOnly`,
   `SameSite=Strict`, `Secure` (over TLS) session cookies. CLI/MCP use scoped bearer tokens
-  (`asterism token create --scope read|actions`), stored hashed and displayed once.
+  (`asterism token generate --name <n> --scope read|actions`), displayed once; only the
+  SHA-256 digest is stored, in `[[auth.tokens]]` until the M4 SQLite store exists.
+- **Scopes:** `read` (every read RPC) and `actions` (mutating RPCs). The admin session holds
+  `read`, plus `actions` only when `allow_actions = true`; tokens hold exactly the scopes
+  configured for them, and `actions` still requires `allow_actions = true`.
 - **`docker.sock`:** mounting `:ro` does **not** make the Docker API read-only. Document both
   direct socket access and running behind a read-only `docker-socket-proxy` (GET + events/logs
   only).
 - **Proxy config parsing:** read-only access to Nginx/Caddy routing configs only; explicitly
   ignore TLS private key files and auth secret files.
 - **Secrets:** never return container environment values, secret-looking labels, or mount
-  contents. Redact bearer tokens, API keys, and `password=` patterns in log output.
+  contents. Redact bearer tokens, API keys, URL
+  credentials and `password=` patterns in log output, and credentials in command arguments
+  (shared rule set, §8.6).
 - **Mutating actions:** disabled by default; separately opt-in for web API and MCP; every
-  action requires an `actions`-scoped token and is recorded in `audit_log`.
-- **CSRF:** ConnectRPC POST requests + `SameSite=Strict` cookies + custom header check for
-  state-changing RPCs.
+  action requires an `actions`-scoped caller, refuses protected containers (Asterism itself),
+  and is recorded as an audit event (§8.6).
+- **CSRF:** ConnectRPC POST requests + `SameSite=Strict` cookies + the
+  `Connect-Protocol-Version` header, which `ActionsService` requires
+  (`connect.WithRequireConnectProtocolHeader`).
+- **Agents (push, outbound only).** The agent dials the hub and never listens. TLS is required
+  except to loopback (or with `hub.tls.insecure_dev`, which logs a loud warning); optional
+  SPKI pins, a private CA and mTLS cover hubs on a private network.
+- **Agent tokens.** `asterism agent token create --host <name> [--allow-actions]` prints an
+  `asta_` token once; only its SHA-256 digest is stored in `[[agents]]`. Agent tokens carry the
+  `ingest` scope only: they are accepted solely by `AgentService`, get 401 on every read API,
+  and are bound to one host name (and optionally a machine-id hash; a mismatch is
+  `PermissionDenied`). Session and API tokens get 403 on `AgentService`. M4 moves agents into
+  SQLite with trust-on-first-use machine binding and revocation.
+- **Two-gate actions.** A container action through an agent needs the hub gates (`[actions]
+  allow_actions`, the per-agent `allow_actions`, the caller's `actions` scope, the protected
+  checks) **and** the agent gates (YAML `actions.enabled`, the action in `allow`, the name
+  matching `containers` globs and not `protect`, and the target not being the agent itself).
+  Containers outside the agent's allow-list arrive `protected` with the reason, so a
+  compromised hub can do no more than each agent's local YAML allows. Environment overrides
+  can only turn agent actions off.
+- **Redaction on the agent.** Docker `Config.Env` is reduced to names inside the converter;
+  label filtering, argument and log-text redaction run on the agent (YAML can add secret
+  patterns, never remove the built-ins); the agent never opens TLS keys, cloudflared
+  credentials or pm2 dumps. The hub re-applies redaction and refuses agent-sent `audit.*`
+  events, so an agent cannot forge audit records.
+- **Least privilege.** systemd: a dedicated `asterism-agent` user with the hardened unit in
+  `deploy/agent/` (`ProtectSystem=strict`, `NoNewPrivileges`, `MemoryMax`, `CPUQuota`, system
+  call filter), adding `CAP_SYS_PTRACE` and `CAP_DAC_READ_SEARCH` only for port owners and
+  root-only proxy configs. Container: user 65532, `cap_drop: ALL`, `no-new-privileges`,
+  read-only root and read-only bind mounts.
+- **Docker socket proxy.** Recommended in front of the agent (for example a GET-only
+  socket proxy allowing `/containers`, `/events`, `/images`, `/volumes`, `/networks`, `/info`,
+  `/system/df` and `/_ping`; the five container `POST` actions only when actions are on). The
+  agent's own Docker client compiles in only those endpoints, so even with a raw socket it
+  cannot call `exec` or `create`.
 - **Supply chain:** `govulncheck` and `pnpm audit` in CI, pinned GitHub Actions, signed
   releases (`cosign`), SBOM.
 
@@ -670,6 +1098,39 @@ asterism/
      `-v /proc:/host/proc:ro`, `-v /sys/fs/cgroup:/host/sys/fs/cgroup:ro`, plus read-only
      mounts for `/etc/nginx:ro` or `/etc/caddy:ro` when reverse proxies run on the host.
      Tier B topology adds `--cap-add SYS_PTRACE`; Tier C adds `CAP_BPF` + `CAP_PERFMON`.
+  3. **Agent mode (recommended):** the hub runs anywhere (same VPS, a home server, a laptop on
+     Tailscale) with `[collect] mode = "agent"`, and each VPS runs `asterism-agent`.
+- **Agent packaging** (`deploy/agent/`):
+  - Binary: `CGO_ENABLED=0 go build -trimpath -tags netgo,osusergo -ldflags "-s -w"
+    ./cmd/asterism-agent`, `linux/amd64` and `linux/arm64`. A dependency deny-list test keeps
+    gopsutil, the Docker SDK, SQLite, cobra, `x/net` and the hub packages out of it.
+  - Install script (`deploy/agent/install.sh`, published as the release asset `install.sh`):
+    `sh install.sh --hub URL --token-file PATH [--host NAME] [--version vX.Y.Z]`, plus
+    `--base-url`, `--binary`, `--unit`, `--docker-group` / `--no-docker-group`, `--no-start`,
+    `--dry-run`, `--uninstall [--purge]`. It detects the architecture, downloads
+    `asterism-agent-linux-<arch>.tar.gz`, `asterism-agent.service` and `checksums.txt` and
+    verifies each SHA-256 (and the `cosign` signature when available), installs
+    `/usr/local/bin/asterism-agent`, creates the `asterism-agent` user, writes
+    `/etc/asterism/agent.yaml` (only if absent) and `/etc/asterism/agent.token`
+    (`0640 root:asterism-agent`), installs the unit, runs `validate`, and enables it. The token is
+    read from a file or the terminal, never from the command line (`--token` is refused).
+  - systemd unit (`deploy/agent/asterism-agent.service`, installed as
+    `/etc/systemd/system/asterism-agent.service`): `Restart=always`, `GOMAXPROCS=1
+    GOMEMLIMIT=12MiB GOGC=50`, `MemoryHigh=48M`, `MemoryMax=64M`, `CPUQuota=10%`, `Nice=10`,
+    idle I/O class, and the sandboxing in §13.
+  - Container image (`deploy/agent/Dockerfile` → `ghcr.io/prabhavalabs/asterism-agent:0.2`,
+    `FROM scratch`, user 65532, `ASTERISM_AGENT_HOST_ROOT=/host`) and
+    `deploy/agent/docker-compose.agent.yml`: the agent (read-only root filesystem, no
+    capabilities, `mem_limit: 32m`, `cpus: 0.1`) behind a GET-only `wollomatic/socket-proxy`,
+    `/proc`, `/sys/fs/cgroup`, `os-release` and `machine-id` mounted read-only under `/host`,
+    `agent.yaml` from `deploy/agent/examples/agent.compose.yaml`, and the token as a compose
+    secret (`./agent.token`). Examples for bare-metal and mixed hosts sit next to it.
+  - Profiling: `net/http/pprof` is linked only into builds with `-tags pprof`
+    (`cmd/asterism-agent/pprof.go`; image `EXTRA_TAGS=pprof`), served on the loopback address in
+    `ASTERISM_AGENT_PPROF`. Release builds and images contain no pprof and never listen.
+  - Commands: `run` (default), `validate` (schema, sockets and paths, with fixes such as "grant
+    DAC_READ_SEARCH"), `print-config` (token redacted, plus the `config_hash` sent in Hello),
+    `discover` (dry run that suggests `projects:` YAML), `version`.
 
 ---
 
@@ -694,6 +1155,35 @@ asterism/
 | Initial JS | < 250 KB gzip |
 | Dashboard interaction | 60 fps while 20 live charts update |
 | MCP `overview` response | < 1,500 tokens |
+| Agent binary (stripped, `linux/amd64` and `linux/arm64`) | ≤ 11 MiB, CI gate (`ASTERISM_AGENT_SIZE_CHECK=1`); measured 10.76 MiB amd64, 10.00 MiB arm64 |
+| Agent container image | ≤ 12 MB, CI gate (`make agent-image-size`) |
+| Agent RSS, steady, 50 containers, default intervals | ≤ 15 MB, *measured* (below) |
+| Agent CPU, 50 containers | ≤ 0.5% of one core avg, *measured* |
+| Agent → hub traffic, 50 containers | ≤ 2 KB/s, *measured* |
+
+The binary budget is 11 MiB because connect, protobuf and the stdlib TLS stack alone come to
+about 9.6 MB; RSS does not depend on binary size. The image is the binary plus a CA bundle on
+`scratch`.
+
+**Agent footprint, measured** with `scripts/agent-footprint.sh` (`make agent-footprint`): the
+hub in agent mode, a GET-only socket proxy, N idle containers and the hardened agent
+container; 45 s warm-up, then a 5-minute window. Docker Desktop, arm64:
+
+| Run | CPU (one core) | RSS, steady (`docker stats`) | Anon (heap) | Agent → hub (wire) |
+|---|---|---|---|---|
+| 50 containers, default (adaptive intervals) | 0.090% | 13.02 MB | 7.77 MB | 153 B/s |
+| 10 containers, default | 0.063% | 14.65 MB | 10.74 MB | 128 B/s |
+| 50 containers, watched rate (`ASTERISM_FP_ADAPTIVE=false`) | 0.192% | 15.08 MB | 9.40 MB | 238 B/s |
+
+Method: CPU is the delta of the agent cgroup's `cpu.stat` `usage_usec` over wall time. RSS,
+steady is the median of `docker stats` MemUsage samples over the second half of the window;
+`docker stats` reports cgroup memory, which includes kernel memory (procfs, socket and slab
+pages: 1.4–2.8 MB here) and, when this cgroup first faulted it in, page cache of the agent
+binary, so it varies by a few MB from run to run. Anon is the cgroup's `anon` at the end of the
+run (the Go heap and stacks proper). Traffic is the agent container's `eth0` tx bytes, so it
+includes TCP/IP and HTTP/2 framing. The RSS budget applies to steady RSS at the default
+(adaptive) intervals; the watched-rate run, where a browser keeps intervals at their minimum,
+sits at the budget (15.08 MB) with anon memory well under it.
 
 ---
 
@@ -769,6 +1259,21 @@ GoReleaser, demo media, public release.
 | D9 | MCP via official `go-sdk`, stdio + stateless Streamable HTTP | Matches MCP 2026-07-28; SSH stdio gives zero-config remote auth | — |
 | D10 | Read-only by default; actions opt-in + audited | `docker.sock` is root-equivalent | — |
 | D11 | Crisp 2.5D isometric SVG/CSS blocks over `@xyflow/react` (no Three.js) | Razor-sharp text/port badges, low bundle size (< 250 KB gzip), 60 fps without WebGL overhead | Users demand free-orbit 3D camera |
-| D12 | First-class Nginx, Caddy, Traefik, and Cloudflare Tunnel ingress + port-map collector | Makes external domains, load-balancer upstreams, and exposed host ports immediately visible | Additional proxies (HAProxy, Envoy) become priority |
+| D12 | First-class Nginx, Caddy, Traefik, HAProxy (`PROXY_KIND_HAPROXY`) and Cloudflare Tunnel ingress + port-map collector | Makes external domains, load-balancer upstreams, and exposed host ports immediately visible | Additional proxies (Envoy) become priority |
 | D13 | Deterministic service role classification (`proxy`, `app`, `worker`, `database`, `cache`, `queue`, `storage`) | Distinct visual blocks for databases, caches, and proxies without manual config | Heuristic false positives require richer rule overrides |
 | D14 | Apache-2.0 open-source license | Permissive for individuals and companies with explicit patent grant and trademark clarity | — |
+| D15 | shadcn lyra look on the stone base (square corners, superseded by D20; 1px rings, Outfit + Oxanium, Hugeicons) re-tuned to Asterism blue/green, kept on Radix primitives; sidebar collapses to an icon rail with tooltips | Owner's preferred preset; Radix keeps the existing component APIs and avoids a Base UI migration; the rail keeps navigation one click away on narrow desktops | Base UI becomes the shadcn default for every component we use, or the rail hides information users need |
+| D16 | Separate `DockerService` (read-only) and `ActionsService` (mutating) next to `InventoryService`; SSH bridge uses one batched `docker inspect` per 30 s poll with an env-names-only template, cgroup v2/netns byte counters for rates, and a slower resources/`system df` loop | Keeps read and write surfaces separately mountable and auditable; one inspect call keeps SSH overhead flat; env values never leave the host; exact counters give usable bps | A local `docker.sock` collector replaces the CLI-over-SSH path, or Docker events streaming makes polling unnecessary |
+| D17 | Scope model `read`/`actions`: admin session gets `actions` only when `allow_actions = true`; static SHA-256-hashed bearer tokens in config; every action attempt audited as an `Event` with `ActionAudit`, held in a bounded in-memory log until M4 | Minimal, testable authorization that matches §13 without waiting for the SQLite store; refusals are visible in the Events page | M4 lands persistent `audit_log` and token storage, or multi-user accounts are needed |
+| D18 | Project icons resolved server-side (config → `asterism.icon` label → dominant image technology → monogram) and sent as `Project.icon` with token-only colours; per-image `tech` slugs on `Workload`/`Container`; brand glyphs from `simple-icons` in a lazy chunk | One detection table in Go keeps web, CLI, and MCP consistent; token-only colours keep configuration from injecting styles; lazy glyphs keep the initial bundle under budget | Users want uploaded custom images, or the catalogue grows large enough to need a data file |
+| D19 | Container management UI as a `/containers` page with a `/containers/$id` detail route (not a sheet), reusing UPlotChart/LiveStore and the logs RPC | Detail needs six live charts plus config sections and must be linkable from projects, ports, events, and the topology inspector | The workload inspector and container detail converge into one surface |
+| D20 | Slightly rounded corners from one `--radius` (8px) through semantic radius tokens (card 8, tile 6, control 8/6, button 10/9, chip 6, bar 4), replacing the square lyra corners; sidebar regrouped into Overview / Workloads / Network / Host / Administration with deep links to URL-driven tabs and sections and a new full-window `/topology` route | Owner wanted a softer finish with buttons a touch rounder than cards, and a fuller, clearly categorised sidebar whose entries all lead to working views; URL-driven tabs make those links, back/forward and breadcrumbs consistent without new pages or bundle cost | The sidebar outgrows a 900px window (move secondary entries into collapsible groups), or a design refresh changes the corner language |
+| D21 | Server-side pagination for every list: `PageRequest`/`PageInfo` (default 25, clamp 10–200, 1-based, past-the-end empty), `query`, AIP-132 `order_by` with per-resource allow-lists and an id tie-break, facet counts that ignore the page and their own filter, and a `before_ts_ms` cursor for logs; an omitted `page` returns the first 200 items | Lists must stay correct and bounded as a VPS accumulates hundreds of images, volumes, and events; doing it in `internal/service` keeps web, CLI, and MCP consistent; numbered pages suit tables, while a timestamp cursor suits append-only logs; the 200-item fallback keeps existing non-table callers working | A list routinely exceeds a few thousand items (move to opaque page tokens over the M4 SQLite store), or clients need live insertion without page drift |
+| D22 | The agent is a **separate binary** (`cmd/asterism-agent`), not an `asterism agent` subcommand | The hub links the SPA, MCP, SQLite and gopsutil (~30 MB); the agent needs none of them and must stay small and auditable on every VPS. A dependency deny-list test enforces the split | The two binaries need to share enough code that release coordination costs more than the size saving |
+| D23 | **Push, outbound only**: the agent dials the hub with a host-bound, ingest-only token and never listens | Works behind NAT, CGNAT and default-deny firewalls; the hub holds no SSH keys or root-equivalent VPS credentials; a stolen agent token can spoof one host's data but read nothing | Operators need pull-only collection where no outbound connection is allowed |
+| D24 | **The agent sends facts; the hub assembles them**: normalised `Container`, `Workload`, `PortBinding`, `IngressRoute`, Docker resources and resolved project rules go up, and role, category, icon, edge and upstream resolution stay in `internal/collect/assemble`, shared with the SSH bridge | Classifier and topology changes ship with the hub alone, never requiring agent upgrades; SSH and agent modes classify identically | Hub-side assembly becomes a CPU bottleneck at many hosts |
+| D25 | **Transport**: connect-rpc bidi `Stream` over HTTP/2 as the primary path, with unary `Push` plus a server-streaming `Commands` fallback for HTTP/1.1-only proxies; same frames on both, gzip, per-connection series dictionary, seq + ack only for replayable frames | One session implementation; works through any reverse proxy that already passes `LiveService` streams; acks bound memory on both ends without a disk queue | A transport (QUIC, WebTransport) becomes clearly cheaper, or unary overhead dominates at short flush intervals |
+| D26 | The active alert count covers the whole retained event log with the `alerts` kind group (warning and critical, excluding audit and container lifecycle events), the same rule as `ListEvents(kind_group = "alerts")` | The sidebar badge and the Events "Alerts" filter must agree; routine lifecycle warnings (a container stopping) were inflating the count | Alert rules gain firing/resolved state (M4), at which point the count becomes "firing alerts" |
+| D27 | `ListNetworks.user_defined_only` with `NetworkCounts` (`total`, `builtin`, `user_defined`, ignoring that filter); the web Networks tab defaults to user-defined | Docker's `bridge`, `host` and `none` networks are noise on most hosts but must stay one click away; server-side counts keep the toggle correct across pages | Users routinely need the built-in networks first |
+| D28 | Agent budgets: binary ≤ 11 MiB, image ≤ 12 MB, steady RSS ≤ 15 MB at default intervals, CPU ≤ 0.5% of a core, ≤ 2 KB/s, all measured (§16); gzip at `BestSpeed`; `net/http/pprof` only with `-tags pprof` | connect, protobuf and TLS alone are ~9.6 MB of binary; `BestSpeed` saves ~0.3 MB of encoder state per pooled writer for ~10% more bytes on a ~100 B/s stream; release binaries must never listen | Steady RSS at default intervals exceeds 15 MB on reference hardware, or a cheaper compressor appears in connect |
+| D29 | One shared, program-aware redaction rule set for arguments and text (§8.6), applied on the agent and again on the hub, with shell strings tokenized rather than split on whitespace | Short flags (`redis-cli -a`, `mysql -p`, `curl -u`, `sshpass -p`) and env args (`-e KEY=VALUE`) leaked through name-only rules; program context keeps `-p` as a port for `docker run`, `ssh` and `psql` | A credential form escapes the golden tables, or false positives hide information operators need |

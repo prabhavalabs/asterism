@@ -1,0 +1,9 @@
+hub:
+  url: https://asterism.example.com
+  tokenfile: /etc/asterism/agent.token
+  tls: {pin: []}
+hots: {name: prod-1}
+sources:
+  docker: {endpont: unix:///var/run/docker.sock}
+projects:
+  - {name: shop, members: {compose: [shop]}, colour: teal}
