@@ -1,4 +1,4 @@
-import { useSyncExternalStore } from "react";
+import { useState, useSyncExternalStore } from "react";
 import type * as React from "react";
 import {
   Activity01Icon,
@@ -12,7 +12,12 @@ import {
   WorkflowSquare01Icon,
 } from "@hugeicons/core-free-icons";
 import { Icon, type IconData } from "@/components/ui/icon";
-import { ProjectIconKind, type ProjectIcon as ProjectIconMessage, type WorkloadRole } from "@/gen/asterism/v1/asterism_pb";
+import { iconSourceLabel } from "./iconSource";
+import {
+  ProjectIconKind,
+  type ProjectIcon as ProjectIconMessage,
+  type WorkloadRole,
+} from "@/gen/asterism/v1/asterism_pb";
 import { cn } from "@/lib/utils";
 import {
   CATEGORY_COLOR,
@@ -89,9 +94,21 @@ const CATEGORY_GLYPH: Record<TechCategory, IconData> = {
   platform: ContainerIcon,
 };
 
+// Image icons sit on a neutral tile with a little inset so transparent
+// favicons keep their own colours and never touch the corners.
+const IMAGE_TILE = "bg-surface-subtle ring-border";
+const IMAGE_INSET: Record<IconTileSize, string> = {
+  16: "p-px",
+  20: "p-px",
+  24: "p-0.5",
+  32: "p-1",
+  40: "p-1",
+};
+
 interface TileProps extends Omit<React.ComponentProps<"span">, "children" | "color"> {
   size: IconTileSize;
-  color: IconColorToken;
+  /** Tint token, or "image" for the neutral image tile. */
+  color: IconColorToken | "image";
   label: string;
   /** Hide from assistive tech when the name is already next to the icon. */
   decorative: boolean;
@@ -110,7 +127,7 @@ function Tile({ size, color, label, decorative, className, children, ...props }:
         // Menus tint descendant SVGs; the glyph always follows the tile colour.
         "inline-flex shrink-0 select-none items-center justify-center overflow-hidden ring-1 ring-inset [&_svg]:text-current!",
         TILE[size].box,
-        ICON_TONE_CLASSES[color],
+        color === "image" ? cn(IMAGE_TILE, IMAGE_INSET[size]) : ICON_TONE_CLASSES[color],
         className,
       )}
       {...props}
@@ -141,27 +158,55 @@ export interface ProjectIconProps extends Omit<React.ComponentProps<"span">, "ch
 }
 
 function iconTitle(icon: ProjectIconMessage | undefined, name: string): string {
+  if (icon?.imageUrl && (icon.kind === ProjectIconKind.UPLOADED || icon.kind === ProjectIconKind.FAVICON)) {
+    return `${name} · ${iconSourceLabel(icon).toLowerCase()}`;
+  }
   if (!icon?.slug) return name;
-  const source =
-    icon.kind === ProjectIconKind.CONFIGURED
-      ? "set in asterism.toml"
-      : icon.kind === ProjectIconKind.LABEL
-        ? "from the asterism.icon label"
-        : "detected";
-  return `${name} · ${icon.label || icon.slug} (${source})`;
+  return `${name} · ${icon.label || icon.slug} (${iconSourceLabel(icon).toLowerCase()})`;
 }
 
 /**
- * Square project tile (16/20/24/32/40px): the project's technology glyph or
- * its monogram, tinted with the daemon-chosen design token.
+ * Square project tile (16/20/24/32/40px): an uploaded or favicon image when
+ * the daemon resolved one, else the technology glyph or the monogram tinted
+ * with the daemon-chosen design token. A broken image falls back to the
+ * glyph or monogram.
  */
 export function ProjectIcon({ icon, name, size = 24, decorative = true, className, ...props }: ProjectIconProps) {
+  const [failedUrl, setFailedUrl] = useState<string | undefined>(undefined);
+  const imageUrl = icon?.imageUrl || undefined;
   const slug = icon?.slug || undefined;
   const glyph = useTechGlyph(slug);
   const color: IconColorToken =
     icon && isIconColorToken(icon.colorToken) ? icon.colorToken : CATEGORY_COLOR.app;
   const monogram = (icon?.monogram || monogramFor(name)).slice(0, TILE[size].letters);
   const meta = techMeta(slug);
+
+  if (imageUrl && failedUrl !== imageUrl) {
+    return (
+      <Tile
+        size={size}
+        color="image"
+        label={iconTitle(icon, name)}
+        decorative={decorative}
+        data-kind={icon ? ProjectIconKind[icon.kind]?.toLowerCase() : undefined}
+        className={className}
+        {...props}
+      >
+        <img
+          src={imageUrl}
+          alt=""
+          width={size}
+          height={size}
+          loading="lazy"
+          decoding="async"
+          draggable={false}
+          referrerPolicy="no-referrer"
+          className="size-full object-contain"
+          onError={() => setFailedUrl(imageUrl)}
+        />
+      </Tile>
+    );
+  }
 
   let content: React.ReactNode;
   if (slug && glyph) {

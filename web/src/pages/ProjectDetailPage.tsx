@@ -1,7 +1,16 @@
 import { useMemo, useState } from "react";
 import { keepPreviousData, useQuery } from "@tanstack/react-query";
 import { useParams } from "@tanstack/react-router";
-import { ArrowRight02Icon, CpuIcon, CubeIcon, FolderRemoveIcon, Globe02Icon, RamMemoryIcon, Route01Icon } from "@hugeicons/core-free-icons";
+import {
+  ArrowRight02Icon,
+  CpuIcon,
+  CubeIcon,
+  FolderRemoveIcon,
+  Globe02Icon,
+  ImageAdd01Icon,
+  RamMemoryIcon,
+  Route01Icon,
+} from "@hugeicons/core-free-icons";
 import { Icon } from "@/components/ui/icon";
 import { WorkloadRole } from "@/gen/asterism/v1/asterism_pb";
 import { inventoryClient, topologyClient } from "@/lib/rpc";
@@ -34,6 +43,7 @@ import { Badge } from "@/components/ui/badge";
 import { Card } from "@/components/ui/card";
 import { PortalCanvas, type PortalViewMode } from "@/components/topology/PortalCanvas";
 import { WorkloadInspectorSheet } from "@/components/topology/WorkloadInspectorSheet";
+import { ProjectIconSheet } from "@/components/projects/ProjectIconSheet";
 import { WorkloadRow } from "@/components/portal/WorkloadRow";
 import { usePagedSearch, usePager } from "@/hooks/use-paged-search";
 import { formatBytes, formatPct, roleLabel } from "@/lib/format";
@@ -46,6 +56,15 @@ export function ProjectDetailPage() {
   const { projectId } = useParams({ from: "/projects/$projectId" });
   const [viewMode, setViewMode] = useState<PortalViewMode>("isometric");
   const [selectedWorkloadId, setSelectedWorkloadId] = useState<string | null>(null);
+  const [iconSheetOpen, setIconSheetOpen] = useState(false);
+
+  // Shared with the shell; tells whether this caller may edit project settings.
+  const overviewQuery = useQuery({
+    queryKey: ["overview"],
+    queryFn: () => inventoryClient.getOverview({}),
+    refetchInterval: 15_000,
+  });
+  const canEditIcon = overviewQuery.data?.capabilities?.canEditProjects === true;
 
   const projectQuery = useQuery({
     queryKey: ["project", projectId],
@@ -126,6 +145,14 @@ export function ProjectDetailPage() {
           </>
         }
         description={project.workingDir ? <span className="font-mono text-mono">{project.workingDir}</span> : undefined}
+        actions={
+          canEditIcon ? (
+            <Button variant="outline" onClick={() => setIconSheetOpen(true)}>
+              <Icon icon={ImageAdd01Icon} data-icon="inline-start" />
+              Change icon
+            </Button>
+          ) : undefined
+        }
       />
 
       <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
@@ -242,6 +269,7 @@ export function ProjectDetailPage() {
       </CardGrid>
 
       <WorkloadInspectorSheet workloadId={selectedWorkloadId} onClose={() => setSelectedWorkloadId(null)} />
+      {canEditIcon && <ProjectIconSheet project={project} open={iconSheetOpen} onOpenChange={setIconSheetOpen} />}
     </Page>
   );
 }
