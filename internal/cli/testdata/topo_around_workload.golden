@@ -1,0 +1,7 @@
+analytics-web [app]  analytics-hub · healthy · 4.1% · 202.1 MiB
+├─▶ ingest-collector [worker]  analytics-hub · degraded · 22.6% · 463.0 MiB  via RPC :9000
+│   ├─▶ nats-broker [queue]  analytics-hub · healthy · 2.7% · 61.5 MiB  via NATS :4222
+│   └─▶ timescale-db [database]  analytics-hub · healthy · 11.0% · 650.2 MiB  via timescale :5432
+└─▶ timescale-db (see above)  via read :5432
+
+4 nodes · 4 edges

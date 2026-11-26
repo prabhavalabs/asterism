@@ -1,0 +1,606 @@
+{
+  "workloads": [
+    {
+      "id": "ctr:analytics-web",
+      "kind": "WORKLOAD_KIND_CONTAINER",
+      "role": "WORKLOAD_ROLE_APP",
+      "name": "analytics-web",
+      "project_id": "proj:analytics-hub",
+      "service_name": "web",
+      "image": "ghcr.io/example/analytics-web:v1.9.0",
+      "pid": 5120,
+      "state": "running",
+      "health": "HEALTH_STATUS_HEALTHY",
+      "started_at_ms": "1795532330261",
+      "cpu_util": 0.041196962260424005,
+      "mem_used_bytes": "211898581",
+      "mem_limit_bytes": "536870912",
+      "net_rx_bps": 310000,
+      "net_tx_bps": 640000,
+      "replicas": 1,
+      "ports": [
+        {
+          "id": "port:3000",
+          "workload_id": "ctr:analytics-web",
+          "workload_name": "analytics-web",
+          "project_id": "proj:analytics-hub",
+          "container_port": 3000,
+          "proto": "tcp",
+          "exposure": "PORT_EXPOSURE_INTERNAL",
+          "process_name": "node"
+        }
+      ],
+      "networks": [
+        "analytics_net"
+      ],
+      "env_keys": [
+        "INGEST_API_URL",
+        "POSTGRES_URL"
+      ]
+    },
+    {
+      "id": "ctr:ingest-collector",
+      "kind": "WORKLOAD_KIND_CONTAINER",
+      "role": "WORKLOAD_ROLE_WORKER",
+      "name": "ingest-collector",
+      "project_id": "proj:analytics-hub",
+      "service_name": "ingest",
+      "image": "ghcr.io/example/ingest:v1.9.0",
+      "pid": 5304,
+      "state": "running",
+      "health": "HEALTH_STATUS_DEGRADED",
+      "restart_count": 2,
+      "started_at_ms": "1795683530261",
+      "cpu_util": 0.22644635448334224,
+      "mem_used_bytes": "485540524",
+      "mem_limit_bytes": "536870912",
+      "net_rx_bps": 620000,
+      "net_tx_bps": 410000,
+      "replicas": 1,
+      "ports": [
+        {
+          "id": "port:9000",
+          "workload_id": "ctr:ingest-collector",
+          "workload_name": "ingest-collector",
+          "project_id": "proj:analytics-hub",
+          "container_port": 9000,
+          "proto": "tcp",
+          "exposure": "PORT_EXPOSURE_INTERNAL",
+          "process_name": "ingest"
+        }
+      ],
+      "networks": [
+        "analytics_net",
+        "core_net"
+      ],
+      "env_keys": [
+        "NATS_URL",
+        "TIMESCALE_URL",
+        "BATCH_SIZE"
+      ]
+    },
+    {
+      "id": "ctr:mailer",
+      "kind": "WORKLOAD_KIND_CONTAINER",
+      "role": "WORKLOAD_ROLE_WORKER",
+      "name": "mailer",
+      "project_id": "proj:analytics-hub",
+      "service_name": "mailer",
+      "image": "ghcr.io/example/mailer:v0.4.2",
+      "state": "unhealthy",
+      "health": "HEALTH_STATUS_DEGRADED",
+      "restart_count": 14,
+      "started_at_ms": "1795705105262",
+      "mem_limit_bytes": "134217728",
+      "replicas": 1,
+      "networks": [
+        "analytics_net"
+      ],
+      "env_keys": [
+        "SMTP_URL",
+        "FROM_ADDRESS"
+      ]
+    },
+    {
+      "id": "ctr:nats-broker",
+      "kind": "WORKLOAD_KIND_CONTAINER",
+      "role": "WORKLOAD_ROLE_QUEUE",
+      "name": "nats-broker",
+      "project_id": "proj:analytics-hub",
+      "service_name": "nats",
+      "image": "nats:2.11-alpine",
+      "pid": 5520,
+      "state": "running",
+      "health": "HEALTH_STATUS_HEALTHY",
+      "started_at_ms": "1794481130261",
+      "cpu_util": 0.02719667030427461,
+      "mem_used_bytes": "64498041",
+      "mem_limit_bytes": "268435456",
+      "net_rx_bps": 380000,
+      "net_tx_bps": 390000,
+      "replicas": 1,
+      "ports": [
+        {
+          "id": "port:4222",
+          "workload_id": "ctr:nats-broker",
+          "workload_name": "nats-broker",
+          "project_id": "proj:analytics-hub",
+          "container_port": 4222,
+          "proto": "tcp",
+          "exposure": "PORT_EXPOSURE_INTERNAL",
+          "process_name": "nats-server"
+        }
+      ],
+      "networks": [
+        "analytics_net"
+      ],
+      "tech": "nats"
+    },
+    {
+      "id": "ctr:timescale-db",
+      "kind": "WORKLOAD_KIND_CONTAINER",
+      "role": "WORKLOAD_ROLE_DATABASE",
+      "name": "timescale-db",
+      "project_id": "proj:analytics-hub",
+      "service_name": "timescale",
+      "image": "timescale/timescaledb:2.18-pg17",
+      "pid": 5410,
+      "state": "running",
+      "health": "HEALTH_STATUS_HEALTHY",
+      "started_at_ms": "1794481130261",
+      "cpu_util": 0.109911839821238,
+      "mem_used_bytes": "681761254",
+      "mem_limit_bytes": "1610612736",
+      "net_rx_bps": 410000,
+      "net_tx_bps": 280000,
+      "replicas": 1,
+      "ports": [
+        {
+          "id": "port:5433",
+          "workload_id": "ctr:timescale-db",
+          "workload_name": "timescale-db",
+          "project_id": "proj:analytics-hub",
+          "container_port": 5432,
+          "proto": "tcp",
+          "exposure": "PORT_EXPOSURE_INTERNAL",
+          "process_name": "postgres"
+        }
+      ],
+      "networks": [
+        "analytics_net"
+      ],
+      "env_keys": [
+        "POSTGRES_DB",
+        "POSTGRES_USER"
+      ],
+      "tech": "timescale"
+    },
+    {
+      "id": "ctr:asterism",
+      "kind": "WORKLOAD_KIND_CONTAINER",
+      "role": "WORKLOAD_ROLE_APP",
+      "name": "asterism",
+      "project_id": "proj:edge-gateway",
+      "service_name": "asterism",
+      "image": "ghcr.io/prabhavalabs/asterism:0.1.0",
+      "pid": 1880,
+      "state": "running",
+      "health": "HEALTH_STATUS_HEALTHY",
+      "started_at_ms": "1794265130262",
+      "cpu_util": 0.017338266053794175,
+      "mem_used_bytes": "64498041",
+      "mem_limit_bytes": "268435456",
+      "replicas": 1,
+      "ports": [
+        {
+          "id": "port:7700",
+          "workload_id": "ctr:asterism",
+          "workload_name": "asterism",
+          "project_id": "proj:edge-gateway",
+          "host_ip": "127.0.0.1",
+          "host_port": 7700,
+          "container_port": 7700,
+          "proto": "tcp",
+          "exposure": "PORT_EXPOSURE_LOOPBACK",
+          "process_name": "asterism"
+        }
+      ],
+      "networks": [
+        "edge_net"
+      ]
+    },
+    {
+      "id": "ctr:caddy-edge",
+      "kind": "WORKLOAD_KIND_CONTAINER",
+      "role": "WORKLOAD_ROLE_PROXY",
+      "name": "caddy-edge",
+      "project_id": "proj:edge-gateway",
+      "service_name": "caddy",
+      "image": "caddy:2.10-alpine",
+      "pid": 2048,
+      "state": "running",
+      "health": "HEALTH_STATUS_HEALTHY",
+      "started_at_ms": "1794913130261",
+      "cpu_util": 0.026232589788471844,
+      "mem_used_bytes": "77781478",
+      "mem_limit_bytes": "536870912",
+      "net_rx_bps": 560000,
+      "net_tx_bps": 910000,
+      "replicas": 1,
+      "ports": [
+        {
+          "id": "port:8443",
+          "workload_id": "ctr:caddy-edge",
+          "workload_name": "caddy-edge",
+          "project_id": "proj:edge-gateway",
+          "host_ip": "0.0.0.0",
+          "host_port": 8443,
+          "container_port": 443,
+          "proto": "tcp",
+          "exposure": "PORT_EXPOSURE_PUBLIC",
+          "process_name": "caddy"
+        },
+        {
+          "id": "port:2019",
+          "workload_id": "ctr:caddy-edge",
+          "workload_name": "caddy-edge",
+          "project_id": "proj:edge-gateway",
+          "host_ip": "127.0.0.1",
+          "host_port": 2019,
+          "container_port": 2019,
+          "proto": "tcp",
+          "exposure": "PORT_EXPOSURE_LOOPBACK",
+          "process_name": "caddy"
+        }
+      ],
+      "networks": [
+        "edge_net",
+        "analytics_net",
+        "staging_net"
+      ],
+      "env_keys": [
+        "CADDY_ADMIN"
+      ],
+      "tech": "caddy"
+    },
+    {
+      "id": "ctr:cloudflared",
+      "kind": "WORKLOAD_KIND_CONTAINER",
+      "role": "WORKLOAD_ROLE_PROXY",
+      "name": "cloudflared",
+      "project_id": "proj:edge-gateway",
+      "service_name": "cloudflared",
+      "image": "cloudflare/cloudflared:2026.9.0",
+      "pid": 1410,
+      "state": "running",
+      "health": "HEALTH_STATUS_HEALTHY",
+      "started_at_ms": "1794481130261",
+      "cpu_util": 0.029325769113658695,
+      "mem_used_bytes": "50417877",
+      "mem_limit_bytes": "268435456",
+      "net_rx_bps": 420000,
+      "net_tx_bps": 380000,
+      "replicas": 1,
+      "networks": [
+        "edge_net"
+      ],
+      "env_keys": [
+        "TUNNEL_METRICS",
+        "TUNNEL_TRANSPORT_PROTOCOL"
+      ],
+      "tech": "cloudflared"
+    },
+    {
+      "id": "unit:nginx.service",
+      "kind": "WORKLOAD_KIND_SYSTEMD_UNIT",
+      "role": "WORKLOAD_ROLE_PROXY",
+      "name": "nginx",
+      "project_id": "proj:edge-gateway",
+      "service_name": "nginx",
+      "image": "nginx 1.28.0 (host systemd)",
+      "pid": 984,
+      "state": "active",
+      "health": "HEALTH_STATUS_HEALTHY",
+      "started_at_ms": "1793501930261",
+      "cpu_util": 0.045090102256991595,
+      "mem_used_bytes": "97567404",
+      "mem_limit_bytes": "536870912",
+      "net_rx_bps": 1240000,
+      "net_tx_bps": 2890000,
+      "replicas": 1,
+      "ports": [
+        {
+          "id": "port:443",
+          "workload_id": "unit:nginx.service",
+          "workload_name": "nginx",
+          "project_id": "proj:edge-gateway",
+          "host_ip": "0.0.0.0",
+          "host_port": 443,
+          "container_port": 443,
+          "proto": "tcp",
+          "exposure": "PORT_EXPOSURE_PUBLIC",
+          "process_name": "nginx"
+        },
+        {
+          "id": "port:80",
+          "workload_id": "unit:nginx.service",
+          "workload_name": "nginx",
+          "project_id": "proj:edge-gateway",
+          "host_ip": "0.0.0.0",
+          "host_port": 80,
+          "container_port": 80,
+          "proto": "tcp",
+          "exposure": "PORT_EXPOSURE_PUBLIC",
+          "process_name": "nginx"
+        }
+      ],
+      "networks": [
+        "host",
+        "edge_net"
+      ],
+      "tech": "nginx"
+    },
+    {
+      "id": "ctr:backup-nightly",
+      "kind": "WORKLOAD_KIND_CONTAINER",
+      "role": "WORKLOAD_ROLE_STORAGE",
+      "name": "backup-nightly",
+      "project_id": "proj:nova-core",
+      "service_name": "backup",
+      "image": "restic/restic:0.17.3",
+      "state": "stopped",
+      "health": "HEALTH_STATUS_DOWN",
+      "started_at_ms": "1795672730262",
+      "mem_limit_bytes": "268435456",
+      "replicas": 1,
+      "networks": [
+        "core_net"
+      ],
+      "env_keys": [
+        "RESTIC_REPOSITORY",
+        "AWS_ACCESS_KEY_ID",
+        "AWS_SECRET_ACCESS_KEY"
+      ],
+      "tech": "restic"
+    },
+    {
+      "id": "ctr:nova-api",
+      "kind": "WORKLOAD_KIND_CONTAINER",
+      "role": "WORKLOAD_ROLE_APP",
+      "name": "nova-api",
+      "project_id": "proj:nova-core",
+      "service_name": "api",
+      "image": "ghcr.io/example/core-api:v2.4.1",
+      "pid": 4120,
+      "state": "running",
+      "health": "HEALTH_STATUS_HEALTHY",
+      "started_at_ms": "1795366730261",
+      "cpu_util": 0.13745667246599047,
+      "mem_used_bytes": "438390997",
+      "mem_limit_bytes": "1073741824",
+      "net_rx_bps": 840000,
+      "net_tx_bps": 1920000,
+      "replicas": 2,
+      "ports": [
+        {
+          "id": "port:8080",
+          "workload_id": "ctr:nova-api",
+          "workload_name": "nova-api",
+          "project_id": "proj:nova-core",
+          "host_ip": "127.0.0.1",
+          "host_port": 8080,
+          "container_port": 8080,
+          "proto": "tcp",
+          "exposure": "PORT_EXPOSURE_LOOPBACK",
+          "process_name": "core-api"
+        }
+      ],
+      "networks": [
+        "edge_net",
+        "core_net"
+      ],
+      "env_keys": [
+        "DATABASE_URL",
+        "REDIS_URL",
+        "PORT",
+        "LOG_LEVEL"
+      ]
+    },
+    {
+      "id": "ctr:nova-worker",
+      "kind": "WORKLOAD_KIND_CONTAINER",
+      "role": "WORKLOAD_ROLE_WORKER",
+      "name": "nova-worker",
+      "project_id": "proj:nova-core",
+      "service_name": "worker",
+      "image": "ghcr.io/example/core-api:v2.4.1",
+      "pid": 4312,
+      "state": "running",
+      "health": "HEALTH_STATUS_HEALTHY",
+      "started_at_ms": "1795366730261",
+      "cpu_util": 0.06481047213885599,
+      "mem_used_bytes": "296796844",
+      "mem_limit_bytes": "536870912",
+      "net_rx_bps": 190000,
+      "net_tx_bps": 145000,
+      "replicas": 1,
+      "networks": [
+        "core_net"
+      ],
+      "env_keys": [
+        "DATABASE_URL",
+        "REDIS_URL",
+        "WORKER_CONCURRENCY"
+      ]
+    },
+    {
+      "id": "ctr:postgres-primary",
+      "kind": "WORKLOAD_KIND_CONTAINER",
+      "role": "WORKLOAD_ROLE_DATABASE",
+      "name": "postgres-primary",
+      "project_id": "proj:nova-core",
+      "service_name": "postgres",
+      "image": "postgres:17.4-alpine",
+      "pid": 3810,
+      "state": "running",
+      "health": "HEALTH_STATUS_HEALTHY",
+      "started_at_ms": "1793501930261",
+      "cpu_util": 0.04885373018585833,
+      "mem_used_bytes": "950196710",
+      "mem_limit_bytes": "2147483648",
+      "net_rx_bps": 520000,
+      "net_tx_bps": 780000,
+      "replicas": 1,
+      "ports": [
+        {
+          "id": "port:5432",
+          "workload_id": "ctr:postgres-primary",
+          "workload_name": "postgres-primary",
+          "project_id": "proj:nova-core",
+          "host_ip": "127.0.0.1",
+          "host_port": 5432,
+          "container_port": 5432,
+          "proto": "tcp",
+          "exposure": "PORT_EXPOSURE_LOOPBACK",
+          "process_name": "postgres"
+        }
+      ],
+      "networks": [
+        "core_net"
+      ],
+      "env_keys": [
+        "POSTGRES_DB",
+        "POSTGRES_USER",
+        "PGDATA"
+      ],
+      "tech": "postgres"
+    },
+    {
+      "id": "ctr:redis-cache",
+      "kind": "WORKLOAD_KIND_CONTAINER",
+      "role": "WORKLOAD_ROLE_CACHE",
+      "name": "redis-cache",
+      "project_id": "proj:nova-core",
+      "service_name": "redis",
+      "image": "valkey/valkey:8.1-alpine",
+      "pid": 3920,
+      "state": "running",
+      "health": "HEALTH_STATUS_HEALTHY",
+      "started_at_ms": "1793501930261",
+      "cpu_util": 0.01819696226042402,
+      "mem_used_bytes": "188692380",
+      "mem_limit_bytes": "536870912",
+      "net_rx_bps": 290000,
+      "net_tx_bps": 310000,
+      "replicas": 1,
+      "ports": [
+        {
+          "id": "port:6379",
+          "workload_id": "ctr:redis-cache",
+          "workload_name": "redis-cache",
+          "project_id": "proj:nova-core",
+          "container_port": 6379,
+          "proto": "tcp",
+          "exposure": "PORT_EXPOSURE_INTERNAL",
+          "process_name": "valkey-server"
+        }
+      ],
+      "networks": [
+        "core_net"
+      ],
+      "tech": "valkey"
+    },
+    {
+      "id": "ctr:staging-preview",
+      "kind": "WORKLOAD_KIND_CONTAINER",
+      "role": "WORKLOAD_ROLE_APP",
+      "name": "staging-preview",
+      "project_id": "proj:staging-lab",
+      "service_name": "preview",
+      "image": "ghcr.io/example/core-api:sha-9c4f21a",
+      "pid": 6180,
+      "state": "running",
+      "health": "HEALTH_STATUS_HEALTHY",
+      "started_at_ms": "1795654730261",
+      "cpu_util": 0.030196670304274607,
+      "mem_used_bytes": "161566933",
+      "mem_limit_bytes": "536870912",
+      "net_rx_bps": 45000,
+      "net_tx_bps": 72000,
+      "replicas": 1,
+      "ports": [
+        {
+          "id": "port:4173",
+          "workload_id": "ctr:staging-preview",
+          "workload_name": "staging-preview",
+          "project_id": "proj:staging-lab",
+          "container_port": 4173,
+          "proto": "tcp",
+          "exposure": "PORT_EXPOSURE_INTERNAL",
+          "process_name": "preview"
+        }
+      ],
+      "networks": [
+        "staging_net"
+      ],
+      "env_keys": [
+        "DATABASE_URL",
+        "APP_ENV"
+      ]
+    }
+  ],
+  "page_info": {
+    "page": 1,
+    "page_size": 15,
+    "total_size": 15,
+    "total_pages": 1
+  },
+  "role_counts": [
+    {
+      "role": "WORKLOAD_ROLE_PROXY",
+      "count": 3
+    },
+    {
+      "role": "WORKLOAD_ROLE_APP",
+      "count": 4
+    },
+    {
+      "role": "WORKLOAD_ROLE_WORKER",
+      "count": 3
+    },
+    {
+      "role": "WORKLOAD_ROLE_DATABASE",
+      "count": 2
+    },
+    {
+      "role": "WORKLOAD_ROLE_CACHE",
+      "count": 1
+    },
+    {
+      "role": "WORKLOAD_ROLE_QUEUE",
+      "count": 1
+    },
+    {
+      "role": "WORKLOAD_ROLE_STORAGE",
+      "count": 1
+    }
+  ],
+  "project_counts": [
+    {
+      "value": "proj:analytics-hub",
+      "count": 5
+    },
+    {
+      "value": "proj:edge-gateway",
+      "count": 4
+    },
+    {
+      "value": "proj:nova-core",
+      "count": 5
+    },
+    {
+      "value": "proj:staging-lab",
+      "count": 1
+    }
+  ]
+}

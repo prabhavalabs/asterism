@@ -1,0 +1,162 @@
+{
+  "events": [
+    {
+      "id": "evt:container.restart:mailer:1795705625291-1",
+      "ts_ms": "1795705625291",
+      "entity_id": "ctr:mailer",
+      "entity_name": "mailer",
+      "kind": "container.restart",
+      "severity": "warning",
+      "message": "Container mailer restarted by its restart policy (25 restarts)",
+      "attrs": {
+        "restart_count": "25"
+      }
+    },
+    {
+      "id": "evt:container.restart:mailer:1795705585298-1",
+      "ts_ms": "1795705585298",
+      "entity_id": "ctr:mailer",
+      "entity_name": "mailer",
+      "kind": "container.restart",
+      "severity": "warning",
+      "message": "Container mailer restarted by its restart policy (24 restarts)",
+      "attrs": {
+        "restart_count": "24"
+      }
+    },
+    {
+      "id": "evt:container.restart:mailer:1795705535292-1",
+      "ts_ms": "1795705535292",
+      "entity_id": "ctr:mailer",
+      "entity_name": "mailer",
+      "kind": "container.restart",
+      "severity": "warning",
+      "message": "Container mailer restarted by its restart policy (23 restarts)",
+      "attrs": {
+        "restart_count": "23"
+      }
+    },
+    {
+      "id": "evt:container.restart:mailer:1795705490292-1",
+      "ts_ms": "1795705490292",
+      "entity_id": "ctr:mailer",
+      "entity_name": "mailer",
+      "kind": "container.restart",
+      "severity": "warning",
+      "message": "Container mailer restarted by its restart policy (22 restarts)",
+      "attrs": {
+        "restart_count": "22"
+      }
+    },
+    {
+      "id": "evt:container.restart:mailer:1795705445292-1",
+      "ts_ms": "1795705445292",
+      "entity_id": "ctr:mailer",
+      "entity_name": "mailer",
+      "kind": "container.restart",
+      "severity": "warning",
+      "message": "Container mailer restarted by its restart policy (21 restarts)",
+      "attrs": {
+        "restart_count": "21"
+      }
+    },
+    {
+      "id": "evt:container.restart:mailer:1795705400292-1",
+      "ts_ms": "1795705400292",
+      "entity_id": "ctr:mailer",
+      "entity_name": "mailer",
+      "kind": "container.restart",
+      "severity": "warning",
+      "message": "Container mailer restarted by its restart policy (20 restarts)",
+      "attrs": {
+        "restart_count": "20"
+      }
+    },
+    {
+      "id": "evt:container.restart:mailer:1795705355292-1",
+      "ts_ms": "1795705355292",
+      "entity_id": "ctr:mailer",
+      "entity_name": "mailer",
+      "kind": "container.restart",
+      "severity": "warning",
+      "message": "Container mailer restarted by its restart policy (19 restarts)",
+      "attrs": {
+        "restart_count": "19"
+      }
+    },
+    {
+      "id": "evt:container.restart:mailer:1795705310293-1",
+      "ts_ms": "1795705310293",
+      "entity_id": "ctr:mailer",
+      "entity_name": "mailer",
+      "kind": "container.restart",
+      "severity": "warning",
+      "message": "Container mailer restarted by its restart policy (18 restarts)",
+      "attrs": {
+        "restart_count": "18"
+      }
+    },
+    {
+      "id": "evt:container.restart:mailer:1795705265293-1",
+      "ts_ms": "1795705265293",
+      "entity_id": "ctr:mailer",
+      "entity_name": "mailer",
+      "kind": "container.restart",
+      "severity": "warning",
+      "message": "Container mailer restarted by its restart policy (17 restarts)",
+      "attrs": {
+        "restart_count": "17"
+      }
+    },
+    {
+      "id": "evt:container.restart:mailer:1795705220293-1",
+      "ts_ms": "1795705220293",
+      "entity_id": "ctr:mailer",
+      "entity_name": "mailer",
+      "kind": "container.restart",
+      "severity": "warning",
+      "message": "Container mailer restarted by its restart policy (16 restarts)",
+      "attrs": {
+        "restart_count": "16"
+      }
+    },
+    {
+      "id": "evt:container.restart:mailer:1795705175293-1",
+      "ts_ms": "1795705175293",
+      "entity_id": "ctr:mailer",
+      "entity_name": "mailer",
+      "kind": "container.restart",
+      "severity": "warning",
+      "message": "Container mailer restarted by its restart policy (15 restarts)",
+      "attrs": {
+        "restart_count": "15"
+      }
+    },
+    {
+      "id": "evt-1",
+      "ts_ms": "1795704890261",
+      "entity_id": "ctr:ingest-collector",
+      "entity_name": "ingest-collector",
+      "kind": "alert.memory",
+      "severity": "warning",
+      "message": "Memory reached 87.5% of 512 MiB cgroup limit"
+    }
+  ],
+  "page_info": {
+    "page": 1,
+    "page_size": 12,
+    "total_size": 196,
+    "total_pages": 1
+  },
+  "severity_counts": {
+    "total": 196,
+    "info": 93,
+    "warning": 73,
+    "critical": 30
+  },
+  "kind_counts": {
+    "total": 196,
+    "lifecycle": 73,
+    "other": 123
+  }
+}

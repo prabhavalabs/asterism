@@ -288,6 +288,43 @@ claude mcp add --transport http asterism https://monitor.example.com/mcp \
 Then ask things like *"Which containers restarted today and why?"*, *"What is using the most
 memory?"* or *"Which Docker images and volumes are unused?"*.
 
+## Use it from the terminal (CLI)
+
+The same binary has terminal views. They call the running hub's API, so they work on the VPS
+itself or from a laptop pointed at it.
+
+```sh
+asterism status                          # host vitals and projects grouped by category
+asterism top [--by cpu|mem]              # live view, refreshed every second (c / m / tab, q to quit)
+asterism ps [--project shop] [--role database]
+asterism ports [--exposure public]
+asterism ingress                         # Nginx / Caddy / Traefik / Cloudflare Tunnel routes and upstreams
+asterism logs <workload> [-f] [--grep ERR] [--tail 200]
+asterism topo [--around ctr:api|proj:shop] [--depth 2]
+asterism events [--since 1h] [--severity warning]
+```
+
+**Connection.** The hub address comes from `--server`, then `ASTERISM_URL`, then
+`http://<server.listen>` from the config (`--config`, which also honours `ASTERISM_LISTEN`),
+defaulting to `http://127.0.0.1:7700`. The views need a read-scoped token, taken from `--token`,
+`--token-file`, `ASTERISM_TOKEN`, or `/etc/asterism/mcp.token` when it is readable:
+
+```sh
+asterism token generate --name cli --scope read      # paste the [[auth.tokens]] entry into asterism.toml
+export ASTERISM_TOKEN=ast_...                        # restart the hub after editing the config
+asterism status
+```
+
+If the hub is not running the views say so (`daemon not reachable at …; start asterism serve or
+set --server`); they do not collect data in-process yet.
+
+**Output.** Tables are coloured on a terminal and plain when piped or when `NO_COLOR` is set
+(`--no-color` forces it). `--json` prints the API response as protojson with proto field names:
+list commands merge every page into one response, `events` keeps the API's newest-first order,
+`logs -f --json` prints one `LogLine` per line, and `top --json` prints
+`{"by", "host", "workloads"}`. Text from the hub is stripped of control characters before it
+reaches the terminal, and log lines arrive already redacted.
+
 ## Security model
 
 - **Read-only by default.** Container actions need `[actions] allow_actions = true`, an
@@ -323,7 +360,7 @@ Binary and image size are CI gates; the rest is measured with `make agent-footpr
 |---|---|---|
 | M0–M2 | Contracts, embedded SPA, host and Docker inventory, projects, ports, ingress discovery, isometric portal, guarded container actions, server-side pagination, `asterism-agent` | Done |
 | M3 | MCP server (stdio + stateless Streamable HTTP, 18 read-only tools) | Done |
-| M3 | CLI views (`status`, `ps`, `ports`, `ingress`, `logs`, `topo`) | Next |
+| M3 | CLI views (`status`, `top`, `ps`, `ports`, `ingress`, `logs`, `topo`, `events`) | Done |
 | M4 | SQLite history tiers, downsampling, range queries | Planned |
 | M5 | Observed TCP topology, alert rules, `diagnose` | Planned |
 | M6 | Release packaging (GoReleaser), install docs, public launch | Planned |
@@ -342,7 +379,7 @@ make agent   # static asterism-agent binary
 ```text
 asterism/
 ├── proto/asterism/v1/   # Protobuf contracts (source of truth)
-├── cmd/asterism/        # Hub: serve, mcp, agent token create, token generate, hash-password
+├── cmd/asterism/        # Hub: serve, mcp, CLI views, agent token create, token generate, hash-password
 ├── cmd/asterism-agent/  # Agent: run, validate, discover
 ├── internal/
 │   ├── agent/           # Agent collectors, Docker API client, procfs, actions
@@ -352,6 +389,8 @@ asterism/
 │   ├── service/         # Domain logic shared by every interface
 │   ├── api/             # ConnectRPC handlers
 │   ├── mcp/             # MCP tools over the same services (stdio + HTTP)
+│   ├── cli/             # Terminal views (status, top, ps, ports, ingress, logs, topo, events)
+│   ├── apiclient/       # ConnectRPC client shared by the CLI and `asterism mcp`
 │   ├── auth/            # Sessions and scoped bearer tokens
 │   ├── config/          # TOML + environment configuration
 │   └── web/             # Embedded SPA handler

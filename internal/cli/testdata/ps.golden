@@ -1,0 +1,19 @@
+ID                    PROJECT        ROLE      STATE      HEALTH      CPU        MEM   MEM%  RESTARTS  PORTS           IMAGE
+ctr:analytics-web     analytics-hub  app       running    healthy    4.1%  202.1 MiB  39.5%         0  3000            ghcr.io/example/analytics-web:v1.9.0
+ctr:ingest-collector  analytics-hub  worker    running    degraded  22.6%  463.0 MiB  90.4%         2  9000            ghcr.io/example/ingest:v1.9.0
+ctr:mailer            analytics-hub  worker    unhealthy  degraded   0.0%        0 B   0.0%        14  -               ghcr.io/example/mailer:v0.4.2
+ctr:nats-broker       analytics-hub  queue     running    healthy    2.7%   61.5 MiB  24.0%         0  4222            nats:2.11-alpine
+ctr:timescale-db      analytics-hub  database  running    healthy   11.0%  650.2 MiB  42.3%         0  5432            timescale/timescaledb:2.18-pg17
+ctr:asterism          edge-gateway   app       running    healthy    1.7%   61.5 MiB  24.0%         0  7700            ghcr.io/prabhavalabs/asterism:0.1.0
+ctr:caddy-edge        edge-gateway   proxy     running    healthy    2.6%   74.2 MiB  14.5%         0  8443→443*,2019  caddy:2.10-alpine
+ctr:cloudflared       edge-gateway   proxy     running    healthy    2.9%   48.1 MiB  18.8%         0  -               cloudflare/cloudflared:2026.9.0
+unit:nginx.service    edge-gateway   proxy     active     healthy    4.5%   93.0 MiB  18.2%         0  443*,80*        nginx 1.28.0 (host systemd)
+ctr:backup-nightly    nova-core      storage   stopped    down       0.0%        0 B   0.0%         0  -               restic/restic:0.17.3
+ctr:nova-api          nova-core      app       running    healthy   13.7%  418.1 MiB  40.8%         0  8080            ghcr.io/example/core-api:v2.4.1
+ctr:nova-worker       nova-core      worker    running    healthy    6.5%  283.0 MiB  55.3%         0  -               ghcr.io/example/core-api:v2.4.1
+ctr:postgres-primary  nova-core      database  running    healthy    4.9%  906.2 MiB  44.2%         0  5432            postgres:17.4-alpine
+ctr:redis-cache       nova-core      cache     running    healthy    1.8%  180.0 MiB  35.1%         0  6379            valkey/valkey:8.1-alpine
+ctr:staging-preview   staging-lab    app       running    healthy    3.0%  154.1 MiB  30.1%         0  4173            ghcr.io/example/core-api:sha-9c4f21a
+
+15 of 15 workloads · 3 proxy, 4 app, 3 worker, 2 database, 1 cache, 1 queue, 1 storage · 2 workloads restarted
+* public port

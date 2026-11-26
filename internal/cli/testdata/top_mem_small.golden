@@ -1,0 +1,10 @@
+vps-demo-1  10 cores · load 21.11 16.69 12.21  15:08:35
+CPU 98.3%    MEM 85.9%  20.6 GiB / 24.0 GiB   NET rx 255.3 KiB/s tx 651.
+
+ID                    PROJECT        ROLE      STATE      CPU       MEM▼
+ctr:postgres-primary  nova-core      database  running   4.9%  906.2 MiB
+ctr:timescale-db      analytics-hub  database  running  11.0%  650.2 MiB
+ctr:ingest-collector  analytics-hub  worker    running  22.6%  463.0 MiB
+
+refresh failed: daemon not reachable
+3 of 15 workloads by memory · c cpu · m memory · tab toggle · q quit

@@ -1,0 +1,52 @@
+{
+  "lines": [
+    {
+      "ts_ms": "1795705037762",
+      "workload_id": "ctr:nova-api",
+      "stream": "stdout",
+      "text": "level=info service=nova-api msg=\"job processed\" queue=default duration_ms=115"
+    },
+    {
+      "ts_ms": "1795705044262",
+      "workload_id": "ctr:nova-api",
+      "stream": "stderr",
+      "text": "level=warn service=nova-api msg=\"slow query\" duration_ms=122 table=events"
+    },
+    {
+      "ts_ms": "1795705050762",
+      "workload_id": "ctr:nova-api",
+      "stream": "stdout",
+      "text": "level=info service=nova-api msg=\"cache hit ratio\" pct=129"
+    },
+    {
+      "ts_ms": "1795705057262",
+      "workload_id": "ctr:nova-api",
+      "stream": "stderr",
+      "text": "level=error service=nova-api msg=\"upstream timeout\" retry_in_ms=136"
+    },
+    {
+      "ts_ms": "1795705057262",
+      "workload_id": "ctr:nova-api",
+      "stream": "stdout",
+      "text": "level=info service=nova-api msg=\"request completed\" status=200 latency_ms=143 path=/api/items"
+    },
+    {
+      "ts_ms": "1795705098261",
+      "workload_id": "ctr:nova-api",
+      "stream": "stdout",
+      "text": "level=info service=nova-api msg=\"listening and accepting connections\""
+    },
+    {
+      "ts_ms": "1795705112261",
+      "workload_id": "ctr:nova-api",
+      "stream": "stdout",
+      "text": "level=info service=nova-api latency_ms=3.4 status=200 path=/healthz"
+    },
+    {
+      "ts_ms": "1795705124261",
+      "workload_id": "ctr:nova-api",
+      "stream": "stdout",
+      "text": "level=info service=nova-api active_conns=14 mem_mb=412"
+    }
+  ]
+}

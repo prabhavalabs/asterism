@@ -1,0 +1,21 @@
+vps-demo-1  10 cores · load 21.11 16.69 12.21  15:08:35
+CPU 98.3%    MEM 85.9%  20.6 GiB / 24.0 GiB   NET rx 255.3 KiB/s tx 651.7 KiB/s
+
+ID                    PROJECT        ROLE      STATE       CPU▼        MEM   MEM%       NET RX       NET TX  RESTARTS
+ctr:ingest-collector  analytics-hub  worker    running    22.6%  463.0 MiB  90.4%  605.5 KiB/s  400.4 KiB/s         2
+ctr:nova-api          nova-core      app       running    13.7%  418.1 MiB  40.8%  820.3 KiB/s    1.8 MiB/s         0
+ctr:timescale-db      analytics-hub  database  running    11.0%  650.2 MiB  42.3%  400.4 KiB/s  273.4 KiB/s         0
+ctr:nova-worker       nova-core      worker    running     6.5%  283.0 MiB  55.3%  185.5 KiB/s  141.6 KiB/s         0
+ctr:postgres-primary  nova-core      database  running     4.9%  906.2 MiB  44.2%  507.8 KiB/s  761.7 KiB/s         0
+unit:nginx.service    edge-gateway   proxy     active      4.5%   93.0 MiB  18.2%    1.2 MiB/s    2.8 MiB/s         0
+ctr:analytics-web     analytics-hub  app       running     4.1%  202.1 MiB  39.5%  302.7 KiB/s  625.0 KiB/s         0
+ctr:staging-preview   staging-lab    app       running     3.0%  154.1 MiB  30.1%   43.9 KiB/s   70.3 KiB/s         0
+ctr:cloudflared       edge-gateway   proxy     running     2.9%   48.1 MiB  18.8%  410.2 KiB/s  371.1 KiB/s         0
+ctr:nats-broker       analytics-hub  queue     running     2.7%   61.5 MiB  24.0%  371.1 KiB/s  380.9 KiB/s         0
+ctr:caddy-edge        edge-gateway   proxy     running     2.6%   74.2 MiB  14.5%  546.9 KiB/s  888.7 KiB/s         0
+ctr:redis-cache       nova-core      cache     running     1.8%  180.0 MiB  35.1%  283.2 KiB/s  302.7 KiB/s         0
+ctr:asterism          edge-gateway   app       running     1.7%   61.5 MiB  24.0%        0 B/s        0 B/s         0
+ctr:backup-nightly    nova-core      storage   stopped     0.0%        0 B   0.0%        0 B/s        0 B/s         0
+ctr:mailer            analytics-hub  worker    unhealthy   0.0%        0 B   0.0%        0 B/s        0 B/s        14
+
+15 of 15 workloads by CPU · c cpu · m memory · tab toggle · q quit

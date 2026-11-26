@@ -1,0 +1,15 @@
+TIME                 SEVERITY  KIND               ENTITY            MESSAGE
+2026-11-26 14:54:50  warning   alert.memory       ingest-collector  Memory reached 87.5% of 512 MiB cgroup limit
+2026-11-26 14:59:35  warning   container.restart  mailer            Container mailer restarted by its restart policy (15 restarts)
+2026-11-26 15:00:20  warning   container.restart  mailer            Container mailer restarted by its restart policy (16 restarts)
+2026-11-26 15:01:05  warning   container.restart  mailer            Container mailer restarted by its restart policy (17 restarts)
+2026-11-26 15:01:50  warning   container.restart  mailer            Container mailer restarted by its restart policy (18 restarts)
+2026-11-26 15:02:35  warning   container.restart  mailer            Container mailer restarted by its restart policy (19 restarts)
+2026-11-26 15:03:20  warning   container.restart  mailer            Container mailer restarted by its restart policy (20 restarts)
+2026-11-26 15:04:05  warning   container.restart  mailer            Container mailer restarted by its restart policy (21 restarts)
+2026-11-26 15:04:50  warning   container.restart  mailer            Container mailer restarted by its restart policy (22 restarts)
+2026-11-26 15:05:35  warning   container.restart  mailer            Container mailer restarted by its restart policy (23 restarts)
+2026-11-26 15:06:25  warning   container.restart  mailer            Container mailer restarted by its restart policy (24 restarts)
+2026-11-26 15:07:05  warning   container.restart  mailer            Container mailer restarted by its restart policy (25 restarts)
+
+12 of 196 events · 30 critical · 73 warning · 93 info

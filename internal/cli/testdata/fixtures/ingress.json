@@ -1,0 +1,122 @@
+{
+  "routes": [
+    {
+      "id": "ingress:caddy/analytics.example.com",
+      "proxy_kind": "PROXY_KIND_CADDY",
+      "proxy_workload_id": "ctr:caddy-edge",
+      "hostnames": [
+        "analytics.example.com"
+      ],
+      "listen_port": 8443,
+      "tls": true,
+      "path_prefix": "/",
+      "strategy": "round_robin",
+      "upstreams": [
+        {
+          "workload_id": "ctr:analytics-web",
+          "address": "analytics-web:3000",
+          "weight": 1,
+          "healthy": true
+        },
+        {
+          "workload_id": "ctr:ingest-collector",
+          "address": "ingest-collector:9000",
+          "weight": 1,
+          "healthy": true
+        }
+      ]
+    },
+    {
+      "id": "ingress:cloudflared/analytics.example.com",
+      "proxy_kind": "PROXY_KIND_CLOUDFLARED",
+      "proxy_workload_id": "ctr:cloudflared",
+      "hostnames": [
+        "analytics.example.com"
+      ],
+      "listen_port": 443,
+      "tls": true,
+      "path_prefix": "/",
+      "strategy": "tunnel",
+      "upstreams": [
+        {
+          "workload_id": "ctr:caddy-edge",
+          "address": "caddy-edge:443",
+          "weight": 1,
+          "healthy": true
+        }
+      ]
+    },
+    {
+      "id": "ingress:nginx/api.example.com",
+      "proxy_kind": "PROXY_KIND_NGINX",
+      "proxy_workload_id": "unit:nginx.service",
+      "hostnames": [
+        "api.example.com"
+      ],
+      "listen_port": 443,
+      "tls": true,
+      "path_prefix": "/v1",
+      "strategy": "least_conn",
+      "upstreams": [
+        {
+          "workload_id": "ctr:nova-api",
+          "address": "127.0.0.1:8080 (replica-1)",
+          "weight": 3,
+          "healthy": true
+        },
+        {
+          "workload_id": "ctr:nova-api",
+          "address": "127.0.0.1:8082 (replica-2)",
+          "weight": 2,
+          "healthy": true
+        }
+      ]
+    },
+    {
+      "id": "ingress:caddy/staging.example.com",
+      "proxy_kind": "PROXY_KIND_CADDY",
+      "proxy_workload_id": "ctr:caddy-edge",
+      "hostnames": [
+        "staging.example.com"
+      ],
+      "listen_port": 8443,
+      "tls": true,
+      "path_prefix": "/",
+      "strategy": "single",
+      "upstreams": [
+        {
+          "workload_id": "ctr:staging-preview",
+          "address": "staging-preview:4173",
+          "weight": 1,
+          "healthy": true
+        }
+      ]
+    },
+    {
+      "id": "ingress:nginx/vps.example.com",
+      "proxy_kind": "PROXY_KIND_NGINX",
+      "proxy_workload_id": "unit:nginx.service",
+      "hostnames": [
+        "vps.example.com"
+      ],
+      "listen_port": 443,
+      "tls": true,
+      "path_prefix": "/",
+      "strategy": "single",
+      "upstreams": [
+        {
+          "workload_id": "host",
+          "address": "127.0.0.1:7700",
+          "weight": 1,
+          "healthy": true
+        }
+      ]
+    }
+  ],
+  "page_info": {
+    "page": 1,
+    "page_size": 5,
+    "total_size": 5,
+    "total_pages": 1
+  }
+}

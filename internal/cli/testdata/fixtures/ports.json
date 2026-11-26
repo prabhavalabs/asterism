@@ -1,0 +1,215 @@
+{
+  "ports": [
+    {
+      "id": "port:22",
+      "workload_id": "host",
+      "workload_name": "sshd",
+      "host_ip": "0.0.0.0",
+      "host_port": 22,
+      "container_port": 22,
+      "proto": "tcp",
+      "exposure": "PORT_EXPOSURE_PUBLIC",
+      "process_name": "sshd"
+    },
+    {
+      "id": "port:80",
+      "workload_id": "unit:nginx.service",
+      "workload_name": "nginx",
+      "project_id": "proj:edge-gateway",
+      "host_ip": "0.0.0.0",
+      "host_port": 80,
+      "container_port": 80,
+      "proto": "tcp",
+      "exposure": "PORT_EXPOSURE_PUBLIC",
+      "process_name": "nginx"
+    },
+    {
+      "id": "port:443",
+      "workload_id": "unit:nginx.service",
+      "workload_name": "nginx",
+      "project_id": "proj:edge-gateway",
+      "host_ip": "0.0.0.0",
+      "host_port": 443,
+      "container_port": 443,
+      "proto": "tcp",
+      "exposure": "PORT_EXPOSURE_PUBLIC",
+      "process_name": "nginx"
+    },
+    {
+      "id": "port:8443",
+      "workload_id": "ctr:caddy-edge",
+      "workload_name": "caddy-edge",
+      "project_id": "proj:edge-gateway",
+      "host_ip": "0.0.0.0",
+      "host_port": 8443,
+      "container_port": 443,
+      "proto": "tcp",
+      "exposure": "PORT_EXPOSURE_PUBLIC",
+      "process_name": "caddy"
+    },
+    {
+      "id": "port:9100",
+      "workload_id": "ctr:node-exporter",
+      "workload_name": "node-exporter",
+      "host_ip": "0.0.0.0",
+      "host_port": 9100,
+      "container_port": 9100,
+      "proto": "tcp",
+      "exposure": "PORT_EXPOSURE_PUBLIC",
+      "process_name": "node_exporter"
+    },
+    {
+      "id": "port:2019",
+      "workload_id": "ctr:caddy-edge",
+      "workload_name": "caddy-edge",
+      "project_id": "proj:edge-gateway",
+      "host_ip": "127.0.0.1",
+      "host_port": 2019,
+      "container_port": 2019,
+      "proto": "tcp",
+      "exposure": "PORT_EXPOSURE_LOOPBACK",
+      "process_name": "caddy"
+    },
+    {
+      "id": "port:3001",
+      "workload_id": "ctr:uptime-probe",
+      "workload_name": "uptime-probe",
+      "host_ip": "127.0.0.1",
+      "host_port": 3001,
+      "container_port": 3001,
+      "proto": "tcp",
+      "exposure": "PORT_EXPOSURE_LOOPBACK",
+      "process_name": "node"
+    },
+    {
+      "id": "port:5000",
+      "workload_id": "ctr:registry-mirror",
+      "workload_name": "registry-mirror",
+      "host_ip": "127.0.0.1",
+      "host_port": 5000,
+      "container_port": 5000,
+      "proto": "tcp",
+      "exposure": "PORT_EXPOSURE_LOOPBACK",
+      "process_name": "registry"
+    },
+    {
+      "id": "port:5432",
+      "workload_id": "ctr:postgres-primary",
+      "workload_name": "postgres-primary",
+      "project_id": "proj:nova-core",
+      "host_ip": "127.0.0.1",
+      "host_port": 5432,
+      "container_port": 5432,
+      "proto": "tcp",
+      "exposure": "PORT_EXPOSURE_LOOPBACK",
+      "process_name": "postgres"
+    },
+    {
+      "id": "port:7700",
+      "workload_id": "ctr:asterism",
+      "workload_name": "asterism",
+      "project_id": "proj:edge-gateway",
+      "host_ip": "127.0.0.1",
+      "host_port": 7700,
+      "container_port": 7700,
+      "proto": "tcp",
+      "exposure": "PORT_EXPOSURE_LOOPBACK",
+      "process_name": "asterism"
+    },
+    {
+      "id": "port:8080",
+      "workload_id": "ctr:nova-api",
+      "workload_name": "nova-api",
+      "project_id": "proj:nova-core",
+      "host_ip": "127.0.0.1",
+      "host_port": 8080,
+      "container_port": 8080,
+      "proto": "tcp",
+      "exposure": "PORT_EXPOSURE_LOOPBACK",
+      "process_name": "core-api"
+    },
+    {
+      "id": "port:8088",
+      "workload_id": "ctr:cadvisor",
+      "workload_name": "cadvisor",
+      "host_ip": "127.0.0.1",
+      "host_port": 8088,
+      "container_port": 8080,
+      "proto": "tcp",
+      "exposure": "PORT_EXPOSURE_LOOPBACK",
+      "process_name": "cadvisor"
+    },
+    {
+      "id": "port:3000",
+      "workload_id": "ctr:analytics-web",
+      "workload_name": "analytics-web",
+      "project_id": "proj:analytics-hub",
+      "container_port": 3000,
+      "proto": "tcp",
+      "exposure": "PORT_EXPOSURE_INTERNAL",
+      "process_name": "node"
+    },
+    {
+      "id": "port:4173",
+      "workload_id": "ctr:staging-preview",
+      "workload_name": "staging-preview",
+      "project_id": "proj:staging-lab",
+      "container_port": 4173,
+      "proto": "tcp",
+      "exposure": "PORT_EXPOSURE_INTERNAL",
+      "process_name": "preview"
+    },
+    {
+      "id": "port:4222",
+      "workload_id": "ctr:nats-broker",
+      "workload_name": "nats-broker",
+      "project_id": "proj:analytics-hub",
+      "container_port": 4222,
+      "proto": "tcp",
+      "exposure": "PORT_EXPOSURE_INTERNAL",
+      "process_name": "nats-server"
+    },
+    {
+      "id": "port:5433",
+      "workload_id": "ctr:timescale-db",
+      "workload_name": "timescale-db",
+      "project_id": "proj:analytics-hub",
+      "container_port": 5432,
+      "proto": "tcp",
+      "exposure": "PORT_EXPOSURE_INTERNAL",
+      "process_name": "postgres"
+    },
+    {
+      "id": "port:6379",
+      "workload_id": "ctr:redis-cache",
+      "workload_name": "redis-cache",
+      "project_id": "proj:nova-core",
+      "container_port": 6379,
+      "proto": "tcp",
+      "exposure": "PORT_EXPOSURE_INTERNAL",
+      "process_name": "valkey-server"
+    },
+    {
+      "id": "port:9000",
+      "workload_id": "ctr:ingest-collector",
+      "workload_name": "ingest-collector",
+      "project_id": "proj:analytics-hub",
+      "container_port": 9000,
+      "proto": "tcp",
+      "exposure": "PORT_EXPOSURE_INTERNAL",
+      "process_name": "ingest"
+    }
+  ],
+  "page_info": {
+    "page": 1,
+    "page_size": 18,
+    "total_size": 18,
+    "total_pages": 1
+  },
+  "exposure_counts": {
+    "total": 18,
+    "public": 5,
+    "loopback": 7,
+    "internal": 6
+  }
+}
