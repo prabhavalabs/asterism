@@ -1,0 +1,43 @@
+{
+  "schema": "asterism.notification.v1",
+  "type": "alert",
+  "status": "firing",
+  "delivery_id": "d-123",
+  "group_key": "proj:shop",
+  "project": "shop",
+  "title": "FIRING (2) shop: Container exited unexpectedly · shop-api-1 and 1 more",
+  "hub_url": "https://monitor.example.com",
+  "sent_at": "2026-11-26T12:00:00Z",
+  "alerts": [
+    {
+      "id": "container_exited|ctr:shop-api-1",
+      "rule": "container_exited",
+      "rule_name": "Container exited unexpectedly",
+      "severity": "critical",
+      "status": "firing",
+      "entity_id": "ctr:shop-api-1",
+      "entity_name": "shop-api-1",
+      "project_id": "proj:shop",
+      "summary": "Container shop-api-1 exited with code 1 \u003c\u0026\u003e",
+      "starts_at": "2026-11-26T11:58:00Z",
+      "firing_at": "2026-11-26T11:59:00Z",
+      "url": "https://monitor.example.com/alerts?alert=container_exited%7Cctr%3Ashop-api-1",
+      "labels": {
+        "exit_code": "1"
+      }
+    },
+    {
+      "id": "container_unhealthy|ctr:shop-worker-1",
+      "rule": "container_unhealthy",
+      "rule_name": "Health check failing",
+      "severity": "warning",
+      "status": "firing",
+      "entity_id": "ctr:shop-worker-1",
+      "entity_name": "shop-worker-1",
+      "project_id": "proj:shop",
+      "summary": "Health check failing",
+      "starts_at": "2026-11-26T11:57:00Z",
+      "firing_at": "2026-11-26T11:59:00Z"
+    }
+  ]
+}

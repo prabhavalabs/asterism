@@ -1,0 +1,9 @@
+{
+  "title": "FIRING (2) shop: Container exited unexpectedly · shop-api-1 and 1 more",
+  "body": "Container shop-api-1 exited with code 1 \u003c\u0026\u003e\nHealth check failing",
+  "url": "/alerts",
+  "tag": "asterism:proj:shop",
+  "severity": "critical",
+  "status": "firing",
+  "ts": 1795694400000
+}
