@@ -21,16 +21,20 @@ import { TooltipProvider } from "@/components/ui/tooltip";
 import { LoginPage } from "@/pages/LoginPage";
 import { fetchAuthSession, inventoryClient, logoutAdmin, type AuthSession } from "@/lib/rpc";
 import {
+  ALERTS_TAB_LABELS,
   CONTAINERS_TAB_LABELS,
   PORTS_TAB_LABELS,
+  validateAlertsSearch,
   validateContainerDetailSearch,
   validateContainersSearch,
   validateEventsSearch,
+  validateNotificationsSearch,
   validatePortsSearch,
   validateProjectDetailSearch,
   validateProjectsSearch,
   validateSettingsSearch,
   validateTopologySearch,
+  type AlertsSearch,
   type ContainersSearch,
   type EventsSearch,
   type PortsSearch,
@@ -222,6 +226,29 @@ const eventsRoute = createRoute({
     breadcrumbSearch: (search) => ((search as EventsSearch).kind === "audit" ? "Audit log" : undefined),
   },
 });
+const alertsRoute = createRoute({
+  getParentRoute: () => rootRoute,
+  path: "/alerts",
+  component: lazyRouteComponent(() => import("@/pages/AlertsPage"), "AlertsPage"),
+  validateSearch: validateAlertsSearch,
+  staticData: {
+    breadcrumb: "Alerts",
+    breadcrumbSearch: (search) => {
+      const { tab } = search as AlertsSearch;
+      return tab ? ALERTS_TAB_LABELS[tab] : undefined;
+    },
+  },
+});
+const notificationsRoute = createRoute({
+  getParentRoute: () => rootRoute,
+  path: "/settings/notifications",
+  component: lazyRouteComponent(() => import("@/pages/NotificationsPage"), "NotificationsPage"),
+  validateSearch: validateNotificationsSearch,
+  staticData: {
+    breadcrumb: "Notifications",
+    breadcrumbParent: { label: "Settings", to: "/settings" },
+  },
+});
 const settingsRoute = createRoute({
   getParentRoute: () => rootRoute,
   path: "/settings",
@@ -246,7 +273,9 @@ const routeTree = rootRoute.addChildren([
   portsRoute,
   hostRoute,
   eventsRoute,
+  alertsRoute,
   settingsRoute,
+  notificationsRoute,
 ]);
 
 const router = createRouter({

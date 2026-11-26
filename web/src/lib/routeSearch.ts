@@ -200,6 +200,55 @@ export function validateEventsSearch(search: Record<string, unknown>): EventsSea
   return validatePagedSearch(search, EVENTS_LIST) as EventsSearch;
 }
 
+// --- /alerts ----------------------------------------------------------------
+
+export const ALERTS_TABS = ["alerts", "rules", "silences"] as const;
+export type AlertsTab = (typeof ALERTS_TABS)[number];
+export const ALERTS_TAB_LABELS: Record<AlertsTab, string> = { alerts: "Alerts", rules: "Rules", silences: "Silences" };
+export const ALERT_STATE_FILTERS = ["active", "firing", "pending", "resolved", "all"] as const;
+export type AlertStateFilter = (typeof ALERT_STATE_FILTERS)[number];
+export const ALERT_SEVERITY_FILTERS = ["all", "critical", "warning", "info"] as const;
+export type AlertSeverityFilter = (typeof ALERT_SEVERITY_FILTERS)[number];
+
+/**
+ * The alerts list (`/alerts?state=resolved&severity=critical&q=disk`),
+ * paged by ListAlerts. `state` is absent for "active" (firing + pending).
+ */
+export const ALERTS_LIST = {
+  defaultOrder: "state, severity desc, since desc",
+  orders: ["state, severity desc, since desc", ...orderValues(["since", "severity", "rule", "entity"])],
+  filters: {
+    state: { default: "active", values: ALERT_STATE_FILTERS },
+    severity: { default: "all", values: ALERT_SEVERITY_FILTERS },
+  },
+} as const satisfies PagedSearchConfig<"state" | "severity">;
+
+export type AlertsSearch = {
+  tab?: Exclude<AlertsTab, "alerts">;
+  /** Deep link from a notification: opens that alert. */
+  alert?: string;
+} & Record<string, string | number | undefined>;
+
+export function validateAlertsSearch(search: Record<string, unknown>): AlertsSearch {
+  const tab = oneOf(ALERTS_TABS, search.tab);
+  const alert = typeof search.alert === "string" && search.alert.length > 0 && search.alert.length < 400 ? search.alert : undefined;
+  return {
+    ...(tab && tab !== "alerts" ? { tab } : {}),
+    ...(alert ? { alert } : {}),
+    ...validatePagedSearch(search, ALERTS_LIST),
+  };
+}
+
+/** The delivery log on /settings/notifications (`?deliveryPage=2`). */
+export const DELIVERIES_LIST = {
+  prefix: "delivery",
+  defaultPageSize: 10,
+} as const satisfies PagedSearchConfig;
+
+export function validateNotificationsSearch(search: Record<string, unknown>): Record<string, string | number> {
+  return validatePagedSearch(search, DELIVERIES_LIST);
+}
+
 // --- /settings --------------------------------------------------------------
 
 export const SETTINGS_SECTIONS = ["appearance", "session", "host", "agents", "mcp", "deployment"] as const;
