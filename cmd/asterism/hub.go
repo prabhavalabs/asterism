@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"log/slog"
 	"net/http"
+	"path/filepath"
 	"time"
 
 	"github.com/prabhavalabs/asterism/internal/api"
@@ -18,9 +19,12 @@ import (
 	"github.com/prabhavalabs/asterism/internal/collect/sshbridge"
 	"github.com/prabhavalabs/asterism/internal/config"
 	mcpserver "github.com/prabhavalabs/asterism/internal/mcp"
+	"github.com/prabhavalabs/asterism/internal/notify"
 	"github.com/prabhavalabs/asterism/internal/service"
 	"github.com/prabhavalabs/asterism/internal/store/iconstore"
 	"github.com/prabhavalabs/asterism/internal/store/ring"
+	"github.com/prabhavalabs/asterism/internal/store/secretbox"
+	"github.com/prabhavalabs/asterism/internal/store/sqlite"
 	"github.com/prabhavalabs/asterism/internal/web"
 )
 
@@ -160,6 +164,13 @@ func newHub(cfg config.Config, logger *slog.Logger, authMgr *auth.Manager) (*hub
 	}
 	h.runners = append(h.runners, named("ingestor", svc.RunIngestor))
 	h.svc = svc
+	if cfg.Alerts.Enabled {
+		if err := h.configureAlerts(cfg, svc); err != nil {
+			return nil, err
+		}
+	} else {
+		logger.Info("alerting disabled ([alerts] enabled = false)")
+	}
 
 	mux := http.NewServeMux()
 	authMgr.RegisterRoutes(mux)
@@ -200,6 +211,53 @@ func iconOptions(cfg config.Config, logger *slog.Logger, dirs service.DirIconSou
 	}
 	logger.Info("project icons enabled", "data_dir", dataDir, "favicon_fetch", opts.Fetcher != nil)
 	return opts, true
+}
+
+// configureAlerts opens the data directory, the SQLite store, the secret
+// key, and the VAPID keys, then attaches the alert engine.
+func (h *hub) configureAlerts(cfg config.Config, svc *service.Observatory) error {
+	dir, err := cfg.EnsureDataDir()
+	if err != nil {
+		return err
+	}
+	ctx := context.Background()
+	db, err := sqlite.Open(ctx, filepath.Join(dir, sqlite.FileName))
+	if err != nil {
+		return fmt.Errorf("open store: %w", err)
+	}
+	key, err := secretbox.LoadOrCreateKey(filepath.Join(dir, "secret.key"))
+	if err != nil {
+		_ = db.Close()
+		return err
+	}
+	box, err := secretbox.New(key)
+	if err != nil {
+		_ = db.Close()
+		return err
+	}
+	ac := service.AlertsConfig{
+		DB: db, Box: box, AllowPrivate: cfg.Alerts.AllowPrivateTargets, HubURL: cfg.Server.PublicURL,
+		EvalInterval: cfg.Alerts.EvaluationInterval, GroupWait: cfg.Alerts.GroupWait, RepeatInterval: cfg.Alerts.RepeatInterval,
+	}
+	if keys, vErr := notify.LoadOrCreateVAPID(filepath.Join(dir, "vapid.json")); vErr != nil {
+		h.logger.Warn("web push disabled", "err", vErr)
+		ac.VAPIDError = vErr.Error()
+	} else {
+		ac.VAPID = &keys
+	}
+	if err := svc.ConfigureAlerts(ctx, ac); err != nil {
+		_ = db.Close()
+		return err
+	}
+	if cfg.Alerts.AllowPrivateTargets {
+		h.logger.Warn("alerts.allow_private_targets is on: notification channels may reach loopback and private addresses")
+	}
+	h.logger.Info("alerting enabled", "data_dir", dir, "evaluation_interval", cfg.Alerts.EvaluationInterval, "web_push", ac.VAPID != nil)
+	h.runners = append(h.runners, named("alerts", svc.RunAlerts), func(ctx context.Context) error {
+		<-ctx.Done()
+		return db.Close()
+	})
+	return nil
 }
 
 // run starts every background loop; they stop when ctx ends.

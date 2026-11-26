@@ -44,6 +44,8 @@ func (h *Handler) Register(mux *http.ServeMux, wrap func(http.Handler) http.Hand
 	mount(asterismv1connect.NewActionsServiceHandler(h, connect.WithRequireConnectProtocolHeader()))
 	// Project settings: browser sessions only, enforced in the service.
 	h.registerProjectSettings(mount)
+	mount(asterismv1connect.NewAlertsServiceHandler(h, connect.WithRequireConnectProtocolHeader()))
+	mount(asterismv1connect.NewNotificationsServiceHandler(h, connect.WithRequireConnectProtocolHeader()))
 }
 
 func (h *Handler) GetOverview(ctx context.Context, _ *connect.Request[asterismv1.GetOverviewRequest]) (*connect.Response[asterismv1.GetOverviewResponse], error) {
