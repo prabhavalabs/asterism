@@ -1,0 +1,488 @@
+## disk_usage — Disk usage
+Root disk usage plus the Docker breakdown (images, containers, volumes, build cache) with reclaimable space and unused image and volume counts.
+  {
+    "additionalProperties": false,
+    "type": "object"
+  }
+
+## get_container — Get container
+Full detail for one container: command, restart policy, limits, healthcheck, mounts, networks, labels (secret-looking ones redacted), env names and recent events. Accepts ctr:<name>, a name or a container id.
+  {
+    "additionalProperties": false,
+    "properties": {
+      "id": {
+        "description": "entity id (e.g. proj:shop, ctr:shop-api-1) or name",
+        "type": "string"
+      }
+    },
+    "required": [
+      "id"
+    ],
+    "type": "object"
+  }
+
+## get_project — Get project
+One project with all its workloads (role, state, health, CPU, memory). Accepts an id (proj:<name>) or a name.
+  {
+    "additionalProperties": false,
+    "properties": {
+      "id": {
+        "description": "entity id (e.g. proj:shop, ctr:shop-api-1) or name",
+        "type": "string"
+      }
+    },
+    "required": [
+      "id"
+    ],
+    "type": "object"
+  }
+
+## get_topology — Get topology
+Nodes and edges of the infrastructure graph (ingress, app, database and cache links), optionally around one entity.
+  {
+    "additionalProperties": false,
+    "properties": {
+      "category": {
+        "description": "only projects of this category",
+        "type": "string"
+      },
+      "depth": {
+        "description": "hops from focus, 1 or 2 (default 1)",
+        "type": "integer"
+      },
+      "focus": {
+        "description": "entity id to centre on; returns only nodes within depth hops",
+        "type": "string"
+      }
+    },
+    "type": "object"
+  }
+
+## get_workload — Get workload
+One workload: image, role, ports, networks, environment variable names (never values), ingress routes that target it, topology edges and recent events.
+  {
+    "additionalProperties": false,
+    "properties": {
+      "id": {
+        "description": "entity id (e.g. proj:shop, ctr:shop-api-1) or name",
+        "type": "string"
+      }
+    },
+    "required": [
+      "id"
+    ],
+    "type": "object"
+  }
+
+## list_containers — List containers
+Every Docker container, running or stopped, with state, health, restarts, OOM kills, CPU, memory and ports. order_by: name, project, state, image, cpu, memory, uptime, restarts, created (default "project, name").
+  {
+    "additionalProperties": false,
+    "properties": {
+      "attention_only": {
+        "description": "only unhealthy, restarting, dead or OOM-killed containers",
+        "type": "boolean"
+      },
+      "order_by": {
+        "description": "e.g. \"memory desc\" or \"restarts desc\"",
+        "type": "string"
+      },
+      "page": {
+        "description": "1-based page (default 1)",
+        "maximum": 2147483647,
+        "minimum": -2147483648,
+        "type": "integer"
+      },
+      "page_size": {
+        "description": "items per page, 10-100 (default 25)",
+        "maximum": 2147483647,
+        "minimum": -2147483648,
+        "type": "integer"
+      },
+      "project_id": {
+        "description": "only containers of this project (proj:\u003cname\u003e)",
+        "type": "string"
+      },
+      "query": {
+        "description": "case-insensitive substring over names, images and ports",
+        "type": "string"
+      },
+      "states": {
+        "description": "any of created, running, paused, restarting, removing, exited, dead",
+        "items": {
+          "type": "string"
+        },
+        "type": [
+          "null",
+          "array"
+        ]
+      }
+    },
+    "type": "object"
+  }
+
+## list_events — List events
+Lifecycle events, restarts, OOM kills, alerts, proxy reloads and audited actions, newest first. order_by: ts, severity, kind, entity (default "ts desc").
+  {
+    "additionalProperties": false,
+    "properties": {
+      "entity_id": {
+        "description": "only events for this entity (e.g. ctr:shop-api-1)",
+        "type": "string"
+      },
+      "kind": {
+        "description": "lifecycle, audit or other",
+        "type": "string"
+      },
+      "order_by": {
+        "description": "default \"ts desc\"",
+        "type": "string"
+      },
+      "page": {
+        "description": "1-based page (default 1)",
+        "maximum": 2147483647,
+        "minimum": -2147483648,
+        "type": "integer"
+      },
+      "page_size": {
+        "description": "items per page, 10-100 (default 25)",
+        "maximum": 2147483647,
+        "minimum": -2147483648,
+        "type": "integer"
+      },
+      "query": {
+        "description": "case-insensitive substring over messages and entities",
+        "type": "string"
+      },
+      "severities": {
+        "description": "any of info, warning, critical",
+        "items": {
+          "type": "string"
+        },
+        "type": [
+          "null",
+          "array"
+        ]
+      }
+    },
+    "type": "object"
+  }
+
+## list_images — List Docker images
+Docker images with size, age and the containers using them. filter: all (default), unused, dangling, in_use. order_by: size, created, repository, containers (default "size desc").
+  {
+    "additionalProperties": false,
+    "properties": {
+      "filter": {
+        "description": "all (default), unused, dangling or in_use",
+        "type": "string"
+      },
+      "order_by": {
+        "description": "e.g. \"size desc\" or \"created\"",
+        "type": "string"
+      },
+      "page": {
+        "description": "1-based page (default 1)",
+        "maximum": 2147483647,
+        "minimum": -2147483648,
+        "type": "integer"
+      },
+      "page_size": {
+        "description": "items per page, 10-100 (default 25)",
+        "maximum": 2147483647,
+        "minimum": -2147483648,
+        "type": "integer"
+      },
+      "query": {
+        "description": "case-insensitive substring over tags, ids and users",
+        "type": "string"
+      }
+    },
+    "type": "object"
+  }
+
+## list_ingress — List ingress routes
+Reverse-proxy routes from Nginx, Caddy, HAProxy, Traefik and Cloudflare Tunnel: hostnames, listen port, TLS, strategy and upstream health. order_by: hostname, port, proxy, upstreams.
+  {
+    "additionalProperties": false,
+    "properties": {
+      "order_by": {
+        "description": "e.g. \"hostname\"",
+        "type": "string"
+      },
+      "page": {
+        "description": "1-based page (default 1)",
+        "maximum": 2147483647,
+        "minimum": -2147483648,
+        "type": "integer"
+      },
+      "page_size": {
+        "description": "items per page, 10-100 (default 25)",
+        "maximum": 2147483647,
+        "minimum": -2147483648,
+        "type": "integer"
+      },
+      "query": {
+        "description": "case-insensitive substring over hostnames, proxies and upstreams",
+        "type": "string"
+      }
+    },
+    "type": "object"
+  }
+
+## list_networks — List Docker networks
+Docker networks with driver, subnets and attached containers. order_by: name, driver, containers, created.
+  {
+    "additionalProperties": false,
+    "properties": {
+      "order_by": {
+        "description": "e.g. \"containers desc\"",
+        "type": "string"
+      },
+      "page": {
+        "description": "1-based page (default 1)",
+        "maximum": 2147483647,
+        "minimum": -2147483648,
+        "type": "integer"
+      },
+      "page_size": {
+        "description": "items per page, 10-100 (default 25)",
+        "maximum": 2147483647,
+        "minimum": -2147483648,
+        "type": "integer"
+      },
+      "query": {
+        "description": "case-insensitive substring over names, projects and containers",
+        "type": "string"
+      },
+      "user_defined_only": {
+        "description": "hide the built-in bridge, host and none networks",
+        "type": "boolean"
+      }
+    },
+    "type": "object"
+  }
+
+## list_ports — List ports
+Listening host and container ports with the owning workload and exposure (public, loopback, internal). order_by: exposure, port, workload, project, proto.
+  {
+    "additionalProperties": false,
+    "properties": {
+      "exposure": {
+        "description": "public, loopback or internal",
+        "type": "string"
+      },
+      "order_by": {
+        "description": "e.g. \"port\" or \"exposure, port\"",
+        "type": "string"
+      },
+      "page": {
+        "description": "1-based page (default 1)",
+        "maximum": 2147483647,
+        "minimum": -2147483648,
+        "type": "integer"
+      },
+      "page_size": {
+        "description": "items per page, 10-100 (default 25)",
+        "maximum": 2147483647,
+        "minimum": -2147483648,
+        "type": "integer"
+      },
+      "query": {
+        "description": "case-insensitive substring over workloads, processes and ports",
+        "type": "string"
+      }
+    },
+    "type": "object"
+  }
+
+## list_projects — List projects
+Projects (compose projects, systemd units, processes) with category, health, CPU and memory cost. order_by: name, category, memory, cpu, workloads, health (default "memory desc").
+  {
+    "additionalProperties": false,
+    "properties": {
+      "category": {
+        "description": "only this category, e.g. production, staging, internal, tools",
+        "type": "string"
+      },
+      "order_by": {
+        "description": "e.g. \"memory desc\" or \"cpu desc, name\"",
+        "type": "string"
+      },
+      "page": {
+        "description": "1-based page (default 1)",
+        "maximum": 2147483647,
+        "minimum": -2147483648,
+        "type": "integer"
+      },
+      "page_size": {
+        "description": "items per page, 10-100 (default 25)",
+        "maximum": 2147483647,
+        "minimum": -2147483648,
+        "type": "integer"
+      },
+      "query": {
+        "description": "case-insensitive substring over names and paths",
+        "type": "string"
+      }
+    },
+    "type": "object"
+  }
+
+## list_volumes — List Docker volumes
+Docker volumes with size, owning compose project and the containers mounting them. filter: all (default), unused, in_use. order_by: name, size, created, containers, project.
+  {
+    "additionalProperties": false,
+    "properties": {
+      "filter": {
+        "description": "all (default), unused or in_use",
+        "type": "string"
+      },
+      "order_by": {
+        "description": "e.g. \"size desc\"",
+        "type": "string"
+      },
+      "page": {
+        "description": "1-based page (default 1)",
+        "maximum": 2147483647,
+        "minimum": -2147483648,
+        "type": "integer"
+      },
+      "page_size": {
+        "description": "items per page, 10-100 (default 25)",
+        "maximum": 2147483647,
+        "minimum": -2147483648,
+        "type": "integer"
+      },
+      "query": {
+        "description": "case-insensitive substring over names, projects and users",
+        "type": "string"
+      }
+    },
+    "type": "object"
+  }
+
+## list_workloads — List workloads
+Workloads (containers, systemd units, processes) filtered by project and role. order_by: name, project, role, state, cpu, memory, restarts.
+  {
+    "additionalProperties": false,
+    "properties": {
+      "order_by": {
+        "description": "e.g. \"memory desc\"",
+        "type": "string"
+      },
+      "page": {
+        "description": "1-based page (default 1)",
+        "maximum": 2147483647,
+        "minimum": -2147483648,
+        "type": "integer"
+      },
+      "page_size": {
+        "description": "items per page, 10-100 (default 25)",
+        "maximum": 2147483647,
+        "minimum": -2147483648,
+        "type": "integer"
+      },
+      "project_id": {
+        "description": "only workloads of this project (proj:\u003cname\u003e)",
+        "type": "string"
+      },
+      "query": {
+        "description": "case-insensitive substring over names and images",
+        "type": "string"
+      },
+      "role": {
+        "description": "proxy, app, worker, database, cache, queue or storage",
+        "type": "string"
+      }
+    },
+    "type": "object"
+  }
+
+## overview — Overview
+Host vitals, container counts, project health, the biggest memory users and recent warnings. Call this first.
+  {
+    "additionalProperties": false,
+    "type": "object"
+  }
+
+## query_metrics — Query metrics
+Summary statistics (min, max, avg, p95, last) for metrics of one entity over the last minutes; raw points on request. Metrics: cpu.util, mem.used_bytes, mem.used_ratio, net.rx_bps, net.tx_bps, load.1 (host), blk.read_bps, blk.write_bps, pids.count.
+  {
+    "additionalProperties": false,
+    "properties": {
+      "entity_id": {
+        "description": "host (default) or a workload id such as ctr:shop-api-1",
+        "type": "string"
+      },
+      "metrics": {
+        "description": "metric names (default cpu.util and mem.used_bytes)",
+        "items": {
+          "type": "string"
+        },
+        "type": [
+          "null",
+          "array"
+        ]
+      },
+      "raw": {
+        "description": "also return the points, downsampled to at most 500",
+        "type": "boolean"
+      },
+      "window": {
+        "description": "how far back, e.g. 5m or 15m (default 15m, maximum 15m)",
+        "type": "string"
+      }
+    },
+    "type": "object"
+  }
+
+## tail_logs — Tail logs
+Recent log lines for one workload (newest last), with optional substring filter. Obvious secrets are redacted.
+  {
+    "additionalProperties": false,
+    "properties": {
+      "before": {
+        "description": "RFC 3339 time; return lines older than this (use next_before from a previous call to page back)",
+        "type": "string"
+      },
+      "grep": {
+        "description": "only lines containing this substring (case-insensitive)",
+        "type": "string"
+      },
+      "limit": {
+        "description": "lines to return, 1-500 (default 100)",
+        "maximum": 4294967295,
+        "minimum": 0,
+        "type": "integer"
+      },
+      "workload_id": {
+        "description": "workload or container id, e.g. ctr:shop-api-1",
+        "type": "string"
+      }
+    },
+    "required": [
+      "workload_id"
+    ],
+    "type": "object"
+  }
+
+## top — Top workloads
+The workloads using the most CPU or memory right now.
+  {
+    "additionalProperties": false,
+    "properties": {
+      "limit": {
+        "description": "how many workloads, 1-50 (default 10)",
+        "maximum": 4294967295,
+        "minimum": 0,
+        "type": "integer"
+      },
+      "metric": {
+        "description": "cpu (default) or memory",
+        "type": "string"
+      }
+    },
+    "type": "object"
+  }
+

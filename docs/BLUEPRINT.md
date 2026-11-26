@@ -738,32 +738,40 @@ service AgentAdminService {                  // read scope (session or API token
   topology, metrics, events, logs).
 
 ### 9.2 Transports
-Served from the same Go `internal/mcp/` package using the official `go-sdk`:
-1. **stdio:** `asterism mcp` (local on VPS or over SSH: `ssh my-vps asterism mcp`).
-2. **Streamable HTTP:** `POST/GET https://<host>/mcp`, bearer-token protected, configured in
-   **stateless** mode (`StreamableHTTPOptions{Stateless: true}`) per MCP spec 2026-07-28.
-   Legacy HTTP+SSE is deprecated and not implemented.
+Served from the same Go `internal/mcp/` package using the official `go-sdk`. The tools are thin
+adapters over the ConnectRPC services the web UI uses (`api.Handler` and the generated clients
+share method signatures), so every interface returns the same answers:
+1. **stdio:** `asterism mcp` (local on VPS or over SSH: `ssh my-vps asterism mcp`). It calls the
+   running hub's API with a read-scoped bearer token (`--token-file`, `ASTERISM_TOKEN`, or
+   `/etc/asterism/mcp.token`); the hub address comes from `--hub`, `ASTERISM_HUB_URL`, or
+   `server.listen`.
+2. **Streamable HTTP:** `POST https://<host>/mcp`, configured in **stateless** mode
+   (`StreamableHTTPOptions{Stateless: true}`) per MCP spec 2026-07-28. Only API bearer tokens
+   with the `read` scope are accepted; browser session cookies are refused so the endpoint cannot
+   be driven cross-site. Legacy HTTP+SSE is deprecated and not implemented.
 
 ### 9.3 Tools (v1)
-Small, orthogonal toolset (~14 tools) with JSON Schemas from Go struct tags, concise
-descriptions, and MCP annotations (`readOnlyHint`, `destructiveHint`, `idempotentHint`):
+Eighteen read-only tools with JSON Schemas from Go struct tags, concise descriptions, and MCP
+annotations (`readOnlyHint`, `idempotentHint`, `openWorldHint: false`). A golden file
+(`internal/mcp/testdata/tools.golden`) pins the catalogue.
 
 | Tool | Purpose | Notes |
 |---|---|---|
-| `overview` | Host vitals, project categories, memory cost, health, top offenders | Default first call; `< 1.5k` tokens |
-| `list_projects` | Projects with category, status, service count, CPU/mem totals | |
-| `get_project` | Services, roles, workloads, ports, ingress routes, recent events | |
-| `list_workloads` | Filter by project/role/state/kind; sort by CPU/mem/restarts | |
-| `get_workload` | Inspect workload: image, role, env **keys only**, mounts, limits, health | Never return env values |
+| `overview` | Host vitals, container counts, project health, top memory users, recent warnings | Default first call; about 1k tokens |
+| `list_projects` / `get_project` | Projects with category, health, CPU/memory cost; one project with its workloads | |
+| `list_workloads` / `get_workload` | Filter by project/role; one workload with ports, networks, **env keys only**, ingress, edges, events | Never return env values |
+| `list_containers` / `get_container` | Every container with state, health, restarts, OOM kills, usage; full inspect detail | Secret-looking labels redacted |
 | `list_ports` | Open host/container ports with exposure (`public`/`loopback`/`internal`) | |
-| `list_ingress` | Nginx, Caddy, Traefik, and Cloudflare Tunnel routes + upstreams | |
-| `query_metrics` | Entity + metrics + range + step → summary stats (`raw: true` capped at 500) | |
-| `top` | Top N workloads or projects by metric over a window | |
-| `get_topology` | Nodes + edges (optional focus entity, depth 1–2) | Includes `edge_kind` and `source` |
-| `list_events` | Lifecycle events, OOMs, restarts, alerts in a window | |
-| `tail_logs` | Last N lines (≤ 500) with optional `grep`, `since`, `stream` | Redacts obvious secrets |
-| `disk_usage` | Mount usage + Docker breakdown (images, volumes, build cache) | |
-| `diagnose` | Rule-based correlation of metrics, events, logs, and neighbours | Deterministic, no LLM |
+| `list_ingress` | Nginx, Caddy, HAProxy, Traefik, and Cloudflare Tunnel routes + upstream health | |
+| `list_images` / `list_volumes` / `list_networks` | Docker resources with users; `filter: unused` for cleanup questions | Adds `ListImagesRequest.unused_only` |
+| `disk_usage` | Root disk + Docker breakdown (images, containers, volumes, build cache) with reclaimable bytes | |
+| `list_events` | Lifecycle events, OOMs, restarts, alerts, audited actions | |
+| `tail_logs` | Last N lines (≤ 500) with optional `grep` and `before` paging | Redacts obvious secrets |
+| `top` | Top N workloads by CPU or memory | |
+| `query_metrics` | Entity + metrics + window (≤ 15 min hot buffer) → min/max/avg/p95/last (`raw: true` capped at 500 points) | |
+| `get_topology` | Nodes + edges, optional `focus` entity and `depth` 1–2, capped at 150 nodes | |
+
+`diagnose` arrives with M5 (alerts and observed topology).
 
 **Opt-in mutating tools** (disabled unless `mcp.allow_actions = true`, `destructiveHint: true`):
 `restart_workload`, `stop_workload`, `start_workload`. Every invocation writes an entry to
@@ -1277,3 +1285,4 @@ GoReleaser, demo media, public release.
 | D27 | `ListNetworks.user_defined_only` with `NetworkCounts` (`total`, `builtin`, `user_defined`, ignoring that filter); the web Networks tab defaults to user-defined | Docker's `bridge`, `host` and `none` networks are noise on most hosts but must stay one click away; server-side counts keep the toggle correct across pages | Users routinely need the built-in networks first |
 | D28 | Agent budgets: binary ≤ 11 MiB, image ≤ 12 MB, steady RSS ≤ 15 MB at default intervals, CPU ≤ 0.5% of a core, ≤ 2 KB/s, all measured (§16); gzip at `BestSpeed`; `net/http/pprof` only with `-tags pprof` | connect, protobuf and TLS alone are ~9.6 MB of binary; `BestSpeed` saves ~0.3 MB of encoder state per pooled writer for ~10% more bytes on a ~100 B/s stream; release binaries must never listen | Steady RSS at default intervals exceeds 15 MB on reference hardware, or a cheaper compressor appears in connect |
 | D29 | One shared, program-aware redaction rule set for arguments and text (§8.6), applied on the agent and again on the hub, with shell strings tokenized rather than split on whitespace | Short flags (`redis-cli -a`, `mysql -p`, `curl -u`, `sshpass -p`) and env args (`-e KEY=VALUE`) leaked through name-only rules; program context keeps `-p` as a port for `docker run`, `ssh` and `psql` | A credential form escapes the golden tables, or false positives hide information operators need |
+| D30 | MCP tools are adapters over the ConnectRPC surface: in the hub the backend is `api.Handler`; `asterism mcp` uses ConnectRPC clients against the running hub with a read token instead of running collectors in-process. `/mcp` accepts bearer tokens only. Results are a one-line summary plus compact JSON (units in names, RFC 3339 times) and the same value as structured content | One code path for UI, API and MCP; no second set of collectors competing for Docker and `/proc`; cookie-free MCP removes CSRF risk; clients that ignore `structuredContent` still get the data | A client needs MCP while the hub is down, or per-connection MCP state becomes necessary |

@@ -16,6 +16,7 @@ import (
 	"github.com/prabhavalabs/asterism/internal/collect/showcase"
 	"github.com/prabhavalabs/asterism/internal/collect/sshbridge"
 	"github.com/prabhavalabs/asterism/internal/config"
+	mcpserver "github.com/prabhavalabs/asterism/internal/mcp"
 	"github.com/prabhavalabs/asterism/internal/service"
 	"github.com/prabhavalabs/asterism/internal/store/ring"
 	"github.com/prabhavalabs/asterism/internal/web"
@@ -152,7 +153,10 @@ func newHub(cfg config.Config, logger *slog.Logger, authMgr *auth.Manager) (*hub
 
 	mux := http.NewServeMux()
 	authMgr.RegisterRoutes(mux)
-	api.New(svc).Register(mux, authMgr.RequireSession)
+	apiHandler := api.New(svc)
+	apiHandler.Register(mux, authMgr.RequireSession)
+	// MCP over stateless Streamable HTTP; bearer tokens with the read scope only.
+	mux.Handle("/mcp", authMgr.RequireSession(mcpserver.HTTPHandler(apiHandler, version)))
 	if h.agents != nil {
 		api.NewAgentHandler(h.agents).Register(mux, authMgr.RequireIngest)
 	}

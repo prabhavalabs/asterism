@@ -271,7 +271,8 @@ func (o *Observatory) ListImages(req *asterismv1.ListImagesRequest) (*asterismv1
 	q := normQuery(req.GetQuery())
 	filters := []filter[*asterismv1.DockerImage]{
 		{facet: "usage", match: func(img *asterismv1.DockerImage) bool {
-			return (!req.GetDanglingOnly() || img.Dangling) && (!req.GetInUseOnly() || img.Containers > 0)
+			return (!req.GetDanglingOnly() || img.Dangling) && (!req.GetInUseOnly() || img.Containers > 0) &&
+				(!req.GetUnusedOnly() || img.Containers == 0)
 		}},
 		{match: func(img *asterismv1.DockerImage) bool {
 			fields := append([]string{img.Id, img.Repository, img.Tag}, img.RepoTags...)

@@ -28,7 +28,7 @@ func main() {
 		Short: "Self-hosted VPS observatory and visual infrastructure portal",
 	}
 
-	rootCmd.AddCommand(newServeCmd(), newHashPasswordCmd(), newTokenCmd(), newAgentCmd(), newVersionCmd())
+	rootCmd.AddCommand(newServeCmd(), newHashPasswordCmd(), newTokenCmd(), newAgentCmd(), newMCPCmd(), newVersionCmd())
 
 	if err := rootCmd.Execute(); err != nil {
 		fmt.Fprintf(os.Stderr, "error: %v\n", err)

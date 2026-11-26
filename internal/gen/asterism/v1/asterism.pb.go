@@ -7295,7 +7295,9 @@ type ListImagesRequest struct {
 	// AIP-132 order: size, created, repository, containers. Default "size desc".
 	OrderBy string `protobuf:"bytes,4,opt,name=order_by,json=orderBy,proto3" json:"order_by,omitempty"`
 	// Only images used by at least one container.
-	InUseOnly     bool `protobuf:"varint,5,opt,name=in_use_only,json=inUseOnly,proto3" json:"in_use_only,omitempty"`
+	InUseOnly bool `protobuf:"varint,5,opt,name=in_use_only,json=inUseOnly,proto3" json:"in_use_only,omitempty"`
+	// Only images no container (running or stopped) uses; candidates for cleanup.
+	UnusedOnly    bool `protobuf:"varint,6,opt,name=unused_only,json=unusedOnly,proto3" json:"unused_only,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -7361,6 +7363,13 @@ func (x *ListImagesRequest) GetOrderBy() string {
 func (x *ListImagesRequest) GetInUseOnly() bool {
 	if x != nil {
 		return x.InUseOnly
+	}
+	return false
+}
+
+func (x *ListImagesRequest) GetUnusedOnly() bool {
+	if x != nil {
+		return x.UnusedOnly
 	}
 	return false
 }
@@ -8858,13 +8867,15 @@ const file_asterism_v1_asterism_proto_rawDesc = "" +
 	"\x14GetContainerResponse\x124\n" +
 	"\tcontainer\x18\x01 \x01(\v2\x16.asterism.v1.ContainerR\tcontainer\x127\n" +
 	"\rrecent_events\x18\x02 \x03(\v2\x12.asterism.v1.EventR\frecentEvents\x12=\n" +
-	"\fcapabilities\x18\x03 \x01(\v2\x19.asterism.v1.CapabilitiesR\fcapabilities\"\xb7\x01\n" +
+	"\fcapabilities\x18\x03 \x01(\v2\x19.asterism.v1.CapabilitiesR\fcapabilities\"\xd8\x01\n" +
 	"\x11ListImagesRequest\x12#\n" +
 	"\rdangling_only\x18\x01 \x01(\bR\fdanglingOnly\x12,\n" +
 	"\x04page\x18\x02 \x01(\v2\x18.asterism.v1.PageRequestR\x04page\x12\x14\n" +
 	"\x05query\x18\x03 \x01(\tR\x05query\x12\x19\n" +
 	"\border_by\x18\x04 \x01(\tR\aorderBy\x12\x1e\n" +
-	"\vin_use_only\x18\x05 \x01(\bR\tinUseOnly\"\xfe\x01\n" +
+	"\vin_use_only\x18\x05 \x01(\bR\tinUseOnly\x12\x1f\n" +
+	"\vunused_only\x18\x06 \x01(\bR\n" +
+	"unusedOnly\"\xfe\x01\n" +
 	"\x12ListImagesResponse\x120\n" +
 	"\x06images\x18\x01 \x03(\v2\x18.asterism.v1.DockerImageR\x06images\x12(\n" +
 	"\x10total_size_bytes\x18\x02 \x01(\x04R\x0etotalSizeBytes\x12&\n" +

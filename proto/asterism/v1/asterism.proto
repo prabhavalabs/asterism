@@ -942,6 +942,8 @@ message ListImagesRequest {
   string order_by = 4;
   // Only images used by at least one container.
   bool in_use_only = 5;
+  // Only images no container (running or stopped) uses; candidates for cleanup.
+  bool unused_only = 6;
 }
 
 message ListImagesResponse {
