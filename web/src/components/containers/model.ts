@@ -286,3 +286,51 @@ export function portText(p: ContainerPort): string {
     ? `${p.hostIp || "0.0.0.0"}:${p.hostPort}→${p.containerPort}/${p.proto}`
     : `${p.containerPort}/${p.proto} (not published)`;
 }
+
+/** One project's containers on a page, in server order. */
+export interface ContainerGroup {
+  /** `proj:<name>`, or "" for standalone containers (and the single flat group). */
+  projectId: string;
+  rows: Container[];
+}
+
+/**
+ * Consecutive runs of the same project, in server order (the `project, name`
+ * order keeps each project together on a page). Ungrouped lists come back as
+ * one group with an empty projectId.
+ */
+export function groupContainersByProject(rows: readonly Container[], grouped = true): ContainerGroup[] {
+  if (!grouped) return [{ projectId: "", rows: [...rows] }];
+  const groups: ContainerGroup[] = [];
+  for (const c of rows) {
+    const last = groups[groups.length - 1];
+    if (last && last.projectId === c.projectId) last.rows.push(c);
+    else groups.push({ projectId: c.projectId, rows: [c] });
+  }
+  return groups;
+}
+
+export interface ContainerGroupSummary {
+  total: number;
+  /** Running, paused or restarting. */
+  up: number;
+  /** Sum of the running containers' CPU (fraction of one core each). */
+  cpuUtil: number;
+  /** Sum of running and paused containers' resident memory. */
+  memUsedBytes: number;
+  attention: number;
+}
+
+/** Totals for a project group's header row. Stopped containers add no usage. */
+export function summarizeContainers(rows: readonly Container[]): ContainerGroupSummary {
+  const summary: ContainerGroupSummary = { total: rows.length, up: 0, cpuUtil: 0, memUsedBytes: 0, attention: 0 };
+  for (const c of rows) {
+    if (isUp(c.state)) summary.up += 1;
+    if (needsAttention(c)) summary.attention += 1;
+    if (c.state === ContainerState.RUNNING) summary.cpuUtil += c.stats?.cpuUtil ?? 0;
+    if (c.state === ContainerState.RUNNING || c.state === ContainerState.PAUSED) {
+      summary.memUsedBytes += Number(c.stats?.memUsedBytes ?? 0n);
+    }
+  }
+  return summary;
+}

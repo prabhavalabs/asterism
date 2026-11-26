@@ -1,10 +1,11 @@
-import { Fragment, useMemo, type ReactNode } from "react";
+import { useCallback, useMemo, useState, type ReactNode } from "react";
 import { Link } from "@tanstack/react-router";
-import { Alert02Icon, InformationCircleIcon, SquareLock02Icon } from "@hugeicons/core-free-icons";
+import { Alert02Icon, ArrowDown01Icon, InformationCircleIcon, SquareLock02Icon } from "@hugeicons/core-free-icons";
 import { Icon } from "@/components/ui/icon";
 import { Badge } from "@/components/ui/badge";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import {
+  CategoryBadge,
   PortChip,
   ProjectIcon,
   SortHeader,
@@ -22,6 +23,7 @@ import { ContainerRowMenu } from "./ContainerActions";
 import { LiveMetricText } from "./live";
 import {
   containerName,
+  groupContainersByProject,
   healthStyle,
   insightTone,
   isUp,
@@ -29,7 +31,9 @@ import {
   portText,
   shortImage,
   stateStyle,
+  summarizeContainers,
   worstInsightTone,
+  type ContainerGroup,
 } from "./model";
 import type { ContainerActionsApi } from "./useContainerActions";
 
@@ -65,23 +69,6 @@ function projectLabel(projectId: string, projects: ReadonlyMap<string, Project>)
   return projects.get(projectId)?.name ?? (projectNameFromId(projectId) || "standalone");
 }
 
-interface Group {
-  projectId: string;
-  rows: Container[];
-}
-
-/** Consecutive runs of the same project, in server order. */
-function groupRows(rows: readonly Container[], grouped: boolean): Group[] {
-  if (!grouped) return [{ projectId: "", rows: [...rows] }];
-  const groups: Group[] = [];
-  for (const c of rows) {
-    const last = groups[groups.length - 1];
-    if (last && last.projectId === c.projectId) last.rows.push(c);
-    else groups.push({ projectId: c.projectId, rows: [c] });
-  }
-  return groups;
-}
-
 /**
  * The containers data table for one server page (40px rows, sticky header,
  * server-sorted columns, optional project groups). Render it inside a
@@ -96,19 +83,33 @@ export function ContainersTable({
   groupByProject,
   projectTotals,
 }: ContainersTableProps) {
-  const groups = useMemo(() => groupRows(containers, groupByProject), [containers, groupByProject]);
+  const groups = useMemo(() => groupContainersByProject(containers, groupByProject), [containers, groupByProject]);
   const sort = { order, onOrderChange };
+  const [collapsed, setCollapsed] = useState<ReadonlySet<string>>(() => new Set());
+  const toggleGroup = useCallback((key: string) => {
+    setCollapsed((prev) => {
+      const next = new Set(prev);
+      if (next.has(key)) next.delete(key);
+      else next.add(key);
+      return next;
+    });
+  }, []);
 
   return (
     <table
       className={cn(
         "w-full table-fixed border-separate border-spacing-0 text-left text-control",
-        groupByProject ? "min-w-[1100px]" : "min-w-[1260px]",
+        groupByProject ? "min-w-[1120px]" : "min-w-[1260px]",
       )}
     >
       <thead className="text-small text-muted-foreground">
         <tr className="h-8">
-          <SortHeader label="State" field="state" {...sort} className="w-[7.5rem] pl-4" />
+          <SortHeader
+            label="State"
+            field="state"
+            {...sort}
+            className={groupByProject ? "w-[8.5rem] pl-10" : "w-[7.5rem] pl-4"}
+          />
           <SortHeader label="Container" field="name" {...sort} />
           {!groupByProject && <SortHeader label="Project" field="project" {...sort} className="w-40" />}
           <Th className="w-[6.75rem]">Health</Th>
@@ -122,39 +123,78 @@ export function ContainersTable({
           </Th>
         </tr>
       </thead>
-      <tbody>
-        {groups.map((g, i) => (
-          <Fragment key={`${g.projectId || "all"}:${i}`}>
-            {groupByProject && (
-              <GroupRow projectId={g.projectId} rows={g.rows} projects={projects} total={projectTotals?.get(g.projectId)} />
-            )}
-            {g.rows.map((c) => (
-              <ContainerTableRow
-                key={c.id}
-                container={c}
-                project={projects.get(c.projectId)}
-                actions={actions}
-                showProject={!groupByProject}
-              />
-            ))}
-          </Fragment>
-        ))}
-      </tbody>
+      {groupByProject ? (
+        groups.map((g, i) => {
+          const key = `${g.projectId || "standalone"}:${i}`;
+          return (
+            <ProjectGroup
+              key={key}
+              group={g}
+              first={i === 0}
+              projects={projects}
+              actions={actions}
+              total={projectTotals?.get(g.projectId)}
+              expanded={!collapsed.has(g.projectId || "standalone")}
+              onToggle={() => toggleGroup(g.projectId || "standalone")}
+            />
+          );
+        })
+      ) : (
+        <tbody>
+          {containers.map((c) => (
+            <ContainerTableRow key={c.id} container={c} project={projects.get(c.projectId)} actions={actions} showProject />
+          ))}
+        </tbody>
+      )}
     </table>
   );
 }
 
-/** Phone layout of the same page: one card per container, in server order. */
+/** Phone layout of the same page: one card per container, under project headers when grouped. */
 export function ContainerCardList({
   containers,
   projects,
   actions,
-}: Pick<ContainersTableProps, "containers" | "projects" | "actions">) {
+  groupByProject = false,
+  projectTotals,
+}: Pick<ContainersTableProps, "containers" | "projects" | "actions" | "projectTotals"> & { groupByProject?: boolean }) {
+  if (!groupByProject) {
+    return (
+      <ul className="flex flex-col divide-y divide-divider">
+        {containers.map((c) => (
+          <ContainerCard key={c.id} container={c} project={projects.get(c.projectId)} actions={actions} />
+        ))}
+      </ul>
+    );
+  }
+  const groups = groupContainersByProject(containers);
   return (
-    <ul className="flex flex-col divide-y divide-divider">
-      {containers.map((c) => (
-        <ContainerCard key={c.id} container={c} project={projects.get(c.projectId)} actions={actions} />
-      ))}
+    <ul className="flex flex-col">
+      {groups.map((g, i) => {
+        const project = projects.get(g.projectId);
+        const name = projectLabel(g.projectId, projects);
+        const summary = summarizeContainers(g.rows);
+        const count = projectTotals?.get(g.projectId) ?? g.rows.length;
+        return (
+          <li key={`${g.projectId || "standalone"}:${i}`} className={cn(i > 0 && "border-t-4 border-background")}>
+            <div className="flex min-w-0 items-center gap-2.5 border-b border-divider bg-surface-subtle px-4 py-2.5">
+              <ProjectIcon icon={project?.icon} name={name} size={24} />
+              <span className="flex min-w-0 flex-1 flex-col">
+                <span className="truncate font-heading text-body font-semibold text-foreground">{name}</span>
+                <span className="text-small text-muted-foreground tabular-nums">
+                  {count} {count === 1 ? "container" : "containers"} · {summary.up}/{summary.total} up
+                </span>
+              </span>
+              {project?.category && <CategoryBadge category={project.category} className="shrink-0" />}
+            </div>
+            <ul className="flex flex-col divide-y divide-divider">
+              {g.rows.map((c) => (
+                <ContainerCard key={c.id} container={c} project={project} actions={actions} />
+              ))}
+            </ul>
+          </li>
+        );
+      })}
     </ul>
   );
 }
@@ -170,60 +210,170 @@ function Th({ className, children }: { className?: string; children?: ReactNode 
   );
 }
 
-function GroupRow({
-  projectId,
-  rows,
+const GROUPED_COLUMNS = 9;
+
+/*
+ * Tree guides for grouped rows, drawn with pseudo-elements in the first cell:
+ * a vertical rail under the group's toggle (24px from the left) and a short
+ * elbow into each row; the last row's elbow curves and ends the rail.
+ */
+const RAIL = "before:absolute before:left-6 before:-top-px before:-bottom-px before:w-px before:bg-border-strong";
+const ELBOW = "after:absolute after:left-6 after:top-1/2 after:h-px after:w-3 after:bg-border-strong";
+const LAST_ELBOW =
+  "after:absolute after:left-6 after:-top-px after:h-[calc(50%+1px)] after:w-3 after:rounded-bl-md after:border-b after:border-l after:border-border-strong";
+const HEADER_RAIL =
+  "after:absolute after:left-6 after:top-[calc(50%+0.75rem)] after:-bottom-px after:w-px after:bg-border-strong";
+
+function rowDomId(c: Container): string {
+  return `container-row-${c.id.replace(/[^A-Za-z0-9_-]/g, "-")}`;
+}
+
+/**
+ * One project as a parent row with its containers threaded beneath it. The
+ * group is its own <tbody>; the header cell is a rowgroup header, and the
+ * disclosure button collapses the children.
+ */
+function ProjectGroup({
+  group,
+  first,
   projects,
+  actions,
   total,
+  expanded,
+  onToggle,
 }: {
-  projectId: string;
-  rows: Container[];
+  group: ContainerGroup;
+  first: boolean;
   projects: ReadonlyMap<string, Project>;
+  actions: ContainerActionsApi;
   total?: number;
+  expanded: boolean;
+  onToggle: () => void;
 }) {
+  const { projectId, rows } = group;
   const project = projects.get(projectId);
   const name = projectLabel(projectId, projects);
-  const up = rows.filter((c) => isUp(c.state)).length;
-  const mem = rows.reduce((acc, c) => acc + memOf(c), 0);
+  const summary = summarizeContainers(rows);
   const split = total !== undefined && total > rows.length;
+  const count = total ?? rows.length;
+  const upTone = summary.up === summary.total ? "healthy" : summary.up === 0 ? "critical" : "warning";
+  const headerCell = "h-14 border-b border-divider bg-surface-subtle px-3 align-middle";
+
   return (
-    <tr>
-      <td colSpan={9} className="h-9 border-b border-divider bg-card px-4">
-        <span className="flex items-center gap-2.5">
-          <ProjectIcon icon={project?.icon} name={name} size={20} />
-          {project ? (
-            <Link
-              to="/projects/$projectId"
-              params={{ projectId: project.name }}
-              className="font-heading text-body font-semibold text-foreground outline-none hover:underline focus-visible:ring-1 focus-visible:ring-ring"
+    <tbody data-project={projectId || "standalone"}>
+      {!first && (
+        <tr aria-hidden="true">
+          <td colSpan={GROUPED_COLUMNS} className="h-4 border-b border-divider bg-background p-0" />
+        </tr>
+      )}
+      <tr className="group/head">
+        <th
+          scope="rowgroup"
+          colSpan={3}
+          className={cn(headerCell, "relative text-left font-normal", expanded && HEADER_RAIL)}
+        >
+          <span className="flex min-w-0 items-center gap-2.5">
+            <button
+              type="button"
+              onClick={onToggle}
+              aria-expanded={expanded}
+              aria-controls={rows.map(rowDomId).join(" ")}
+              aria-label={`${expanded ? "Collapse" : "Expand"} ${name}`}
+              className="inline-flex size-6 shrink-0 items-center justify-center rounded-button-sm text-muted-foreground outline-none transition-colors hover:bg-muted hover:text-foreground focus-visible:ring-1 focus-visible:ring-ring"
             >
-              {name}
-            </Link>
-          ) : (
-            <span className="font-heading text-body font-semibold text-foreground">{name}</span>
-          )}
-          <span className="text-small text-muted-foreground tabular-nums">
-            {up}/{rows.length} running · {formatBytes(mem)}
-            {split && ` · ${rows.length} of ${total} on this page`}
+              <Icon
+                icon={ArrowDown01Icon}
+                className={cn(
+                  "size-4 transition-transform duration-150 ease-out motion-reduce:transition-none",
+                  !expanded && "-rotate-90",
+                )}
+              />
+            </button>
+            <ProjectIcon icon={project?.icon} name={name} size={32} />
+            <span className="flex min-w-0 flex-col gap-0.5">
+              <span className="flex min-w-0 items-center gap-2">
+                {project ? (
+                  <Link
+                    to="/projects/$projectId"
+                    params={{ projectId: project.name }}
+                    className="truncate font-heading text-body font-semibold text-foreground outline-none hover:underline focus-visible:ring-1 focus-visible:ring-ring"
+                  >
+                    {name}
+                  </Link>
+                ) : (
+                  <span className="truncate font-heading text-body font-semibold text-foreground">{name}</span>
+                )}
+                {project?.category && <CategoryBadge category={project.category} className="shrink-0" />}
+              </span>
+              <span className="flex min-w-0 items-center gap-1.5 whitespace-nowrap text-small text-muted-foreground tabular-nums">
+                <span>
+                  {count} {count === 1 ? "container" : "containers"}
+                </span>
+                <span aria-hidden="true">·</span>
+                <StatusDot tone={upTone} />
+                <span className="text-text-2">{summary.up}/{summary.total} up</span>
+              </span>
+            </span>
           </span>
-        </span>
-      </td>
-    </tr>
+        </th>
+        <td className={headerCell}>
+          <GroupTotal value={summary.up > 0 ? formatPct(summary.cpuUtil) : "—"} label="CPU" />
+        </td>
+        <td className={headerCell}>
+          <GroupTotal value={summary.up > 0 ? formatBytes(summary.memUsedBytes) : "—"} label="memory" />
+        </td>
+        <td colSpan={4} className={cn(headerCell, "pr-3 text-right text-small text-muted-foreground tabular-nums")}>
+          {split && `${rows.length} of ${total} on this page`}
+          {summary.attention > 0 && (
+            <span className={cn("ml-3 inline-flex items-center gap-1", TONE_TEXT_CLASSES.warning)}>
+              <Icon icon={Alert02Icon} className="size-3.5" />
+              {summary.attention} need{summary.attention === 1 ? "s" : ""} attention
+            </span>
+          )}
+        </td>
+      </tr>
+      {expanded &&
+        rows.map((c, i) => (
+          <ContainerTableRow
+            key={c.id}
+            id={rowDomId(c)}
+            container={c}
+            project={project}
+            actions={actions}
+            showProject={false}
+            tree={i === rows.length - 1 ? "last" : "middle"}
+          />
+        ))}
+    </tbody>
   );
 }
 
-const td = "h-10 border-b border-divider px-3 align-middle";
+function GroupTotal({ value, label }: { value: string; label: string }) {
+  return (
+    <span className="flex items-baseline gap-1.5 whitespace-nowrap" title={`Total ${label} of this group's containers on this page`}>
+      <span className="font-mono text-mono font-semibold text-foreground tabular-nums">{value}</span>
+      <span className="text-small text-muted-foreground">total</span>
+    </span>
+  );
+}
+
+const td = "h-11 border-b border-divider px-3 align-middle";
 
 function ContainerTableRow({
+  id,
   container: c,
   project,
   actions,
   showProject,
+  tree,
 }: {
+  id?: string;
   container: Container;
   project?: Project;
   actions: ContainerActionsApi;
   showProject: boolean;
+  /** Position under a project group: draws the thread guide in the first cell. */
+  tree?: "middle" | "last";
 }) {
   const state = stateStyle(c);
   const health = healthStyle(c.health);
@@ -235,11 +385,17 @@ function ContainerTableRow({
 
   return (
     <tr
+      id={id}
       data-state={state.tone}
       aria-busy={pending ? true : undefined}
       className={cn("group/row transition-colors hover:bg-muted/50", pending && "bg-muted/40")}
     >
-      <td className={cn(td, "pl-4")}>
+      <td
+        className={cn(
+          td,
+          tree ? cn("relative pl-10", tree === "last" ? LAST_ELBOW : cn(RAIL, ELBOW)) : "pl-4",
+        )}
+      >
         <span className="flex items-center gap-2 whitespace-nowrap">
           <StatusDot tone={state.tone} pulse={c.state === ContainerState.RESTARTING} />
           <span className={cn(state.tone === "critical" ? TONE_TEXT_CLASSES.critical : "text-foreground")}>
