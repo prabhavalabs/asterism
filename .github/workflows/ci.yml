@@ -1,0 +1,83 @@
+name: CI
+
+on:
+  pull_request:
+    branches: [main]
+  push:
+    branches: [main]
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  go:
+    name: Go test & vet
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-go@v5
+        with:
+          go-version-file: go.mod
+          cache: true
+      - run: go vet ./...
+      - run: go test -race ./...
+
+  agent:
+    name: Agent deps, size gates & tests
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-go@v5
+        with:
+          go-version-file: go.mod
+          cache: true
+      - name: Dependency deny-list (TestAgentDeps)
+        run: go test -count=1 -run TestAgentDeps -v ./cmd/asterism-agent
+      - name: Agent and hub-ingest unit tests
+        run: >-
+          go test -race -count=1
+          ./cmd/asterism-agent/...
+          ./internal/agent/...
+          ./internal/collect/agentingest/...
+          ./internal/collect/assemble/...
+          ./internal/collect/dockercli/...
+          ./internal/collect/ingress/...
+      - name: Binary size gate (linux/amd64, linux/arm64 <= 11 MiB)
+        run: ASTERISM_AGENT_SIZE_CHECK=1 go test -count=1 -run TestAgentBinarySize -v ./cmd/asterism-agent
+      - name: Integration test compiles
+        run: go vet -tags integration ./scripts/agent-it
+      - name: Shell scripts
+        run: shellcheck -s sh deploy/agent/install.sh && shellcheck scripts/agent-footprint.sh
+      - uses: docker/setup-buildx-action@v3
+      - name: Build image (linux/amd64)
+        run: make agent-image AGENT_IMAGE=asterism-agent:ci AGENT_VERSION=ci
+      - name: Image size gate (<= 12 MB)
+        run: make agent-image-size AGENT_IMAGE=asterism-agent:ci
+      - name: Multi-arch build (linux/amd64, linux/arm64)
+        run: docker buildx build -f deploy/agent/Dockerfile --platform linux/amd64,linux/arm64 .
+
+  web:
+    name: Web lint, typecheck, test & build
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: web
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 12
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: pnpm
+          cache-dependency-path: web/pnpm-lock.yaml
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm lint
+      - run: pnpm typecheck
+      - run: pnpm test
+      - run: pnpm build
