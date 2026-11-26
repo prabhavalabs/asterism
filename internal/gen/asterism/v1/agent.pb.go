@@ -37,6 +37,7 @@ type AgentFrame struct {
 	//	*AgentFrame_LogChunk
 	//	*AgentFrame_CommandResult
 	//	*AgentFrame_Heartbeat
+	//	*AgentFrame_IconData
 	Payload       isAgentFrame_Payload `protobuf_oneof:"payload"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
@@ -165,6 +166,15 @@ func (x *AgentFrame) GetHeartbeat() *AgentHeartbeat {
 	return nil
 }
 
+func (x *AgentFrame) GetIconData() *IconData {
+	if x != nil {
+		if x, ok := x.Payload.(*AgentFrame_IconData); ok {
+			return x.IconData
+		}
+	}
+	return nil
+}
+
 type isAgentFrame_Payload interface {
 	isAgentFrame_Payload()
 }
@@ -201,6 +211,10 @@ type AgentFrame_Heartbeat struct {
 	Heartbeat *AgentHeartbeat `protobuf:"bytes,17,opt,name=heartbeat,proto3,oneof"`
 }
 
+type AgentFrame_IconData struct {
+	IconData *IconData `protobuf:"bytes,18,opt,name=icon_data,json=iconData,proto3,oneof"`
+}
+
 func (*AgentFrame_Hello) isAgentFrame_Payload() {}
 
 func (*AgentFrame_Metrics) isAgentFrame_Payload() {}
@@ -216,6 +230,8 @@ func (*AgentFrame_LogChunk) isAgentFrame_Payload() {}
 func (*AgentFrame_CommandResult) isAgentFrame_Payload() {}
 
 func (*AgentFrame_Heartbeat) isAgentFrame_Payload() {}
+
+func (*AgentFrame_IconData) isAgentFrame_Payload() {}
 
 type AgentHello struct {
 	state protoimpl.MessageState `protogen:"open.v1"`
@@ -460,6 +476,7 @@ type InventorySnapshot struct {
 	Routes        []*IngressRoute    `protobuf:"bytes,11,rep,name=routes,proto3" json:"routes,omitempty"`
 	ProjectRules  []*ProjectRule     `protobuf:"bytes,12,rep,name=project_rules,json=projectRules,proto3" json:"project_rules,omitempty"`
 	Filesystems   []*FilesystemUsage `protobuf:"bytes,13,rep,name=filesystems,proto3" json:"filesystems,omitempty"`
+	ProjectIcons  []*ProjectIconRef  `protobuf:"bytes,14,rep,name=project_icons,json=projectIcons,proto3" json:"project_icons,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -585,6 +602,13 @@ func (x *InventorySnapshot) GetFilesystems() []*FilesystemUsage {
 	return nil
 }
 
+func (x *InventorySnapshot) GetProjectIcons() []*ProjectIconRef {
+	if x != nil {
+		return x.ProjectIcons
+	}
+	return nil
+}
+
 type InventoryDelta struct {
 	state protoimpl.MessageState `protogen:"open.v1"`
 	// The version this delta applies to; a mismatch means the hub sends a
@@ -703,6 +727,8 @@ type ReplaceSet struct {
 	ProjectRulesSet bool                   `protobuf:"varint,15,opt,name=project_rules_set,json=projectRulesSet,proto3" json:"project_rules_set,omitempty"`
 	Filesystems     []*FilesystemUsage     `protobuf:"bytes,16,rep,name=filesystems,proto3" json:"filesystems,omitempty"`
 	FilesystemsSet  bool                   `protobuf:"varint,17,opt,name=filesystems_set,json=filesystemsSet,proto3" json:"filesystems_set,omitempty"`
+	ProjectIcons    []*ProjectIconRef      `protobuf:"bytes,18,rep,name=project_icons,json=projectIcons,proto3" json:"project_icons,omitempty"`
+	ProjectIconsSet bool                   `protobuf:"varint,19,opt,name=project_icons_set,json=projectIconsSet,proto3" json:"project_icons_set,omitempty"`
 	unknownFields   protoimpl.UnknownFields
 	sizeCache       protoimpl.SizeCache
 }
@@ -856,6 +882,164 @@ func (x *ReplaceSet) GetFilesystemsSet() bool {
 	return false
 }
 
+func (x *ReplaceSet) GetProjectIcons() []*ProjectIconRef {
+	if x != nil {
+		return x.ProjectIcons
+	}
+	return nil
+}
+
+func (x *ReplaceSet) GetProjectIconsSet() bool {
+	if x != nil {
+		return x.ProjectIconsSet
+	}
+	return false
+}
+
+// A favicon candidate the agent found in a compose working directory. Only
+// the digest travels with the inventory; the hub fetches the bytes once per
+// digest with an IconRequest and caches them.
+type ProjectIconRef struct {
+	state protoimpl.MessageState `protogen:"open.v1"`
+	// Compose working directory the file was found under.
+	WorkingDir string `protobuf:"bytes,1,opt,name=working_dir,json=workingDir,proto3" json:"working_dir,omitempty"`
+	// Path relative to working_dir, e.g. "public/favicon.svg".
+	RelPath string `protobuf:"bytes,2,opt,name=rel_path,json=relPath,proto3" json:"rel_path,omitempty"`
+	// Hex SHA-256 of the file.
+	Sha256        string `protobuf:"bytes,3,opt,name=sha256,proto3" json:"sha256,omitempty"`
+	SizeBytes     uint32 `protobuf:"varint,4,opt,name=size_bytes,json=sizeBytes,proto3" json:"size_bytes,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *ProjectIconRef) Reset() {
+	*x = ProjectIconRef{}
+	mi := &file_asterism_v1_agent_proto_msgTypes[6]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *ProjectIconRef) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*ProjectIconRef) ProtoMessage() {}
+
+func (x *ProjectIconRef) ProtoReflect() protoreflect.Message {
+	mi := &file_asterism_v1_agent_proto_msgTypes[6]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use ProjectIconRef.ProtoReflect.Descriptor instead.
+func (*ProjectIconRef) Descriptor() ([]byte, []int) {
+	return file_asterism_v1_agent_proto_rawDescGZIP(), []int{6}
+}
+
+func (x *ProjectIconRef) GetWorkingDir() string {
+	if x != nil {
+		return x.WorkingDir
+	}
+	return ""
+}
+
+func (x *ProjectIconRef) GetRelPath() string {
+	if x != nil {
+		return x.RelPath
+	}
+	return ""
+}
+
+func (x *ProjectIconRef) GetSha256() string {
+	if x != nil {
+		return x.Sha256
+	}
+	return ""
+}
+
+func (x *ProjectIconRef) GetSizeBytes() uint32 {
+	if x != nil {
+		return x.SizeBytes
+	}
+	return 0
+}
+
+// The bytes for one ProjectIconRef (answer to IconRequest).
+type IconData struct {
+	state     protoimpl.MessageState `protogen:"open.v1"`
+	RequestId string                 `protobuf:"bytes,1,opt,name=request_id,json=requestId,proto3" json:"request_id,omitempty"`
+	Sha256    string                 `protobuf:"bytes,2,opt,name=sha256,proto3" json:"sha256,omitempty"`
+	Data      []byte                 `protobuf:"bytes,3,opt,name=data,proto3" json:"data,omitempty"`
+	// Set when the file could not be read or changed since it was scanned.
+	Error         string `protobuf:"bytes,4,opt,name=error,proto3" json:"error,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *IconData) Reset() {
+	*x = IconData{}
+	mi := &file_asterism_v1_agent_proto_msgTypes[7]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *IconData) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*IconData) ProtoMessage() {}
+
+func (x *IconData) ProtoReflect() protoreflect.Message {
+	mi := &file_asterism_v1_agent_proto_msgTypes[7]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use IconData.ProtoReflect.Descriptor instead.
+func (*IconData) Descriptor() ([]byte, []int) {
+	return file_asterism_v1_agent_proto_rawDescGZIP(), []int{7}
+}
+
+func (x *IconData) GetRequestId() string {
+	if x != nil {
+		return x.RequestId
+	}
+	return ""
+}
+
+func (x *IconData) GetSha256() string {
+	if x != nil {
+		return x.Sha256
+	}
+	return ""
+}
+
+func (x *IconData) GetData() []byte {
+	if x != nil {
+		return x.Data
+	}
+	return nil
+}
+
+func (x *IconData) GetError() string {
+	if x != nil {
+		return x.Error
+	}
+	return ""
+}
+
 // A project resolved on the agent from agent.yaml "projects:".
 type ProjectRule struct {
 	state    protoimpl.MessageState `protogen:"open.v1"`
@@ -873,7 +1057,7 @@ type ProjectRule struct {
 
 func (x *ProjectRule) Reset() {
 	*x = ProjectRule{}
-	mi := &file_asterism_v1_agent_proto_msgTypes[6]
+	mi := &file_asterism_v1_agent_proto_msgTypes[8]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -885,7 +1069,7 @@ func (x *ProjectRule) String() string {
 func (*ProjectRule) ProtoMessage() {}
 
 func (x *ProjectRule) ProtoReflect() protoreflect.Message {
-	mi := &file_asterism_v1_agent_proto_msgTypes[6]
+	mi := &file_asterism_v1_agent_proto_msgTypes[8]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -898,7 +1082,7 @@ func (x *ProjectRule) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ProjectRule.ProtoReflect.Descriptor instead.
 func (*ProjectRule) Descriptor() ([]byte, []int) {
-	return file_asterism_v1_agent_proto_rawDescGZIP(), []int{6}
+	return file_asterism_v1_agent_proto_rawDescGZIP(), []int{8}
 }
 
 func (x *ProjectRule) GetName() string {
@@ -948,7 +1132,7 @@ type FilesystemUsage struct {
 
 func (x *FilesystemUsage) Reset() {
 	*x = FilesystemUsage{}
-	mi := &file_asterism_v1_agent_proto_msgTypes[7]
+	mi := &file_asterism_v1_agent_proto_msgTypes[9]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -960,7 +1144,7 @@ func (x *FilesystemUsage) String() string {
 func (*FilesystemUsage) ProtoMessage() {}
 
 func (x *FilesystemUsage) ProtoReflect() protoreflect.Message {
-	mi := &file_asterism_v1_agent_proto_msgTypes[7]
+	mi := &file_asterism_v1_agent_proto_msgTypes[9]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -973,7 +1157,7 @@ func (x *FilesystemUsage) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use FilesystemUsage.ProtoReflect.Descriptor instead.
 func (*FilesystemUsage) Descriptor() ([]byte, []int) {
-	return file_asterism_v1_agent_proto_rawDescGZIP(), []int{7}
+	return file_asterism_v1_agent_proto_rawDescGZIP(), []int{9}
 }
 
 func (x *FilesystemUsage) GetMount() string {
@@ -1015,7 +1199,7 @@ type AgentEvents struct {
 
 func (x *AgentEvents) Reset() {
 	*x = AgentEvents{}
-	mi := &file_asterism_v1_agent_proto_msgTypes[8]
+	mi := &file_asterism_v1_agent_proto_msgTypes[10]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1027,7 +1211,7 @@ func (x *AgentEvents) String() string {
 func (*AgentEvents) ProtoMessage() {}
 
 func (x *AgentEvents) ProtoReflect() protoreflect.Message {
-	mi := &file_asterism_v1_agent_proto_msgTypes[8]
+	mi := &file_asterism_v1_agent_proto_msgTypes[10]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1040,7 +1224,7 @@ func (x *AgentEvents) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use AgentEvents.ProtoReflect.Descriptor instead.
 func (*AgentEvents) Descriptor() ([]byte, []int) {
-	return file_asterism_v1_agent_proto_rawDescGZIP(), []int{8}
+	return file_asterism_v1_agent_proto_rawDescGZIP(), []int{10}
 }
 
 func (x *AgentEvents) GetEvents() []*Event {
@@ -1062,7 +1246,7 @@ type LogChunk struct {
 
 func (x *LogChunk) Reset() {
 	*x = LogChunk{}
-	mi := &file_asterism_v1_agent_proto_msgTypes[9]
+	mi := &file_asterism_v1_agent_proto_msgTypes[11]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1074,7 +1258,7 @@ func (x *LogChunk) String() string {
 func (*LogChunk) ProtoMessage() {}
 
 func (x *LogChunk) ProtoReflect() protoreflect.Message {
-	mi := &file_asterism_v1_agent_proto_msgTypes[9]
+	mi := &file_asterism_v1_agent_proto_msgTypes[11]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1087,7 +1271,7 @@ func (x *LogChunk) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use LogChunk.ProtoReflect.Descriptor instead.
 func (*LogChunk) Descriptor() ([]byte, []int) {
-	return file_asterism_v1_agent_proto_rawDescGZIP(), []int{9}
+	return file_asterism_v1_agent_proto_rawDescGZIP(), []int{11}
 }
 
 func (x *LogChunk) GetRequestId() string {
@@ -1137,7 +1321,7 @@ type CommandResult struct {
 
 func (x *CommandResult) Reset() {
 	*x = CommandResult{}
-	mi := &file_asterism_v1_agent_proto_msgTypes[10]
+	mi := &file_asterism_v1_agent_proto_msgTypes[12]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1149,7 +1333,7 @@ func (x *CommandResult) String() string {
 func (*CommandResult) ProtoMessage() {}
 
 func (x *CommandResult) ProtoReflect() protoreflect.Message {
-	mi := &file_asterism_v1_agent_proto_msgTypes[10]
+	mi := &file_asterism_v1_agent_proto_msgTypes[12]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1162,7 +1346,7 @@ func (x *CommandResult) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use CommandResult.ProtoReflect.Descriptor instead.
 func (*CommandResult) Descriptor() ([]byte, []int) {
-	return file_asterism_v1_agent_proto_rawDescGZIP(), []int{10}
+	return file_asterism_v1_agent_proto_rawDescGZIP(), []int{12}
 }
 
 func (x *CommandResult) GetRequestId() string {
@@ -1223,7 +1407,7 @@ type AgentHeartbeat struct {
 
 func (x *AgentHeartbeat) Reset() {
 	*x = AgentHeartbeat{}
-	mi := &file_asterism_v1_agent_proto_msgTypes[11]
+	mi := &file_asterism_v1_agent_proto_msgTypes[13]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1235,7 +1419,7 @@ func (x *AgentHeartbeat) String() string {
 func (*AgentHeartbeat) ProtoMessage() {}
 
 func (x *AgentHeartbeat) ProtoReflect() protoreflect.Message {
-	mi := &file_asterism_v1_agent_proto_msgTypes[11]
+	mi := &file_asterism_v1_agent_proto_msgTypes[13]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1248,7 +1432,7 @@ func (x *AgentHeartbeat) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use AgentHeartbeat.ProtoReflect.Descriptor instead.
 func (*AgentHeartbeat) Descriptor() ([]byte, []int) {
-	return file_asterism_v1_agent_proto_rawDescGZIP(), []int{11}
+	return file_asterism_v1_agent_proto_rawDescGZIP(), []int{13}
 }
 
 func (x *AgentHeartbeat) GetStats() *AgentStats {
@@ -1280,7 +1464,7 @@ type AgentStats struct {
 
 func (x *AgentStats) Reset() {
 	*x = AgentStats{}
-	mi := &file_asterism_v1_agent_proto_msgTypes[12]
+	mi := &file_asterism_v1_agent_proto_msgTypes[14]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1292,7 +1476,7 @@ func (x *AgentStats) String() string {
 func (*AgentStats) ProtoMessage() {}
 
 func (x *AgentStats) ProtoReflect() protoreflect.Message {
-	mi := &file_asterism_v1_agent_proto_msgTypes[12]
+	mi := &file_asterism_v1_agent_proto_msgTypes[14]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1305,7 +1489,7 @@ func (x *AgentStats) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use AgentStats.ProtoReflect.Descriptor instead.
 func (*AgentStats) Descriptor() ([]byte, []int) {
-	return file_asterism_v1_agent_proto_rawDescGZIP(), []int{12}
+	return file_asterism_v1_agent_proto_rawDescGZIP(), []int{14}
 }
 
 func (x *AgentStats) GetRssBytes() uint64 {
@@ -1404,6 +1588,7 @@ type HubFrame struct {
 	//	*HubFrame_LogCancel
 	//	*HubFrame_Command
 	//	*HubFrame_Ping
+	//	*HubFrame_IconRequest
 	Payload       isHubFrame_Payload `protobuf_oneof:"payload"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
@@ -1411,7 +1596,7 @@ type HubFrame struct {
 
 func (x *HubFrame) Reset() {
 	*x = HubFrame{}
-	mi := &file_asterism_v1_agent_proto_msgTypes[13]
+	mi := &file_asterism_v1_agent_proto_msgTypes[15]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1423,7 +1608,7 @@ func (x *HubFrame) String() string {
 func (*HubFrame) ProtoMessage() {}
 
 func (x *HubFrame) ProtoReflect() protoreflect.Message {
-	mi := &file_asterism_v1_agent_proto_msgTypes[13]
+	mi := &file_asterism_v1_agent_proto_msgTypes[15]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1436,7 +1621,7 @@ func (x *HubFrame) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use HubFrame.ProtoReflect.Descriptor instead.
 func (*HubFrame) Descriptor() ([]byte, []int) {
-	return file_asterism_v1_agent_proto_rawDescGZIP(), []int{13}
+	return file_asterism_v1_agent_proto_rawDescGZIP(), []int{15}
 }
 
 func (x *HubFrame) GetPayload() isHubFrame_Payload {
@@ -1518,6 +1703,15 @@ func (x *HubFrame) GetPing() *Heartbeat {
 	return nil
 }
 
+func (x *HubFrame) GetIconRequest() *IconRequest {
+	if x != nil {
+		if x, ok := x.Payload.(*HubFrame_IconRequest); ok {
+			return x.IconRequest
+		}
+	}
+	return nil
+}
+
 type isHubFrame_Payload interface {
 	isHubFrame_Payload()
 }
@@ -1554,6 +1748,10 @@ type HubFrame_Ping struct {
 	Ping *Heartbeat `protobuf:"bytes,8,opt,name=ping,proto3,oneof"`
 }
 
+type HubFrame_IconRequest struct {
+	IconRequest *IconRequest `protobuf:"bytes,9,opt,name=icon_request,json=iconRequest,proto3,oneof"`
+}
+
 func (*HubFrame_HelloAck) isHubFrame_Payload() {}
 
 func (*HubFrame_Ack) isHubFrame_Payload() {}
@@ -1569,6 +1767,61 @@ func (*HubFrame_LogCancel) isHubFrame_Payload() {}
 func (*HubFrame_Command) isHubFrame_Payload() {}
 
 func (*HubFrame_Ping) isHubFrame_Payload() {}
+
+func (*HubFrame_IconRequest) isHubFrame_Payload() {}
+
+// Asks the agent for the bytes of a ProjectIconRef it reported.
+type IconRequest struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	RequestId     string                 `protobuf:"bytes,1,opt,name=request_id,json=requestId,proto3" json:"request_id,omitempty"`
+	Sha256        string                 `protobuf:"bytes,2,opt,name=sha256,proto3" json:"sha256,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *IconRequest) Reset() {
+	*x = IconRequest{}
+	mi := &file_asterism_v1_agent_proto_msgTypes[16]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *IconRequest) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*IconRequest) ProtoMessage() {}
+
+func (x *IconRequest) ProtoReflect() protoreflect.Message {
+	mi := &file_asterism_v1_agent_proto_msgTypes[16]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use IconRequest.ProtoReflect.Descriptor instead.
+func (*IconRequest) Descriptor() ([]byte, []int) {
+	return file_asterism_v1_agent_proto_rawDescGZIP(), []int{16}
+}
+
+func (x *IconRequest) GetRequestId() string {
+	if x != nil {
+		return x.RequestId
+	}
+	return ""
+}
+
+func (x *IconRequest) GetSha256() string {
+	if x != nil {
+		return x.Sha256
+	}
+	return ""
+}
 
 type HelloAck struct {
 	state        protoimpl.MessageState `protogen:"open.v1"`
@@ -1587,7 +1840,7 @@ type HelloAck struct {
 
 func (x *HelloAck) Reset() {
 	*x = HelloAck{}
-	mi := &file_asterism_v1_agent_proto_msgTypes[14]
+	mi := &file_asterism_v1_agent_proto_msgTypes[17]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1599,7 +1852,7 @@ func (x *HelloAck) String() string {
 func (*HelloAck) ProtoMessage() {}
 
 func (x *HelloAck) ProtoReflect() protoreflect.Message {
-	mi := &file_asterism_v1_agent_proto_msgTypes[14]
+	mi := &file_asterism_v1_agent_proto_msgTypes[17]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1612,7 +1865,7 @@ func (x *HelloAck) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use HelloAck.ProtoReflect.Descriptor instead.
 func (*HelloAck) Descriptor() ([]byte, []int) {
-	return file_asterism_v1_agent_proto_rawDescGZIP(), []int{14}
+	return file_asterism_v1_agent_proto_rawDescGZIP(), []int{17}
 }
 
 func (x *HelloAck) GetHostId() string {
@@ -1666,7 +1919,7 @@ type Ack struct {
 
 func (x *Ack) Reset() {
 	*x = Ack{}
-	mi := &file_asterism_v1_agent_proto_msgTypes[15]
+	mi := &file_asterism_v1_agent_proto_msgTypes[18]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1678,7 +1931,7 @@ func (x *Ack) String() string {
 func (*Ack) ProtoMessage() {}
 
 func (x *Ack) ProtoReflect() protoreflect.Message {
-	mi := &file_asterism_v1_agent_proto_msgTypes[15]
+	mi := &file_asterism_v1_agent_proto_msgTypes[18]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1691,7 +1944,7 @@ func (x *Ack) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use Ack.ProtoReflect.Descriptor instead.
 func (*Ack) Descriptor() ([]byte, []int) {
-	return file_asterism_v1_agent_proto_rawDescGZIP(), []int{15}
+	return file_asterism_v1_agent_proto_rawDescGZIP(), []int{18}
 }
 
 func (x *Ack) GetUptoSeq() uint64 {
@@ -1716,7 +1969,7 @@ type AgentHints struct {
 
 func (x *AgentHints) Reset() {
 	*x = AgentHints{}
-	mi := &file_asterism_v1_agent_proto_msgTypes[16]
+	mi := &file_asterism_v1_agent_proto_msgTypes[19]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1728,7 +1981,7 @@ func (x *AgentHints) String() string {
 func (*AgentHints) ProtoMessage() {}
 
 func (x *AgentHints) ProtoReflect() protoreflect.Message {
-	mi := &file_asterism_v1_agent_proto_msgTypes[16]
+	mi := &file_asterism_v1_agent_proto_msgTypes[19]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1741,7 +1994,7 @@ func (x *AgentHints) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use AgentHints.ProtoReflect.Descriptor instead.
 func (*AgentHints) Descriptor() ([]byte, []int) {
-	return file_asterism_v1_agent_proto_rawDescGZIP(), []int{16}
+	return file_asterism_v1_agent_proto_rawDescGZIP(), []int{19}
 }
 
 func (x *AgentHints) GetLiveViewers() bool {
@@ -1788,7 +2041,7 @@ type ResyncRequest struct {
 
 func (x *ResyncRequest) Reset() {
 	*x = ResyncRequest{}
-	mi := &file_asterism_v1_agent_proto_msgTypes[17]
+	mi := &file_asterism_v1_agent_proto_msgTypes[20]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1800,7 +2053,7 @@ func (x *ResyncRequest) String() string {
 func (*ResyncRequest) ProtoMessage() {}
 
 func (x *ResyncRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_asterism_v1_agent_proto_msgTypes[17]
+	mi := &file_asterism_v1_agent_proto_msgTypes[20]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1813,7 +2066,7 @@ func (x *ResyncRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ResyncRequest.ProtoReflect.Descriptor instead.
 func (*ResyncRequest) Descriptor() ([]byte, []int) {
-	return file_asterism_v1_agent_proto_rawDescGZIP(), []int{17}
+	return file_asterism_v1_agent_proto_rawDescGZIP(), []int{20}
 }
 
 func (x *ResyncRequest) GetReason() string {
@@ -1840,7 +2093,7 @@ type LogRequest struct {
 
 func (x *LogRequest) Reset() {
 	*x = LogRequest{}
-	mi := &file_asterism_v1_agent_proto_msgTypes[18]
+	mi := &file_asterism_v1_agent_proto_msgTypes[21]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1852,7 +2105,7 @@ func (x *LogRequest) String() string {
 func (*LogRequest) ProtoMessage() {}
 
 func (x *LogRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_asterism_v1_agent_proto_msgTypes[18]
+	mi := &file_asterism_v1_agent_proto_msgTypes[21]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1865,7 +2118,7 @@ func (x *LogRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use LogRequest.ProtoReflect.Descriptor instead.
 func (*LogRequest) Descriptor() ([]byte, []int) {
-	return file_asterism_v1_agent_proto_rawDescGZIP(), []int{18}
+	return file_asterism_v1_agent_proto_rawDescGZIP(), []int{21}
 }
 
 func (x *LogRequest) GetRequestId() string {
@@ -1926,7 +2179,7 @@ type LogCancel struct {
 
 func (x *LogCancel) Reset() {
 	*x = LogCancel{}
-	mi := &file_asterism_v1_agent_proto_msgTypes[19]
+	mi := &file_asterism_v1_agent_proto_msgTypes[22]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1938,7 +2191,7 @@ func (x *LogCancel) String() string {
 func (*LogCancel) ProtoMessage() {}
 
 func (x *LogCancel) ProtoReflect() protoreflect.Message {
-	mi := &file_asterism_v1_agent_proto_msgTypes[19]
+	mi := &file_asterism_v1_agent_proto_msgTypes[22]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1951,7 +2204,7 @@ func (x *LogCancel) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use LogCancel.ProtoReflect.Descriptor instead.
 func (*LogCancel) Descriptor() ([]byte, []int) {
-	return file_asterism_v1_agent_proto_rawDescGZIP(), []int{19}
+	return file_asterism_v1_agent_proto_rawDescGZIP(), []int{22}
 }
 
 func (x *LogCancel) GetRequestId() string {
@@ -1978,7 +2231,7 @@ type CommandRequest struct {
 
 func (x *CommandRequest) Reset() {
 	*x = CommandRequest{}
-	mi := &file_asterism_v1_agent_proto_msgTypes[20]
+	mi := &file_asterism_v1_agent_proto_msgTypes[23]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1990,7 +2243,7 @@ func (x *CommandRequest) String() string {
 func (*CommandRequest) ProtoMessage() {}
 
 func (x *CommandRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_asterism_v1_agent_proto_msgTypes[20]
+	mi := &file_asterism_v1_agent_proto_msgTypes[23]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -2003,7 +2256,7 @@ func (x *CommandRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use CommandRequest.ProtoReflect.Descriptor instead.
 func (*CommandRequest) Descriptor() ([]byte, []int) {
-	return file_asterism_v1_agent_proto_rawDescGZIP(), []int{20}
+	return file_asterism_v1_agent_proto_rawDescGZIP(), []int{23}
 }
 
 func (x *CommandRequest) GetRequestId() string {
@@ -2058,7 +2311,7 @@ type PushRequest struct {
 
 func (x *PushRequest) Reset() {
 	*x = PushRequest{}
-	mi := &file_asterism_v1_agent_proto_msgTypes[21]
+	mi := &file_asterism_v1_agent_proto_msgTypes[24]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -2070,7 +2323,7 @@ func (x *PushRequest) String() string {
 func (*PushRequest) ProtoMessage() {}
 
 func (x *PushRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_asterism_v1_agent_proto_msgTypes[21]
+	mi := &file_asterism_v1_agent_proto_msgTypes[24]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -2083,7 +2336,7 @@ func (x *PushRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use PushRequest.ProtoReflect.Descriptor instead.
 func (*PushRequest) Descriptor() ([]byte, []int) {
-	return file_asterism_v1_agent_proto_rawDescGZIP(), []int{21}
+	return file_asterism_v1_agent_proto_rawDescGZIP(), []int{24}
 }
 
 func (x *PushRequest) GetSessionId() string {
@@ -2111,7 +2364,7 @@ type PushResponse struct {
 
 func (x *PushResponse) Reset() {
 	*x = PushResponse{}
-	mi := &file_asterism_v1_agent_proto_msgTypes[22]
+	mi := &file_asterism_v1_agent_proto_msgTypes[25]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -2123,7 +2376,7 @@ func (x *PushResponse) String() string {
 func (*PushResponse) ProtoMessage() {}
 
 func (x *PushResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_asterism_v1_agent_proto_msgTypes[22]
+	mi := &file_asterism_v1_agent_proto_msgTypes[25]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -2136,7 +2389,7 @@ func (x *PushResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use PushResponse.ProtoReflect.Descriptor instead.
 func (*PushResponse) Descriptor() ([]byte, []int) {
-	return file_asterism_v1_agent_proto_rawDescGZIP(), []int{22}
+	return file_asterism_v1_agent_proto_rawDescGZIP(), []int{25}
 }
 
 func (x *PushResponse) GetAckedSeq() uint64 {
@@ -2162,7 +2415,7 @@ type CommandsRequest struct {
 
 func (x *CommandsRequest) Reset() {
 	*x = CommandsRequest{}
-	mi := &file_asterism_v1_agent_proto_msgTypes[23]
+	mi := &file_asterism_v1_agent_proto_msgTypes[26]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -2174,7 +2427,7 @@ func (x *CommandsRequest) String() string {
 func (*CommandsRequest) ProtoMessage() {}
 
 func (x *CommandsRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_asterism_v1_agent_proto_msgTypes[23]
+	mi := &file_asterism_v1_agent_proto_msgTypes[26]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -2187,7 +2440,7 @@ func (x *CommandsRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use CommandsRequest.ProtoReflect.Descriptor instead.
 func (*CommandsRequest) Descriptor() ([]byte, []int) {
-	return file_asterism_v1_agent_proto_rawDescGZIP(), []int{23}
+	return file_asterism_v1_agent_proto_rawDescGZIP(), []int{26}
 }
 
 func (x *CommandsRequest) GetSessionId() string {
@@ -2205,7 +2458,7 @@ type ListAgentsRequest struct {
 
 func (x *ListAgentsRequest) Reset() {
 	*x = ListAgentsRequest{}
-	mi := &file_asterism_v1_agent_proto_msgTypes[24]
+	mi := &file_asterism_v1_agent_proto_msgTypes[27]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -2217,7 +2470,7 @@ func (x *ListAgentsRequest) String() string {
 func (*ListAgentsRequest) ProtoMessage() {}
 
 func (x *ListAgentsRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_asterism_v1_agent_proto_msgTypes[24]
+	mi := &file_asterism_v1_agent_proto_msgTypes[27]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -2230,7 +2483,7 @@ func (x *ListAgentsRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ListAgentsRequest.ProtoReflect.Descriptor instead.
 func (*ListAgentsRequest) Descriptor() ([]byte, []int) {
-	return file_asterism_v1_agent_proto_rawDescGZIP(), []int{24}
+	return file_asterism_v1_agent_proto_rawDescGZIP(), []int{27}
 }
 
 type ListAgentsResponse struct {
@@ -2243,7 +2496,7 @@ type ListAgentsResponse struct {
 
 func (x *ListAgentsResponse) Reset() {
 	*x = ListAgentsResponse{}
-	mi := &file_asterism_v1_agent_proto_msgTypes[25]
+	mi := &file_asterism_v1_agent_proto_msgTypes[28]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -2255,7 +2508,7 @@ func (x *ListAgentsResponse) String() string {
 func (*ListAgentsResponse) ProtoMessage() {}
 
 func (x *ListAgentsResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_asterism_v1_agent_proto_msgTypes[25]
+	mi := &file_asterism_v1_agent_proto_msgTypes[28]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -2268,7 +2521,7 @@ func (x *ListAgentsResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ListAgentsResponse.ProtoReflect.Descriptor instead.
 func (*ListAgentsResponse) Descriptor() ([]byte, []int) {
-	return file_asterism_v1_agent_proto_rawDescGZIP(), []int{25}
+	return file_asterism_v1_agent_proto_rawDescGZIP(), []int{28}
 }
 
 func (x *ListAgentsResponse) GetAgents() []*AgentStatus {
@@ -2317,7 +2570,7 @@ type AgentStatus struct {
 
 func (x *AgentStatus) Reset() {
 	*x = AgentStatus{}
-	mi := &file_asterism_v1_agent_proto_msgTypes[26]
+	mi := &file_asterism_v1_agent_proto_msgTypes[29]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -2329,7 +2582,7 @@ func (x *AgentStatus) String() string {
 func (*AgentStatus) ProtoMessage() {}
 
 func (x *AgentStatus) ProtoReflect() protoreflect.Message {
-	mi := &file_asterism_v1_agent_proto_msgTypes[26]
+	mi := &file_asterism_v1_agent_proto_msgTypes[29]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -2342,7 +2595,7 @@ func (x *AgentStatus) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use AgentStatus.ProtoReflect.Descriptor instead.
 func (*AgentStatus) Descriptor() ([]byte, []int) {
-	return file_asterism_v1_agent_proto_rawDescGZIP(), []int{26}
+	return file_asterism_v1_agent_proto_rawDescGZIP(), []int{29}
 }
 
 func (x *AgentStatus) GetHostId() string {
@@ -2482,7 +2735,7 @@ var File_asterism_v1_agent_proto protoreflect.FileDescriptor
 
 const file_asterism_v1_agent_proto_rawDesc = "" +
 	"\n" +
-	"\x17asterism/v1/agent.proto\x12\vasterism.v1\x1a\x1aasterism/v1/asterism.proto\"\x8e\x04\n" +
+	"\x17asterism/v1/agent.proto\x12\vasterism.v1\x1a\x1aasterism/v1/asterism.proto\"\xc4\x04\n" +
 	"\n" +
 	"AgentFrame\x12\x10\n" +
 	"\x03seq\x18\x01 \x01(\x04R\x03seq\x12\x1c\n" +
@@ -2496,7 +2749,8 @@ const file_asterism_v1_agent_proto_rawDesc = "" +
 	"\x06events\x18\x0e \x01(\v2\x18.asterism.v1.AgentEventsH\x00R\x06events\x124\n" +
 	"\tlog_chunk\x18\x0f \x01(\v2\x15.asterism.v1.LogChunkH\x00R\blogChunk\x12C\n" +
 	"\x0ecommand_result\x18\x10 \x01(\v2\x1a.asterism.v1.CommandResultH\x00R\rcommandResult\x12;\n" +
-	"\theartbeat\x18\x11 \x01(\v2\x1b.asterism.v1.AgentHeartbeatH\x00R\theartbeatB\t\n" +
+	"\theartbeat\x18\x11 \x01(\v2\x1b.asterism.v1.AgentHeartbeatH\x00R\theartbeat\x124\n" +
+	"\ticon_data\x18\x12 \x01(\v2\x15.asterism.v1.IconDataH\x00R\biconDataB\t\n" +
 	"\apayload\"\x9c\x04\n" +
 	"\n" +
 	"AgentHello\x12)\n" +
@@ -2524,7 +2778,7 @@ const file_asterism_v1_agent_proto_rawDesc = "" +
 	"\x04rows\x18\x03 \x03(\v2\x18.asterism.v1.MetricBatchR\x04rows\x12\x1d\n" +
 	"\n" +
 	"row_groups\x18\x04 \x03(\rR\trowGroups\x12#\n" +
-	"\rkeyframe_rows\x18\x05 \x03(\rR\fkeyframeRows\"\xbe\x05\n" +
+	"\rkeyframe_rows\x18\x05 \x03(\rR\fkeyframeRows\"\x80\x06\n" +
 	"\x11InventorySnapshot\x12\x18\n" +
 	"\aversion\x18\x01 \x01(\x04R\aversion\x12)\n" +
 	"\x04host\x18\x02 \x01(\v2\x15.asterism.v1.HostInfoR\x04host\x121\n" +
@@ -2542,7 +2796,8 @@ const file_asterism_v1_agent_proto_rawDesc = "" +
 	" \x03(\v2\x18.asterism.v1.PortBindingR\tlisteners\x121\n" +
 	"\x06routes\x18\v \x03(\v2\x19.asterism.v1.IngressRouteR\x06routes\x12=\n" +
 	"\rproject_rules\x18\f \x03(\v2\x18.asterism.v1.ProjectRuleR\fprojectRules\x12>\n" +
-	"\vfilesystems\x18\r \x03(\v2\x1c.asterism.v1.FilesystemUsageR\vfilesystems\"\xed\x02\n" +
+	"\vfilesystems\x18\r \x03(\v2\x1c.asterism.v1.FilesystemUsageR\vfilesystems\x12@\n" +
+	"\rproject_icons\x18\x0e \x03(\v2\x1b.asterism.v1.ProjectIconRefR\fprojectIcons\"\xed\x02\n" +
 	"\x0eInventoryDelta\x12!\n" +
 	"\fbase_version\x18\x01 \x01(\x04R\vbaseVersion\x12\x18\n" +
 	"\aversion\x18\x02 \x01(\x04R\aversion\x12C\n" +
@@ -2550,7 +2805,7 @@ const file_asterism_v1_agent_proto_rawDesc = "" +
 	"\x15removed_container_ids\x18\x04 \x03(\tR\x13removedContainerIds\x12@\n" +
 	"\x10upsert_workloads\x18\x05 \x03(\v2\x15.asterism.v1.WorkloadR\x0fupsertWorkloads\x120\n" +
 	"\x14removed_workload_ids\x18\x06 \x03(\tR\x12removedWorkloadIds\x121\n" +
-	"\areplace\x18\a \x01(\v2\x17.asterism.v1.ReplaceSetR\areplace\"\xac\x06\n" +
+	"\areplace\x18\a \x01(\v2\x17.asterism.v1.ReplaceSetR\areplace\"\x9a\a\n" +
 	"\n" +
 	"ReplaceSet\x12)\n" +
 	"\x04host\x18\x01 \x01(\v2\x15.asterism.v1.HostInfoR\x04host\x121\n" +
@@ -2574,7 +2829,22 @@ const file_asterism_v1_agent_proto_rawDesc = "" +
 	"\rproject_rules\x18\x0e \x03(\v2\x18.asterism.v1.ProjectRuleR\fprojectRules\x12*\n" +
 	"\x11project_rules_set\x18\x0f \x01(\bR\x0fprojectRulesSet\x12>\n" +
 	"\vfilesystems\x18\x10 \x03(\v2\x1c.asterism.v1.FilesystemUsageR\vfilesystems\x12'\n" +
-	"\x0ffilesystems_set\x18\x11 \x01(\bR\x0efilesystemsSet\"\x86\x01\n" +
+	"\x0ffilesystems_set\x18\x11 \x01(\bR\x0efilesystemsSet\x12@\n" +
+	"\rproject_icons\x18\x12 \x03(\v2\x1b.asterism.v1.ProjectIconRefR\fprojectIcons\x12*\n" +
+	"\x11project_icons_set\x18\x13 \x01(\bR\x0fprojectIconsSet\"\x83\x01\n" +
+	"\x0eProjectIconRef\x12\x1f\n" +
+	"\vworking_dir\x18\x01 \x01(\tR\n" +
+	"workingDir\x12\x19\n" +
+	"\brel_path\x18\x02 \x01(\tR\arelPath\x12\x16\n" +
+	"\x06sha256\x18\x03 \x01(\tR\x06sha256\x12\x1d\n" +
+	"\n" +
+	"size_bytes\x18\x04 \x01(\rR\tsizeBytes\"k\n" +
+	"\bIconData\x12\x1d\n" +
+	"\n" +
+	"request_id\x18\x01 \x01(\tR\trequestId\x12\x16\n" +
+	"\x06sha256\x18\x02 \x01(\tR\x06sha256\x12\x12\n" +
+	"\x04data\x18\x03 \x01(\fR\x04data\x12\x14\n" +
+	"\x05error\x18\x04 \x01(\tR\x05error\"\x86\x01\n" +
 	"\vProjectRule\x12\x12\n" +
 	"\x04name\x18\x01 \x01(\tR\x04name\x12\x1a\n" +
 	"\bcategory\x18\x02 \x01(\tR\bcategory\x12\x12\n" +
@@ -2632,7 +2902,7 @@ const file_asterism_v1_agent_proto_rawDesc = "" +
 	"\ttransport\x18\f \x01(\tR\ttransport\x1aB\n" +
 	"\x14CollectorErrorsEntry\x12\x10\n" +
 	"\x03key\x18\x01 \x01(\tR\x03key\x12\x14\n" +
-	"\x05value\x18\x02 \x01(\rR\x05value:\x028\x01\"\xb4\x03\n" +
+	"\x05value\x18\x02 \x01(\rR\x05value:\x028\x01\"\xf3\x03\n" +
 	"\bHubFrame\x124\n" +
 	"\thello_ack\x18\x01 \x01(\v2\x15.asterism.v1.HelloAckH\x00R\bhelloAck\x12$\n" +
 	"\x03ack\x18\x02 \x01(\v2\x10.asterism.v1.AckH\x00R\x03ack\x12/\n" +
@@ -2643,8 +2913,13 @@ const file_asterism_v1_agent_proto_rawDesc = "" +
 	"\n" +
 	"log_cancel\x18\x06 \x01(\v2\x16.asterism.v1.LogCancelH\x00R\tlogCancel\x127\n" +
 	"\acommand\x18\a \x01(\v2\x1b.asterism.v1.CommandRequestH\x00R\acommand\x12,\n" +
-	"\x04ping\x18\b \x01(\v2\x16.asterism.v1.HeartbeatH\x00R\x04pingB\t\n" +
-	"\apayload\"\xe9\x01\n" +
+	"\x04ping\x18\b \x01(\v2\x16.asterism.v1.HeartbeatH\x00R\x04ping\x12=\n" +
+	"\ficon_request\x18\t \x01(\v2\x18.asterism.v1.IconRequestH\x00R\viconRequestB\t\n" +
+	"\apayload\"D\n" +
+	"\vIconRequest\x12\x1d\n" +
+	"\n" +
+	"request_id\x18\x01 \x01(\tR\trequestId\x12\x16\n" +
+	"\x06sha256\x18\x02 \x01(\tR\x06sha256\"\xe9\x01\n" +
 	"\bHelloAck\x12\x17\n" +
 	"\ahost_id\x18\x01 \x01(\tR\x06hostId\x12\x1f\n" +
 	"\vhub_version\x18\x02 \x01(\tR\n" +
@@ -2749,7 +3024,7 @@ func file_asterism_v1_agent_proto_rawDescGZIP() []byte {
 	return file_asterism_v1_agent_proto_rawDescData
 }
 
-var file_asterism_v1_agent_proto_msgTypes = make([]protoimpl.MessageInfo, 29)
+var file_asterism_v1_agent_proto_msgTypes = make([]protoimpl.MessageInfo, 32)
 var file_asterism_v1_agent_proto_goTypes = []any{
 	(*AgentFrame)(nil),         // 0: asterism.v1.AgentFrame
 	(*AgentHello)(nil),         // 1: asterism.v1.AgentHello
@@ -2757,118 +3032,125 @@ var file_asterism_v1_agent_proto_goTypes = []any{
 	(*InventorySnapshot)(nil),  // 3: asterism.v1.InventorySnapshot
 	(*InventoryDelta)(nil),     // 4: asterism.v1.InventoryDelta
 	(*ReplaceSet)(nil),         // 5: asterism.v1.ReplaceSet
-	(*ProjectRule)(nil),        // 6: asterism.v1.ProjectRule
-	(*FilesystemUsage)(nil),    // 7: asterism.v1.FilesystemUsage
-	(*AgentEvents)(nil),        // 8: asterism.v1.AgentEvents
-	(*LogChunk)(nil),           // 9: asterism.v1.LogChunk
-	(*CommandResult)(nil),      // 10: asterism.v1.CommandResult
-	(*AgentHeartbeat)(nil),     // 11: asterism.v1.AgentHeartbeat
-	(*AgentStats)(nil),         // 12: asterism.v1.AgentStats
-	(*HubFrame)(nil),           // 13: asterism.v1.HubFrame
-	(*HelloAck)(nil),           // 14: asterism.v1.HelloAck
-	(*Ack)(nil),                // 15: asterism.v1.Ack
-	(*AgentHints)(nil),         // 16: asterism.v1.AgentHints
-	(*ResyncRequest)(nil),      // 17: asterism.v1.ResyncRequest
-	(*LogRequest)(nil),         // 18: asterism.v1.LogRequest
-	(*LogCancel)(nil),          // 19: asterism.v1.LogCancel
-	(*CommandRequest)(nil),     // 20: asterism.v1.CommandRequest
-	(*PushRequest)(nil),        // 21: asterism.v1.PushRequest
-	(*PushResponse)(nil),       // 22: asterism.v1.PushResponse
-	(*CommandsRequest)(nil),    // 23: asterism.v1.CommandsRequest
-	(*ListAgentsRequest)(nil),  // 24: asterism.v1.ListAgentsRequest
-	(*ListAgentsResponse)(nil), // 25: asterism.v1.ListAgentsResponse
-	(*AgentStatus)(nil),        // 26: asterism.v1.AgentStatus
-	nil,                        // 27: asterism.v1.AgentHello.LabelsEntry
-	nil,                        // 28: asterism.v1.AgentStats.CollectorErrorsEntry
-	(*HostInfo)(nil),           // 29: asterism.v1.HostInfo
-	(ContainerAction)(0),       // 30: asterism.v1.ContainerAction
-	(*SeriesEntry)(nil),        // 31: asterism.v1.SeriesEntry
-	(*MetricBatch)(nil),        // 32: asterism.v1.MetricBatch
-	(*DockerEngine)(nil),       // 33: asterism.v1.DockerEngine
-	(*Container)(nil),          // 34: asterism.v1.Container
-	(*DockerImage)(nil),        // 35: asterism.v1.DockerImage
-	(*DockerVolume)(nil),       // 36: asterism.v1.DockerVolume
-	(*DockerNetwork)(nil),      // 37: asterism.v1.DockerNetwork
-	(*DockerDiskUsage)(nil),    // 38: asterism.v1.DockerDiskUsage
-	(*Workload)(nil),           // 39: asterism.v1.Workload
-	(*PortBinding)(nil),        // 40: asterism.v1.PortBinding
-	(*IngressRoute)(nil),       // 41: asterism.v1.IngressRoute
-	(*Event)(nil),              // 42: asterism.v1.Event
-	(*LogLine)(nil),            // 43: asterism.v1.LogLine
-	(*Heartbeat)(nil),          // 44: asterism.v1.Heartbeat
+	(*ProjectIconRef)(nil),     // 6: asterism.v1.ProjectIconRef
+	(*IconData)(nil),           // 7: asterism.v1.IconData
+	(*ProjectRule)(nil),        // 8: asterism.v1.ProjectRule
+	(*FilesystemUsage)(nil),    // 9: asterism.v1.FilesystemUsage
+	(*AgentEvents)(nil),        // 10: asterism.v1.AgentEvents
+	(*LogChunk)(nil),           // 11: asterism.v1.LogChunk
+	(*CommandResult)(nil),      // 12: asterism.v1.CommandResult
+	(*AgentHeartbeat)(nil),     // 13: asterism.v1.AgentHeartbeat
+	(*AgentStats)(nil),         // 14: asterism.v1.AgentStats
+	(*HubFrame)(nil),           // 15: asterism.v1.HubFrame
+	(*IconRequest)(nil),        // 16: asterism.v1.IconRequest
+	(*HelloAck)(nil),           // 17: asterism.v1.HelloAck
+	(*Ack)(nil),                // 18: asterism.v1.Ack
+	(*AgentHints)(nil),         // 19: asterism.v1.AgentHints
+	(*ResyncRequest)(nil),      // 20: asterism.v1.ResyncRequest
+	(*LogRequest)(nil),         // 21: asterism.v1.LogRequest
+	(*LogCancel)(nil),          // 22: asterism.v1.LogCancel
+	(*CommandRequest)(nil),     // 23: asterism.v1.CommandRequest
+	(*PushRequest)(nil),        // 24: asterism.v1.PushRequest
+	(*PushResponse)(nil),       // 25: asterism.v1.PushResponse
+	(*CommandsRequest)(nil),    // 26: asterism.v1.CommandsRequest
+	(*ListAgentsRequest)(nil),  // 27: asterism.v1.ListAgentsRequest
+	(*ListAgentsResponse)(nil), // 28: asterism.v1.ListAgentsResponse
+	(*AgentStatus)(nil),        // 29: asterism.v1.AgentStatus
+	nil,                        // 30: asterism.v1.AgentHello.LabelsEntry
+	nil,                        // 31: asterism.v1.AgentStats.CollectorErrorsEntry
+	(*HostInfo)(nil),           // 32: asterism.v1.HostInfo
+	(ContainerAction)(0),       // 33: asterism.v1.ContainerAction
+	(*SeriesEntry)(nil),        // 34: asterism.v1.SeriesEntry
+	(*MetricBatch)(nil),        // 35: asterism.v1.MetricBatch
+	(*DockerEngine)(nil),       // 36: asterism.v1.DockerEngine
+	(*Container)(nil),          // 37: asterism.v1.Container
+	(*DockerImage)(nil),        // 38: asterism.v1.DockerImage
+	(*DockerVolume)(nil),       // 39: asterism.v1.DockerVolume
+	(*DockerNetwork)(nil),      // 40: asterism.v1.DockerNetwork
+	(*DockerDiskUsage)(nil),    // 41: asterism.v1.DockerDiskUsage
+	(*Workload)(nil),           // 42: asterism.v1.Workload
+	(*PortBinding)(nil),        // 43: asterism.v1.PortBinding
+	(*IngressRoute)(nil),       // 44: asterism.v1.IngressRoute
+	(*Event)(nil),              // 45: asterism.v1.Event
+	(*LogLine)(nil),            // 46: asterism.v1.LogLine
+	(*Heartbeat)(nil),          // 47: asterism.v1.Heartbeat
 }
 var file_asterism_v1_agent_proto_depIdxs = []int32{
 	1,  // 0: asterism.v1.AgentFrame.hello:type_name -> asterism.v1.AgentHello
 	2,  // 1: asterism.v1.AgentFrame.metrics:type_name -> asterism.v1.AgentMetrics
 	3,  // 2: asterism.v1.AgentFrame.snapshot:type_name -> asterism.v1.InventorySnapshot
 	4,  // 3: asterism.v1.AgentFrame.delta:type_name -> asterism.v1.InventoryDelta
-	8,  // 4: asterism.v1.AgentFrame.events:type_name -> asterism.v1.AgentEvents
-	9,  // 5: asterism.v1.AgentFrame.log_chunk:type_name -> asterism.v1.LogChunk
-	10, // 6: asterism.v1.AgentFrame.command_result:type_name -> asterism.v1.CommandResult
-	11, // 7: asterism.v1.AgentFrame.heartbeat:type_name -> asterism.v1.AgentHeartbeat
-	29, // 8: asterism.v1.AgentHello.host:type_name -> asterism.v1.HostInfo
-	27, // 9: asterism.v1.AgentHello.labels:type_name -> asterism.v1.AgentHello.LabelsEntry
-	30, // 10: asterism.v1.AgentHello.allowed_actions:type_name -> asterism.v1.ContainerAction
-	31, // 11: asterism.v1.AgentMetrics.dict:type_name -> asterism.v1.SeriesEntry
-	32, // 12: asterism.v1.AgentMetrics.rows:type_name -> asterism.v1.MetricBatch
-	29, // 13: asterism.v1.InventorySnapshot.host:type_name -> asterism.v1.HostInfo
-	33, // 14: asterism.v1.InventorySnapshot.engine:type_name -> asterism.v1.DockerEngine
-	34, // 15: asterism.v1.InventorySnapshot.containers:type_name -> asterism.v1.Container
-	35, // 16: asterism.v1.InventorySnapshot.images:type_name -> asterism.v1.DockerImage
-	36, // 17: asterism.v1.InventorySnapshot.volumes:type_name -> asterism.v1.DockerVolume
-	37, // 18: asterism.v1.InventorySnapshot.networks:type_name -> asterism.v1.DockerNetwork
-	38, // 19: asterism.v1.InventorySnapshot.disk_usage:type_name -> asterism.v1.DockerDiskUsage
-	39, // 20: asterism.v1.InventorySnapshot.workloads:type_name -> asterism.v1.Workload
-	40, // 21: asterism.v1.InventorySnapshot.listeners:type_name -> asterism.v1.PortBinding
-	41, // 22: asterism.v1.InventorySnapshot.routes:type_name -> asterism.v1.IngressRoute
-	6,  // 23: asterism.v1.InventorySnapshot.project_rules:type_name -> asterism.v1.ProjectRule
-	7,  // 24: asterism.v1.InventorySnapshot.filesystems:type_name -> asterism.v1.FilesystemUsage
-	34, // 25: asterism.v1.InventoryDelta.upsert_containers:type_name -> asterism.v1.Container
-	39, // 26: asterism.v1.InventoryDelta.upsert_workloads:type_name -> asterism.v1.Workload
-	5,  // 27: asterism.v1.InventoryDelta.replace:type_name -> asterism.v1.ReplaceSet
-	29, // 28: asterism.v1.ReplaceSet.host:type_name -> asterism.v1.HostInfo
-	33, // 29: asterism.v1.ReplaceSet.engine:type_name -> asterism.v1.DockerEngine
-	35, // 30: asterism.v1.ReplaceSet.images:type_name -> asterism.v1.DockerImage
-	36, // 31: asterism.v1.ReplaceSet.volumes:type_name -> asterism.v1.DockerVolume
-	37, // 32: asterism.v1.ReplaceSet.networks:type_name -> asterism.v1.DockerNetwork
-	38, // 33: asterism.v1.ReplaceSet.disk_usage:type_name -> asterism.v1.DockerDiskUsage
-	40, // 34: asterism.v1.ReplaceSet.listeners:type_name -> asterism.v1.PortBinding
-	41, // 35: asterism.v1.ReplaceSet.routes:type_name -> asterism.v1.IngressRoute
-	6,  // 36: asterism.v1.ReplaceSet.project_rules:type_name -> asterism.v1.ProjectRule
-	7,  // 37: asterism.v1.ReplaceSet.filesystems:type_name -> asterism.v1.FilesystemUsage
-	42, // 38: asterism.v1.AgentEvents.events:type_name -> asterism.v1.Event
-	43, // 39: asterism.v1.LogChunk.lines:type_name -> asterism.v1.LogLine
-	34, // 40: asterism.v1.CommandResult.container:type_name -> asterism.v1.Container
-	12, // 41: asterism.v1.AgentHeartbeat.stats:type_name -> asterism.v1.AgentStats
-	28, // 42: asterism.v1.AgentStats.collector_errors:type_name -> asterism.v1.AgentStats.CollectorErrorsEntry
-	14, // 43: asterism.v1.HubFrame.hello_ack:type_name -> asterism.v1.HelloAck
-	15, // 44: asterism.v1.HubFrame.ack:type_name -> asterism.v1.Ack
-	16, // 45: asterism.v1.HubFrame.hints:type_name -> asterism.v1.AgentHints
-	17, // 46: asterism.v1.HubFrame.resync:type_name -> asterism.v1.ResyncRequest
-	18, // 47: asterism.v1.HubFrame.log_request:type_name -> asterism.v1.LogRequest
-	19, // 48: asterism.v1.HubFrame.log_cancel:type_name -> asterism.v1.LogCancel
-	20, // 49: asterism.v1.HubFrame.command:type_name -> asterism.v1.CommandRequest
-	44, // 50: asterism.v1.HubFrame.ping:type_name -> asterism.v1.Heartbeat
-	16, // 51: asterism.v1.HelloAck.hints:type_name -> asterism.v1.AgentHints
-	30, // 52: asterism.v1.CommandRequest.action:type_name -> asterism.v1.ContainerAction
-	0,  // 53: asterism.v1.PushRequest.frames:type_name -> asterism.v1.AgentFrame
-	13, // 54: asterism.v1.PushResponse.frames:type_name -> asterism.v1.HubFrame
-	26, // 55: asterism.v1.ListAgentsResponse.agents:type_name -> asterism.v1.AgentStatus
-	12, // 56: asterism.v1.AgentStatus.stats:type_name -> asterism.v1.AgentStats
-	30, // 57: asterism.v1.AgentStatus.allowed_actions:type_name -> asterism.v1.ContainerAction
-	0,  // 58: asterism.v1.AgentService.Stream:input_type -> asterism.v1.AgentFrame
-	21, // 59: asterism.v1.AgentService.Push:input_type -> asterism.v1.PushRequest
-	23, // 60: asterism.v1.AgentService.Commands:input_type -> asterism.v1.CommandsRequest
-	24, // 61: asterism.v1.AgentAdminService.ListAgents:input_type -> asterism.v1.ListAgentsRequest
-	13, // 62: asterism.v1.AgentService.Stream:output_type -> asterism.v1.HubFrame
-	22, // 63: asterism.v1.AgentService.Push:output_type -> asterism.v1.PushResponse
-	13, // 64: asterism.v1.AgentService.Commands:output_type -> asterism.v1.HubFrame
-	25, // 65: asterism.v1.AgentAdminService.ListAgents:output_type -> asterism.v1.ListAgentsResponse
-	62, // [62:66] is the sub-list for method output_type
-	58, // [58:62] is the sub-list for method input_type
-	58, // [58:58] is the sub-list for extension type_name
-	58, // [58:58] is the sub-list for extension extendee
-	0,  // [0:58] is the sub-list for field type_name
+	10, // 4: asterism.v1.AgentFrame.events:type_name -> asterism.v1.AgentEvents
+	11, // 5: asterism.v1.AgentFrame.log_chunk:type_name -> asterism.v1.LogChunk
+	12, // 6: asterism.v1.AgentFrame.command_result:type_name -> asterism.v1.CommandResult
+	13, // 7: asterism.v1.AgentFrame.heartbeat:type_name -> asterism.v1.AgentHeartbeat
+	7,  // 8: asterism.v1.AgentFrame.icon_data:type_name -> asterism.v1.IconData
+	32, // 9: asterism.v1.AgentHello.host:type_name -> asterism.v1.HostInfo
+	30, // 10: asterism.v1.AgentHello.labels:type_name -> asterism.v1.AgentHello.LabelsEntry
+	33, // 11: asterism.v1.AgentHello.allowed_actions:type_name -> asterism.v1.ContainerAction
+	34, // 12: asterism.v1.AgentMetrics.dict:type_name -> asterism.v1.SeriesEntry
+	35, // 13: asterism.v1.AgentMetrics.rows:type_name -> asterism.v1.MetricBatch
+	32, // 14: asterism.v1.InventorySnapshot.host:type_name -> asterism.v1.HostInfo
+	36, // 15: asterism.v1.InventorySnapshot.engine:type_name -> asterism.v1.DockerEngine
+	37, // 16: asterism.v1.InventorySnapshot.containers:type_name -> asterism.v1.Container
+	38, // 17: asterism.v1.InventorySnapshot.images:type_name -> asterism.v1.DockerImage
+	39, // 18: asterism.v1.InventorySnapshot.volumes:type_name -> asterism.v1.DockerVolume
+	40, // 19: asterism.v1.InventorySnapshot.networks:type_name -> asterism.v1.DockerNetwork
+	41, // 20: asterism.v1.InventorySnapshot.disk_usage:type_name -> asterism.v1.DockerDiskUsage
+	42, // 21: asterism.v1.InventorySnapshot.workloads:type_name -> asterism.v1.Workload
+	43, // 22: asterism.v1.InventorySnapshot.listeners:type_name -> asterism.v1.PortBinding
+	44, // 23: asterism.v1.InventorySnapshot.routes:type_name -> asterism.v1.IngressRoute
+	8,  // 24: asterism.v1.InventorySnapshot.project_rules:type_name -> asterism.v1.ProjectRule
+	9,  // 25: asterism.v1.InventorySnapshot.filesystems:type_name -> asterism.v1.FilesystemUsage
+	6,  // 26: asterism.v1.InventorySnapshot.project_icons:type_name -> asterism.v1.ProjectIconRef
+	37, // 27: asterism.v1.InventoryDelta.upsert_containers:type_name -> asterism.v1.Container
+	42, // 28: asterism.v1.InventoryDelta.upsert_workloads:type_name -> asterism.v1.Workload
+	5,  // 29: asterism.v1.InventoryDelta.replace:type_name -> asterism.v1.ReplaceSet
+	32, // 30: asterism.v1.ReplaceSet.host:type_name -> asterism.v1.HostInfo
+	36, // 31: asterism.v1.ReplaceSet.engine:type_name -> asterism.v1.DockerEngine
+	38, // 32: asterism.v1.ReplaceSet.images:type_name -> asterism.v1.DockerImage
+	39, // 33: asterism.v1.ReplaceSet.volumes:type_name -> asterism.v1.DockerVolume
+	40, // 34: asterism.v1.ReplaceSet.networks:type_name -> asterism.v1.DockerNetwork
+	41, // 35: asterism.v1.ReplaceSet.disk_usage:type_name -> asterism.v1.DockerDiskUsage
+	43, // 36: asterism.v1.ReplaceSet.listeners:type_name -> asterism.v1.PortBinding
+	44, // 37: asterism.v1.ReplaceSet.routes:type_name -> asterism.v1.IngressRoute
+	8,  // 38: asterism.v1.ReplaceSet.project_rules:type_name -> asterism.v1.ProjectRule
+	9,  // 39: asterism.v1.ReplaceSet.filesystems:type_name -> asterism.v1.FilesystemUsage
+	6,  // 40: asterism.v1.ReplaceSet.project_icons:type_name -> asterism.v1.ProjectIconRef
+	45, // 41: asterism.v1.AgentEvents.events:type_name -> asterism.v1.Event
+	46, // 42: asterism.v1.LogChunk.lines:type_name -> asterism.v1.LogLine
+	37, // 43: asterism.v1.CommandResult.container:type_name -> asterism.v1.Container
+	14, // 44: asterism.v1.AgentHeartbeat.stats:type_name -> asterism.v1.AgentStats
+	31, // 45: asterism.v1.AgentStats.collector_errors:type_name -> asterism.v1.AgentStats.CollectorErrorsEntry
+	17, // 46: asterism.v1.HubFrame.hello_ack:type_name -> asterism.v1.HelloAck
+	18, // 47: asterism.v1.HubFrame.ack:type_name -> asterism.v1.Ack
+	19, // 48: asterism.v1.HubFrame.hints:type_name -> asterism.v1.AgentHints
+	20, // 49: asterism.v1.HubFrame.resync:type_name -> asterism.v1.ResyncRequest
+	21, // 50: asterism.v1.HubFrame.log_request:type_name -> asterism.v1.LogRequest
+	22, // 51: asterism.v1.HubFrame.log_cancel:type_name -> asterism.v1.LogCancel
+	23, // 52: asterism.v1.HubFrame.command:type_name -> asterism.v1.CommandRequest
+	47, // 53: asterism.v1.HubFrame.ping:type_name -> asterism.v1.Heartbeat
+	16, // 54: asterism.v1.HubFrame.icon_request:type_name -> asterism.v1.IconRequest
+	19, // 55: asterism.v1.HelloAck.hints:type_name -> asterism.v1.AgentHints
+	33, // 56: asterism.v1.CommandRequest.action:type_name -> asterism.v1.ContainerAction
+	0,  // 57: asterism.v1.PushRequest.frames:type_name -> asterism.v1.AgentFrame
+	15, // 58: asterism.v1.PushResponse.frames:type_name -> asterism.v1.HubFrame
+	29, // 59: asterism.v1.ListAgentsResponse.agents:type_name -> asterism.v1.AgentStatus
+	14, // 60: asterism.v1.AgentStatus.stats:type_name -> asterism.v1.AgentStats
+	33, // 61: asterism.v1.AgentStatus.allowed_actions:type_name -> asterism.v1.ContainerAction
+	0,  // 62: asterism.v1.AgentService.Stream:input_type -> asterism.v1.AgentFrame
+	24, // 63: asterism.v1.AgentService.Push:input_type -> asterism.v1.PushRequest
+	26, // 64: asterism.v1.AgentService.Commands:input_type -> asterism.v1.CommandsRequest
+	27, // 65: asterism.v1.AgentAdminService.ListAgents:input_type -> asterism.v1.ListAgentsRequest
+	15, // 66: asterism.v1.AgentService.Stream:output_type -> asterism.v1.HubFrame
+	25, // 67: asterism.v1.AgentService.Push:output_type -> asterism.v1.PushResponse
+	15, // 68: asterism.v1.AgentService.Commands:output_type -> asterism.v1.HubFrame
+	28, // 69: asterism.v1.AgentAdminService.ListAgents:output_type -> asterism.v1.ListAgentsResponse
+	66, // [66:70] is the sub-list for method output_type
+	62, // [62:66] is the sub-list for method input_type
+	62, // [62:62] is the sub-list for extension type_name
+	62, // [62:62] is the sub-list for extension extendee
+	0,  // [0:62] is the sub-list for field type_name
 }
 
 func init() { file_asterism_v1_agent_proto_init() }
@@ -2886,8 +3168,9 @@ func file_asterism_v1_agent_proto_init() {
 		(*AgentFrame_LogChunk)(nil),
 		(*AgentFrame_CommandResult)(nil),
 		(*AgentFrame_Heartbeat)(nil),
+		(*AgentFrame_IconData)(nil),
 	}
-	file_asterism_v1_agent_proto_msgTypes[13].OneofWrappers = []any{
+	file_asterism_v1_agent_proto_msgTypes[15].OneofWrappers = []any{
 		(*HubFrame_HelloAck)(nil),
 		(*HubFrame_Ack)(nil),
 		(*HubFrame_Hints)(nil),
@@ -2896,6 +3179,7 @@ func file_asterism_v1_agent_proto_init() {
 		(*HubFrame_LogCancel)(nil),
 		(*HubFrame_Command)(nil),
 		(*HubFrame_Ping)(nil),
+		(*HubFrame_IconRequest)(nil),
 	}
 	type x struct{}
 	out := protoimpl.TypeBuilder{
@@ -2903,7 +3187,7 @@ func file_asterism_v1_agent_proto_init() {
 			GoPackagePath: reflect.TypeOf(x{}).PkgPath(),
 			RawDescriptor: unsafe.Slice(unsafe.StringData(file_asterism_v1_agent_proto_rawDesc), len(file_asterism_v1_agent_proto_rawDesc)),
 			NumEnums:      0,
-			NumMessages:   29,
+			NumMessages:   32,
 			NumExtensions: 0,
 			NumServices:   2,
 		},
