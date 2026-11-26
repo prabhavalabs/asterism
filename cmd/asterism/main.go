@@ -17,6 +17,7 @@ import (
 	"golang.org/x/net/http2/h2c"
 
 	"github.com/prabhavalabs/asterism/internal/auth"
+	"github.com/prabhavalabs/asterism/internal/cli"
 	"github.com/prabhavalabs/asterism/internal/config"
 )
 
@@ -29,6 +30,7 @@ func main() {
 	}
 
 	rootCmd.AddCommand(newServeCmd(), newHashPasswordCmd(), newTokenCmd(), newAgentCmd(), newMCPCmd(), newVersionCmd())
+	rootCmd.AddCommand(cli.Commands()...)
 
 	if err := rootCmd.Execute(); err != nil {
 		fmt.Fprintf(os.Stderr, "error: %v\n", err)

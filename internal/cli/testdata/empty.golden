@@ -1,0 +1,13 @@
+No workloads match.
+No open ports match.
+No ingress routes discovered.
+No events match.
+The topology is empty.
+-
+
+CPU  0.0%    load 0.00 0.00 0.00
+NET          rx 0 B/s  tx 0 B/s
+
+Exposure    0 public ports · 0 ingress routes · 0 active alerts
+
+No projects discovered yet.

@@ -1,0 +1,281 @@
+{
+  "host": {
+    "id": "host",
+    "hostname": "vps-demo-1",
+    "os": "ubuntu 24.04",
+    "kernel": "6.8.0-49-generic",
+    "arch": "x86_64",
+    "cpu_model": "AMD EPYC Processor",
+    "cores": 10,
+    "mem_total_bytes": "25769803776",
+    "mem_used_bytes": "22132457472",
+    "swap_total_bytes": "18253611008",
+    "swap_used_bytes": "16984244224",
+    "disk_total_bytes": "494384795648",
+    "disk_used_bytes": "399428677632",
+    "uptime_seconds": "270899",
+    "boot_time_ms": "1795434764000",
+    "cpu_util": 0.9829999999616761,
+    "load_1": 21.11376953125,
+    "load_5": 16.6865234375,
+    "load_15": 12.20947265625,
+    "net_rx_bps": 261402.25724166495,
+    "net_tx_bps": 667342.0101542036,
+    "source_mode": "showcase"
+  },
+  "projects": [
+    {
+      "id": "proj:edge-gateway",
+      "name": "edge-gateway",
+      "kind": "compose",
+      "category": "infra",
+      "working_dir": "/srv/infra/edge-gateway",
+      "status": "HEALTH_STATUS_HEALTHY",
+      "health_score": 99,
+      "cpu_util": 0.11798672721291631,
+      "mem_used_bytes": "290264800",
+      "mem_limit_bytes": "1610612736",
+      "mem_share_pct": 3.379127010703087,
+      "workload_count": 4,
+      "icon": {
+        "kind": "PROJECT_ICON_KIND_DETECTED",
+        "slug": "nginx",
+        "color_token": "role-proxy",
+        "monogram": "EG",
+        "label": "Nginx"
+      }
+    },
+    {
+      "id": "proj:nova-core",
+      "name": "nova-core",
+      "kind": "compose",
+      "category": "production",
+      "working_dir": "/srv/apps/nova-core",
+      "status": "HEALTH_STATUS_HEALTHY",
+      "health_score": 96,
+      "cpu_util": 0.2693178370511288,
+      "mem_used_bytes": "1874076931",
+      "mem_limit_bytes": "4563402752",
+      "mem_share_pct": 21.81712690507993,
+      "workload_count": 5,
+      "icon": {
+        "kind": "PROJECT_ICON_KIND_DETECTED",
+        "slug": "postgres",
+        "color_token": "role-db",
+        "monogram": "NC",
+        "label": "PostgreSQL"
+      }
+    },
+    {
+      "id": "proj:analytics-hub",
+      "name": "analytics-hub",
+      "kind": "compose",
+      "category": "production",
+      "working_dir": "/srv/apps/analytics-hub",
+      "status": "HEALTH_STATUS_DEGRADED",
+      "health_score": 78,
+      "cpu_util": 0.4047518268692789,
+      "mem_used_bytes": "1443698400",
+      "mem_limit_bytes": "3087007744",
+      "mem_share_pct": 16.806861385703087,
+      "workload_count": 5,
+      "icon": {
+        "kind": "PROJECT_ICON_KIND_DETECTED",
+        "slug": "timescale",
+        "color_token": "role-db",
+        "monogram": "AH",
+        "label": "TimescaleDB"
+      }
+    },
+    {
+      "id": "proj:staging-lab",
+      "name": "staging-lab",
+      "kind": "compose",
+      "category": "staging",
+      "working_dir": "/srv/staging/lab",
+      "status": "HEALTH_STATUS_HEALTHY",
+      "health_score": 100,
+      "cpu_util": 0.030196670304274607,
+      "mem_used_bytes": "161566933",
+      "mem_limit_bytes": "536870912",
+      "mem_share_pct": 1.8808866501785815,
+      "workload_count": 1,
+      "icon": {
+        "kind": "PROJECT_ICON_KIND_MONOGRAM",
+        "color_token": "role-cache",
+        "monogram": "SL"
+      }
+    }
+  ],
+  "public_port_count": 5,
+  "ingress_route_count": 5,
+  "active_alert_count": 61,
+  "recent_events": [
+    {
+      "id": "evt:container.restart:mailer:1795705625291-1",
+      "ts_ms": "1795705625291",
+      "entity_id": "ctr:mailer",
+      "entity_name": "mailer",
+      "kind": "container.restart",
+      "severity": "warning",
+      "message": "Container mailer restarted by its restart policy (25 restarts)",
+      "attrs": {
+        "restart_count": "25"
+      }
+    },
+    {
+      "id": "evt:container.restart:mailer:1795705585298-1",
+      "ts_ms": "1795705585298",
+      "entity_id": "ctr:mailer",
+      "entity_name": "mailer",
+      "kind": "container.restart",
+      "severity": "warning",
+      "message": "Container mailer restarted by its restart policy (24 restarts)",
+      "attrs": {
+        "restart_count": "24"
+      }
+    },
+    {
+      "id": "evt:container.restart:mailer:1795705535292-1",
+      "ts_ms": "1795705535292",
+      "entity_id": "ctr:mailer",
+      "entity_name": "mailer",
+      "kind": "container.restart",
+      "severity": "warning",
+      "message": "Container mailer restarted by its restart policy (23 restarts)",
+      "attrs": {
+        "restart_count": "23"
+      }
+    },
+    {
+      "id": "evt:container.restart:mailer:1795705490292-1",
+      "ts_ms": "1795705490292",
+      "entity_id": "ctr:mailer",
+      "entity_name": "mailer",
+      "kind": "container.restart",
+      "severity": "warning",
+      "message": "Container mailer restarted by its restart policy (22 restarts)",
+      "attrs": {
+        "restart_count": "22"
+      }
+    },
+    {
+      "id": "evt:container.restart:mailer:1795705445292-1",
+      "ts_ms": "1795705445292",
+      "entity_id": "ctr:mailer",
+      "entity_name": "mailer",
+      "kind": "container.restart",
+      "severity": "warning",
+      "message": "Container mailer restarted by its restart policy (21 restarts)",
+      "attrs": {
+        "restart_count": "21"
+      }
+    },
+    {
+      "id": "evt:container.restart:mailer:1795705400292-1",
+      "ts_ms": "1795705400292",
+      "entity_id": "ctr:mailer",
+      "entity_name": "mailer",
+      "kind": "container.restart",
+      "severity": "warning",
+      "message": "Container mailer restarted by its restart policy (20 restarts)",
+      "attrs": {
+        "restart_count": "20"
+      }
+    },
+    {
+      "id": "evt:container.restart:mailer:1795705355292-1",
+      "ts_ms": "1795705355292",
+      "entity_id": "ctr:mailer",
+      "entity_name": "mailer",
+      "kind": "container.restart",
+      "severity": "warning",
+      "message": "Container mailer restarted by its restart policy (19 restarts)",
+      "attrs": {
+        "restart_count": "19"
+      }
+    },
+    {
+      "id": "evt:container.restart:mailer:1795705310293-1",
+      "ts_ms": "1795705310293",
+      "entity_id": "ctr:mailer",
+      "entity_name": "mailer",
+      "kind": "container.restart",
+      "severity": "warning",
+      "message": "Container mailer restarted by its restart policy (18 restarts)",
+      "attrs": {
+        "restart_count": "18"
+      }
+    },
+    {
+      "id": "evt:container.restart:mailer:1795705265293-1",
+      "ts_ms": "1795705265293",
+      "entity_id": "ctr:mailer",
+      "entity_name": "mailer",
+      "kind": "container.restart",
+      "severity": "warning",
+      "message": "Container mailer restarted by its restart policy (17 restarts)",
+      "attrs": {
+        "restart_count": "17"
+      }
+    },
+    {
+      "id": "evt:container.restart:mailer:1795705220293-1",
+      "ts_ms": "1795705220293",
+      "entity_id": "ctr:mailer",
+      "entity_name": "mailer",
+      "kind": "container.restart",
+      "severity": "warning",
+      "message": "Container mailer restarted by its restart policy (16 restarts)",
+      "attrs": {
+        "restart_count": "16"
+      }
+    },
+    {
+      "id": "evt:container.restart:mailer:1795705175293-1",
+      "ts_ms": "1795705175293",
+      "entity_id": "ctr:mailer",
+      "entity_name": "mailer",
+      "kind": "container.restart",
+      "severity": "warning",
+      "message": "Container mailer restarted by its restart policy (15 restarts)",
+      "attrs": {
+        "restart_count": "15"
+      }
+    },
+    {
+      "id": "evt-1",
+      "ts_ms": "1795704890261",
+      "entity_id": "ctr:ingest-collector",
+      "entity_name": "ingest-collector",
+      "kind": "alert.memory",
+      "severity": "warning",
+      "message": "Memory reached 87.5% of 512 MiB cgroup limit"
+    }
+  ],
+  "capabilities": {
+    "actions_disabled_reason": "container actions are disabled: set allow_actions = true under [actions] in asterism.toml (or ASTERISM_ALLOW_ACTIONS=true) and restart Asterism",
+    "container_actions": [
+      "CONTAINER_ACTION_START",
+      "CONTAINER_ACTION_STOP",
+      "CONTAINER_ACTION_RESTART",
+      "CONTAINER_ACTION_PAUSE",
+      "CONTAINER_ACTION_UNPAUSE"
+    ],
+    "scopes": [
+      "read"
+    ],
+    "docker_available": true,
+    "source_mode": "showcase"
+  },
+  "container_counts": {
+    "total": 32,
+    "running": 19,
+    "restarting": 1,
+    "exited": 10,
+    "created": 1,
+    "dead": 1,
+    "unhealthy": 2,
+    "attention": 5
+  }
+}

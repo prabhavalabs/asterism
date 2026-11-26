@@ -1,0 +1,24 @@
+vps-demo-1  ubuntu 24.04 · x86_64 · 10 cores · up 3d 3h · showcase mode
+
+CPU   98.3%    load 21.11 16.69 12.21
+MEM   85.9%    20.6 GiB / 24.0 GiB
+SWAP  93.0%    15.8 GiB / 17.0 GiB
+DISK  80.8%    372.0 GiB / 460.4 GiB
+NET            rx 255.3 KiB/s  tx 651.7 KiB/s
+
+Containers  32 total · 19 running · 10 exited · 5 need attention
+Exposure    5 public ports · 5 ingress routes · 61 active alerts
+
+CATEGORY    PROJECT        STATUS    SCORE    CPU        MEM  SHARE  WORKLOADS
+infra       edge-gateway   healthy      99  11.8%  276.8 MiB   3.4%          4
+production  nova-core      healthy      96  26.9%    1.7 GiB  21.8%          5
+            analytics-hub  degraded     78  40.5%    1.3 GiB  16.8%          5
+staging     staging-lab    healthy     100   3.0%  154.1 MiB   1.9%          1
+
+RECENT EVENTS
+  WHEN  SEVERITY  ENTITY  MESSAGE
+1m ago  warning   mailer  Container mailer restarted by its restart policy (25 restarts)
+2m ago  warning   mailer  Container mailer restarted by its restart policy (24 restarts)
+2m ago  warning   mailer  Container mailer restarted by its restart policy (23 restarts)
+3m ago  warning   mailer  Container mailer restarted by its restart policy (22 restarts)
+4m ago  warning   mailer  Container mailer restarted by its restart policy (21 restarts)

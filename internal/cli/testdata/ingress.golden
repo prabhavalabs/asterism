@@ -1,0 +1,15 @@
+PROXY        HOSTS                  PORT  TLS  PATH  STRATEGY     UPSTREAMS  VIA
+caddy        analytics.example.com  8443  yes  /     round_robin        2/2  ctr:caddy-edge
+  ├─▶ analytics-web:3000          healthy  ctr:analytics-web · weight 1
+  └─▶ ingest-collector:9000       healthy  ctr:ingest-collector · weight 1
+cloudflared  analytics.example.com   443  yes  /     tunnel             1/1  ctr:cloudflared
+  └─▶ caddy-edge:443              healthy  ctr:caddy-edge · weight 1
+nginx        api.example.com         443  yes  /v1   least_conn         2/2  unit:nginx.service
+  ├─▶ 127.0.0.1:8080 (replica-1)  healthy  ctr:nova-api · weight 3
+  └─▶ 127.0.0.1:8082 (replica-2)  healthy  ctr:nova-api · weight 2
+caddy        staging.example.com    8443  yes  /     single             1/1  ctr:caddy-edge
+  └─▶ staging-preview:4173        healthy  ctr:staging-preview · weight 1
+nginx        vps.example.com         443  yes  /     single             1/1  unit:nginx.service
+  └─▶ 127.0.0.1:7700              healthy  host · weight 1
+
+5 routes

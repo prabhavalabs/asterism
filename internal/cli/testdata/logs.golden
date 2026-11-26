@@ -1,0 +1,8 @@
+2026-11-26 14:57:17.762   level=info service=nova-api msg="job processed" queue=default duration_ms=115
+2026-11-26 14:57:24.262 ! level=warn service=nova-api msg="slow query" duration_ms=122 table=events
+2026-11-26 14:57:30.762   level=info service=nova-api msg="cache hit ratio" pct=129
+2026-11-26 14:57:37.262 ! level=error service=nova-api msg="upstream timeout" retry_in_ms=136
+2026-11-26 14:57:37.262   level=info service=nova-api msg="request completed" status=200 latency_ms=143 path=/api/items
+2026-11-26 14:58:18.261   level=info service=nova-api msg="listening and accepting connections"
+2026-11-26 14:58:32.261   level=info service=nova-api latency_ms=3.4 status=200 path=/healthz
+2026-11-26 14:58:44.261   level=info service=nova-api active_conns=14 mem_mb=412

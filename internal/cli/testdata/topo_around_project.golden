@@ -1,0 +1,13 @@
+nginx [proxy]  edge-gateway · healthy · 4.5% · 93.0 MiB  api.example.com, vps.example.com
+└─▶ nova-api [app] ×2  nova-core · healthy · 13.7% · 418.1 MiB  via least_conn (2×)
+    ├─▶ redis-cache [cache]  nova-core · healthy · 1.8% · 180.0 MiB  via valkey :6379
+    └─▶ postgres-primary [database]  nova-core · healthy · 4.9% · 906.2 MiB  via pg :5432
+
+nova-worker [worker]  nova-core · healthy · 6.5% · 283.0 MiB
+├─▶ redis-cache (see above)  via queue :6379
+└─▶ postgres-primary (see above)  via pg :5432
+
+UNCONNECTED
+  backup-nightly [storage]  nova-core · down · 0.0% · 0 B
+
+6 nodes · 5 edges
