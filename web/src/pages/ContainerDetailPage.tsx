@@ -36,6 +36,8 @@ import {
   PaginatedScrollArea,
   PortChip,
   ProjectIcon,
+  CardGrid,
+  CardStack,
   SectionCard,
   StatCard,
   StatusDot,
@@ -327,7 +329,7 @@ export function ContainerDetailPage() {
           <SectionCard title="Facts" icon={ContainerIcon}>
             <FactsGrid container={c} />
           </SectionCard>
-          <div className="grid items-start gap-3 lg:grid-cols-2">
+          <CardGrid>
             <SectionCard title="Ports" icon={PlugSocketIcon} description={`${c.ports.filter((p) => p.published).length} published · ${c.ports.filter((p) => !p.published).length} exposed only`} flush>
               {c.ports.length === 0 ? (
                 <EmptyState size="compact" icon={PlugSocketIcon} title="No ports" description="The image exposes no ports and none are published." />
@@ -366,7 +368,7 @@ export function ContainerDetailPage() {
                 </ul>
               )}
             </SectionCard>
-          </div>
+          </CardGrid>
           <SectionCard title="Mounts" icon={Folder02Icon} description={`${c.mounts.length} mounts · contents are never read`} flush>
             {socketMounts.length > 0 && (
               <p className="flex items-start gap-2 border-b border-divider bg-status-warning-surface px-4 py-2.5 text-control text-foreground">
@@ -406,59 +408,70 @@ export function ContainerDetailPage() {
           </SectionCard>
         </TabsContent>
 
-        <TabsContent value="config" className="grid items-start gap-3 lg:grid-cols-2">
-          <HealthcheckCard container={c} />
-          <SectionCard title="Command" icon={FileScriptIcon} description="Secret-looking arguments are redacted">
-            <div className="flex flex-col gap-3">
-              <CommandBlock label="Entrypoint" args={c.entrypoint} />
-              <CommandBlock label="Command" args={c.command} />
-            </div>
-          </SectionCard>
-          <SectionCard title="Environment" icon={ViewOffSlashIcon} description="Names only; values are never collected">
-            {c.envKeys.length === 0 ? (
-              <p className="text-control text-muted-foreground">No environment variables.</p>
-            ) : (
-              <ul className="flex flex-wrap gap-1.5">
-                {c.envKeys.map((k) => (
-                  <li key={k}>
-                    <Badge variant="secondary" mono>
-                      {k}
-                    </Badge>
-                  </li>
-                ))}
-              </ul>
-            )}
-          </SectionCard>
-          <SectionCard
-            title="Labels"
-            icon={Tag01Icon}
-            description={
-              c.redactedLabelCount > 0
-                ? `${Object.keys(c.labels).length} shown · ${c.redactedLabelCount} hidden because they look secret`
-                : `${Object.keys(c.labels).length} labels`
-            }
-            flush
-          >
-            {Object.keys(c.labels).length === 0 ? (
-              <EmptyState size="compact" icon={Tag01Icon} title="No labels" />
-            ) : (
-              <ScrollArea viewportClassName="max-h-[420px]" viewportProps={{ tabIndex: 0, "aria-label": "Labels" }}>
-                <dl className="divide-y divide-divider">
-                  {Object.entries(c.labels)
-                    .sort(([a], [b]) => a.localeCompare(b))
-                    .map(([k, v]) => (
-                      <div key={k} className="flex min-h-10 flex-col justify-center gap-0.5 px-4 py-1.5">
-                        <dt className="truncate font-mono text-small text-muted-foreground" title={k}>
+        <TabsContent value="config" className="flex flex-col gap-3">
+          {/* Healthcheck, command and environment stack on the left; the labels
+              list fills the right column to the same height and scrolls. */}
+          <CardGrid>
+            <CardStack>
+              <HealthcheckCard container={c} />
+              <SectionCard title="Command" icon={FileScriptIcon} description="Secret-looking arguments are redacted">
+                <div className="flex flex-col gap-3">
+                  <CommandBlock label="Entrypoint" args={c.entrypoint} />
+                  <CommandBlock label="Command" args={c.command} />
+                </div>
+              </SectionCard>
+              <SectionCard title="Environment" icon={ViewOffSlashIcon} description="Names only; values are never collected">
+                {c.envKeys.length === 0 ? (
+                  <p className="text-control text-muted-foreground">No environment variables.</p>
+                ) : (
+                  <ul className="flex flex-wrap gap-1.5">
+                    {c.envKeys.map((k) => (
+                      <li key={k}>
+                        <Badge variant="secondary" mono>
                           {k}
-                        </dt>
-                        <dd className="font-mono text-mono break-all text-foreground">{v || "—"}</dd>
-                      </div>
+                        </Badge>
+                      </li>
                     ))}
-                </dl>
-              </ScrollArea>
-            )}
-          </SectionCard>
-          <SectionCard title="Resources and security" icon={Settings02Icon} className="lg:col-span-2">
+                  </ul>
+                )}
+              </SectionCard>
+            </CardStack>
+            <SectionCard
+              title="Labels"
+              icon={Tag01Icon}
+              description={
+                c.redactedLabelCount > 0
+                  ? `${Object.keys(c.labels).length} shown · ${c.redactedLabelCount} hidden because they look secret`
+                  : `${Object.keys(c.labels).length} labels`
+              }
+              bodyClassName="relative flex flex-col lg:min-h-64"
+              flush
+            >
+              {Object.keys(c.labels).length === 0 ? (
+                <EmptyState size="compact" icon={Tag01Icon} title="No labels" className="flex-1" />
+              ) : (
+                <ScrollArea
+                  className="lg:absolute lg:inset-0"
+                  viewportClassName="max-h-[420px] lg:max-h-none"
+                  viewportProps={{ tabIndex: 0, "aria-label": "Labels" }}
+                >
+                  <dl className="divide-y divide-divider">
+                    {Object.entries(c.labels)
+                      .sort(([a], [b]) => a.localeCompare(b))
+                      .map(([k, v]) => (
+                        <div key={k} className="flex min-h-10 flex-col justify-center gap-0.5 px-4 py-1.5">
+                          <dt className="truncate font-mono text-small text-muted-foreground" title={k}>
+                            {k}
+                          </dt>
+                          <dd className="font-mono text-mono break-all text-foreground">{v || "—"}</dd>
+                        </div>
+                      ))}
+                  </dl>
+                </ScrollArea>
+              )}
+            </SectionCard>
+          </CardGrid>
+          <SectionCard title="Resources and security" icon={Settings02Icon}>
             <dl className="grid grid-cols-2 gap-x-6 gap-y-3 sm:grid-cols-3 lg:grid-cols-6">
               <Fact label="Memory limit">{memLimit > 0 ? formatBytes(memLimit) : "unlimited"}</Fact>
               <Fact label="Memory reservation">

@@ -21,6 +21,7 @@ import {
   MeterBar,
   PagedSearchInput,
   PropertyRow,
+  CardGrid,
   SectionCard,
   SegmentedControl,
   SortHeader,
@@ -479,17 +480,17 @@ export function DiskUsageTab() {
   const max = Math.max(1, ...categories.map((c) => Number(c.sizeBytes)));
 
   return (
-    <div className="grid items-start gap-3 lg:grid-cols-12">
+    <CardGrid split="7:5">
       <SectionCard
         title="Docker disk usage"
         icon={HardDriveIcon}
         description={usage ? `${formatBytes(usage.totalSizeBytes)} used · ${formatBytes(usage.totalReclaimableBytes)} reclaimable` : undefined}
-        className="lg:col-span-7"
+        bodyClassName="flex flex-col"
         flush
       >
         <QueryFrame query={query} emptyIcon={HardDriveIcon} emptyTitle="No disk usage reported">
           {categories.length === 0 ? null : (
-            <ul className="divide-y divide-divider">
+            <ul className="flex flex-1 flex-col divide-y divide-divider">
               {categories.map((c) => (
                 <DiskRow key={c.kind} category={c} max={max} />
               ))}
@@ -497,16 +498,16 @@ export function DiskUsageTab() {
           )}
         </QueryFrame>
         {usage && (
-          <p className="border-t border-divider px-4 py-3 text-small text-muted-foreground">
+          <p className="mt-auto border-t border-divider px-4 py-3 text-small text-muted-foreground">
             Reclaimable space belongs to unused images, stopped containers, unused volumes and build cache. Asterism never prunes; run{" "}
             <code className="font-mono text-text-2">docker system prune</code> on the host if you want it back.
           </p>
         )}
       </SectionCard>
-      <SectionCard title="Engine" icon={CloudServerIcon} className="lg:col-span-5" flush>
+      <SectionCard title="Engine" icon={CloudServerIcon} flush>
         {engine ? <EngineFacts engine={engine} /> : <LoadingState variant="rows" count={6} />}
       </SectionCard>
-    </div>
+    </CardGrid>
   );
 }
 
@@ -516,7 +517,7 @@ function DiskRow({ category: c, max }: { category: DiskUsageCategory; max: numbe
   const reclaim = Math.min(size, Number(c.reclaimableBytes));
   const pctReclaim = size > 0 ? Math.round((reclaim / size) * 100) : 0;
   return (
-    <li className="flex flex-col gap-2 px-4 py-3.5">
+    <li className="flex flex-1 flex-col justify-center gap-2 px-4 py-3.5">
       <div className="flex flex-wrap items-baseline justify-between gap-x-4 gap-y-1">
         <span className="flex items-baseline gap-2">
           <span className="text-body font-medium text-foreground">{meta.label}</span>

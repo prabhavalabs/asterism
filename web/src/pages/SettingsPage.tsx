@@ -6,6 +6,7 @@ import { ScrollArea } from "@/components/ui/scroll-area";
 import type { HostInfo } from "@/gen/asterism/v1/asterism_pb";
 import {
   CopyButton,
+  CardGrid,
   CopyValue,
   Page,
   PageHeader,
@@ -88,88 +89,88 @@ export function SettingsPage({ host, sourceMode, userEmail, onLogout }: Settings
     <Page>
       <PageHeader title="Settings" description="Appearance, your session, the collector and how agents connect." />
 
-      <div className="grid grid-cols-1 items-start gap-5 xl:grid-cols-2">
-        <div className="flex flex-col gap-5">
-          <SectionCard title="Appearance" icon={PaintBoardIcon} flush {...target("appearance")}>
-            <PropertyRow label="Theme" hint="System follows your OS setting">
-              <SegmentedControl
-                size="sm"
-                aria-label="Theme"
-                value={preference}
-                onValueChange={setPreference}
-                options={THEME_OPTIONS}
-              />
+      {/* Short preference cards pair up here; a lone card spans the row. */}
+      <CardGrid gap={5} breakpoint="xl">
+        <SectionCard title="Appearance" icon={PaintBoardIcon} flush {...target("appearance")}>
+          <PropertyRow label="Theme" hint="System follows your OS setting">
+            <SegmentedControl
+              size="sm"
+              aria-label="Theme"
+              value={preference}
+              onValueChange={setPreference}
+              options={THEME_OPTIONS}
+            />
+          </PropertyRow>
+        </SectionCard>
+      </CardGrid>
+
+      {/* Session and host have the same number of rows, so the pair ends level. */}
+      <CardGrid gap={5} breakpoint="xl">
+        <SectionCard title="Session" icon={SecurityCheckIcon} flush {...target("session")}>
+          <div className="divide-y divide-divider">
+            <PropertyRow label="Signed in as" mono>
+              {userEmail || "Administrator"}
             </PropertyRow>
-          </SectionCard>
+            <PropertyRow label="Session cookie" hint="Password verified with Argon2id">
+              <Badge variant="outline" mono>
+                HttpOnly · SameSite=Strict
+              </Badge>
+            </PropertyRow>
+            <PropertyRow label="Sign out" hint="Ends the session in this browser">
+              <Button variant="outline" size="sm" onClick={onLogout}>
+                <Icon icon={Logout01Icon} />
+                Sign out
+              </Button>
+            </PropertyRow>
+          </div>
+        </SectionCard>
 
-          <SectionCard title="Session" icon={SecurityCheckIcon} flush {...target("session")}>
-            <div className="divide-y divide-divider">
-              <PropertyRow label="Signed in as" mono>
-                {userEmail || "Administrator"}
+        <SectionCard title="Host and collector" icon={ServerStack01Icon} flush {...target("host")}>
+          <div className="divide-y divide-divider">
+            <PropertyRow label="Host" mono>
+              {host?.hostname || "—"}
+            </PropertyRow>
+            <PropertyRow label="Platform" mono>
+              {host ? `${host.os} · ${host.arch}` : "—"}
+            </PropertyRow>
+            <PropertyRow label="Collector mode">
+              <Badge variant="outline">{categoryLabel(mode)}</Badge>
+            </PropertyRow>
+            {mode === "agent" ? (
+              <PropertyRow label="Source" hint="Primary agent feeding this view" mono>
+                {agent ? agentChipText(agent) : <span className="font-sans text-control text-muted-foreground">No agent enrolled</span>}
               </PropertyRow>
-              <PropertyRow label="Session cookie" hint="Password verified with Argon2id">
-                <Badge variant="outline" mono>
-                  HttpOnly · SameSite=Strict
-                </Badge>
+            ) : (
+              <PropertyRow label="SSH target" mono>
+                {host?.sshTarget || <span className="font-sans text-control text-muted-foreground">Not set (reads this machine)</span>}
               </PropertyRow>
-              <PropertyRow label="Sign out" hint="Ends the session in this browser">
-                <Button variant="outline" size="sm" onClick={onLogout}>
-                  <Icon icon={Logout01Icon} />
-                  Sign out
-                </Button>
-              </PropertyRow>
-            </div>
-          </SectionCard>
+            )}
+          </div>
+        </SectionCard>
+      </CardGrid>
+
+      <SectionCard
+        title="API & MCP"
+        icon={Plug01Icon}
+        description="Query this observatory from agents, the CLI and scripts"
+        flush
+        {...target("mcp")}
+      >
+        <div className="divide-y divide-divider">
+          <PropertyRow label="MCP, local (stdio)">
+            <CopyValue value="asterism mcp" />
+          </PropertyRow>
+          <PropertyRow label="MCP, Streamable HTTP">
+            <CopyValue value={`${origin}/mcp`} />
+          </PropertyRow>
+          <PropertyRow label="Connect RPC API" hint="Same data as the web UI">
+            <CopyValue value={`${origin}/asterism.v1.*`} />
+          </PropertyRow>
+          <PropertyRow label="Bearer token" hint="Paste the printed entry into [[auth.tokens]]">
+            <CopyValue value={TOKEN_COMMAND} />
+          </PropertyRow>
         </div>
-
-        <div className="flex flex-col gap-5">
-          <SectionCard title="Host and collector" icon={ServerStack01Icon} flush {...target("host")}>
-            <div className="divide-y divide-divider">
-              <PropertyRow label="Host" mono>
-                {host?.hostname || "—"}
-              </PropertyRow>
-              <PropertyRow label="Platform" mono>
-                {host ? `${host.os} · ${host.arch}` : "—"}
-              </PropertyRow>
-              <PropertyRow label="Collector mode">
-                <Badge variant="outline">{categoryLabel(mode)}</Badge>
-              </PropertyRow>
-              {mode === "agent" ? (
-                <PropertyRow label="Source" hint="Primary agent feeding this view" mono>
-                  {agent ? agentChipText(agent) : <span className="font-sans text-control text-muted-foreground">No agent enrolled</span>}
-                </PropertyRow>
-              ) : (
-                <PropertyRow label="SSH target" mono>
-                  {host?.sshTarget || <span className="font-sans text-control text-muted-foreground">Not set (reads this machine)</span>}
-                </PropertyRow>
-              )}
-            </div>
-          </SectionCard>
-
-          <SectionCard
-            title="API & MCP"
-            icon={Plug01Icon}
-            description="Query this observatory from agents, the CLI and scripts"
-            flush
-            {...target("mcp")}
-          >
-            <div className="divide-y divide-divider">
-              <PropertyRow label="MCP, local (stdio)">
-                <CopyValue value="asterism mcp" />
-              </PropertyRow>
-              <PropertyRow label="MCP, Streamable HTTP">
-                <CopyValue value={`${origin}/mcp`} />
-              </PropertyRow>
-              <PropertyRow label="Connect RPC API" hint="Same data as the web UI">
-                <CopyValue value={`${origin}/asterism.v1.*`} />
-              </PropertyRow>
-              <PropertyRow label="Bearer token" hint="Paste the printed entry into [[auth.tokens]]">
-                <CopyValue value={TOKEN_COMMAND} />
-              </PropertyRow>
-            </div>
-          </SectionCard>
-        </div>
-      </div>
+      </SectionCard>
 
       <AgentsCard sourceMode={mode} hubUrl={origin || "https://asterism.example.com"} target={target("agents")} />
 
