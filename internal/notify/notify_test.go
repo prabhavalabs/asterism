@@ -61,7 +61,8 @@ func golden(t *testing.T, name string, got []byte) {
 	if err != nil {
 		t.Fatalf("%v (run go test ./internal/notify -update)", err)
 	}
-	if !bytes.Equal(got, want) {
+	// Git normalises line endings (.gitattributes), so compare without CR.
+	if !bytes.Equal(bytes.ReplaceAll(got, []byte("\r\n"), []byte("\n")), bytes.ReplaceAll(want, []byte("\r\n"), []byte("\n"))) {
 		t.Errorf("%s mismatch\n--- got ---\n%s\n--- want ---\n%s", name, got, want)
 	}
 }
