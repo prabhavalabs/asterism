@@ -392,7 +392,9 @@ reaches the terminal, and log lines arrive already redacted.
   HTTP/1.1 proxies.
 - **Ingest-only tokens.** An agent token can push data for its own host and nothing else.
 - **Hardened web session.** Argon2id password hashes, `HttpOnly` + `SameSite=Strict` cookies,
-  `Secure` behind TLS.
+  `Secure` behind TLS. Sessions last 30 days idle (`session_ttl_hours`), survive restarts,
+  and are stored only as SHA-256 digests; changing the admin email or password signs every
+  browser out.
 - **Contained favicon fetching.** Favicons are fetched only from hostnames routed to a project,
   over https, with a connect-time guard against private, loopback and link-local addresses,
   short timeouts, size caps and at most daily. Icons are served with a sandboxing CSP and
