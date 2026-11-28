@@ -166,10 +166,15 @@ type CollectConfig struct {
 	ShowcaseFleet int `toml:"showcase_fleet"`
 }
 
+// DefaultSessionTTLHours keeps an idle browser session for 30 days.
+const DefaultSessionTTLHours = 720
+
 type AuthConfig struct {
-	AdminEmail      string           `toml:"admin_email"`
-	AdminPassword   string           `toml:"admin_password"`
-	PasswordHash    string           `toml:"password_hash"`
+	AdminEmail    string `toml:"admin_email"`
+	AdminPassword string `toml:"admin_password"`
+	PasswordHash  string `toml:"password_hash"`
+	// SessionTTLHours is how long an idle browser session stays signed in
+	// (default 720 = 30 days). Active sessions slide forward on use.
 	SessionTTLHours int              `toml:"session_ttl_hours"`
 	Tokens          []APITokenConfig `toml:"tokens"`
 }
@@ -239,7 +244,7 @@ func Default() Config {
 			Agent: AgentCollectConfig{StaleAfter: 30 * time.Second},
 		},
 		Auth: AuthConfig{
-			SessionTTLHours: 24,
+			SessionTTLHours: DefaultSessionTTLHours,
 		},
 		Actions: ActionsConfig{
 			AllowActions:              false,
@@ -315,7 +320,7 @@ func Load(path string) (Config, string, error) {
 		cfg.Collect.Mode = "local"
 	}
 	if cfg.Auth.SessionTTLHours <= 0 {
-		cfg.Auth.SessionTTLHours = 24
+		cfg.Auth.SessionTTLHours = DefaultSessionTTLHours
 	}
 
 	switch cfg.Collect.Mode {
@@ -398,7 +403,7 @@ func (cfg *Config) validateAlerts() error {
 
 func (c AuthConfig) SessionTTL() time.Duration {
 	if c.SessionTTLHours <= 0 {
-		return 24 * time.Hour
+		return DefaultSessionTTLHours * time.Hour
 	}
 	return time.Duration(c.SessionTTLHours) * time.Hour
 }

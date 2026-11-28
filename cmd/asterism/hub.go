@@ -164,8 +164,29 @@ func newHub(cfg config.Config, logger *slog.Logger, authMgr *auth.Manager) (*hub
 	}
 	h.runners = append(h.runners, named("ingestor", svc.RunIngestor))
 	h.svc = svc
+
+	// The SQLite store holds browser sessions and alerting state. Alerting
+	// needs it; without alerting a store failure only costs session
+	// persistence across restarts.
+	db, dataDir, err := openStore(cfg)
+	if err != nil && cfg.Alerts.Enabled {
+		return nil, err
+	}
+	if err != nil {
+		logger.Warn("sessions will not survive a restart: store unavailable", "err", err)
+	} else {
+		h.runners = append(h.runners, func(ctx context.Context) error {
+			<-ctx.Done()
+			return db.Close()
+		})
+		if n, attachErr := authMgr.AttachStore(context.Background(), sessionStore{db}); attachErr != nil {
+			logger.Warn("sessions will not survive a restart", "err", attachErr)
+		} else {
+			logger.Info("browser sessions restored", "sessions", n, "ttl", cfg.Auth.SessionTTL())
+		}
+	}
 	if cfg.Alerts.Enabled {
-		if err := h.configureAlerts(cfg, svc); err != nil {
+		if err := h.configureAlerts(cfg, svc, db, dataDir); err != nil {
 			return nil, err
 		}
 	} else {
@@ -213,26 +234,29 @@ func iconOptions(cfg config.Config, logger *slog.Logger, dirs service.DirIconSou
 	return opts, true
 }
 
-// configureAlerts opens the data directory, the SQLite store, the secret
-// key, and the VAPID keys, then attaches the alert engine.
-func (h *hub) configureAlerts(cfg config.Config, svc *service.Observatory) error {
+// openStore opens the data directory and the SQLite store in it.
+func openStore(cfg config.Config) (*sqlite.DB, string, error) {
 	dir, err := cfg.EnsureDataDir()
 	if err != nil {
-		return err
+		return nil, "", err
 	}
-	ctx := context.Background()
-	db, err := sqlite.Open(ctx, filepath.Join(dir, sqlite.FileName))
+	db, err := sqlite.Open(context.Background(), filepath.Join(dir, sqlite.FileName))
 	if err != nil {
-		return fmt.Errorf("open store: %w", err)
+		return nil, "", fmt.Errorf("open store: %w", err)
 	}
+	return db, dir, nil
+}
+
+// configureAlerts loads the secret key and the VAPID keys from dir, then
+// attaches the alert engine backed by db. The caller owns db.
+func (h *hub) configureAlerts(cfg config.Config, svc *service.Observatory, db *sqlite.DB, dir string) error {
+	ctx := context.Background()
 	key, err := secretbox.LoadOrCreateKey(filepath.Join(dir, "secret.key"))
 	if err != nil {
-		_ = db.Close()
 		return err
 	}
 	box, err := secretbox.New(key)
 	if err != nil {
-		_ = db.Close()
 		return err
 	}
 	ac := service.AlertsConfig{
@@ -246,17 +270,13 @@ func (h *hub) configureAlerts(cfg config.Config, svc *service.Observatory) error
 		ac.VAPID = &keys
 	}
 	if err := svc.ConfigureAlerts(ctx, ac); err != nil {
-		_ = db.Close()
 		return err
 	}
 	if cfg.Alerts.AllowPrivateTargets {
 		h.logger.Warn("alerts.allow_private_targets is on: notification channels may reach loopback and private addresses")
 	}
 	h.logger.Info("alerting enabled", "data_dir", dir, "evaluation_interval", cfg.Alerts.EvaluationInterval, "web_push", ac.VAPID != nil)
-	h.runners = append(h.runners, named("alerts", svc.RunAlerts), func(ctx context.Context) error {
-		<-ctx.Done()
-		return db.Close()
-	})
+	h.runners = append(h.runners, named("alerts", svc.RunAlerts))
 	return nil
 }
 
