@@ -41,7 +41,10 @@ showcase_fleet = 0
 # environment variables ASTERISM_ADMIN_EMAIL / ASTERISM_ADMIN_PASSWORD_HASH.
 admin_email = "admin@example.com"
 admin_password = "change-me-before-running"
-session_ttl_hours = 24
+# How long an idle browser session stays signed in (720 h = 30 days). Each visit
+# in the second half of that window extends it again. Sessions are kept in the
+# SQLite store under data_dir, so restarts and upgrades do not sign you out.
+session_ttl_hours = 720
 
 # API bearer tokens for CLI, MCP, and scripts. Generate one with
 #   asterism token generate --name ci --scope read

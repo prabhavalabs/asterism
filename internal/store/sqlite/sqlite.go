@@ -80,6 +80,16 @@ CREATE TABLE push_subscriptions (
 	secret        BLOB NOT NULL
 );
 `},
+	{2, "browser sessions", `
+CREATE TABLE sessions (
+	token_sha256 TEXT PRIMARY KEY,
+	email        TEXT NOT NULL,
+	credential   TEXT NOT NULL,
+	created_ms   INTEGER NOT NULL,
+	expires_ms   INTEGER NOT NULL
+);
+CREATE INDEX sessions_by_expiry ON sessions (expires_ms);
+`},
 }
 
 // Open opens (creating with mode 0600 when missing) and migrates the

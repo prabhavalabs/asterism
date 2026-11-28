@@ -7,6 +7,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"log/slog"
 	"net/http"
 	"slices"
 	"strings"
@@ -15,6 +16,9 @@ import (
 
 	"golang.org/x/crypto/argon2"
 )
+
+// DefaultSessionTTL is how long a browser session stays valid without use.
+const DefaultSessionTTL = 30 * 24 * time.Hour
 
 const (
 	sessionCookieName = "asterism_session"
@@ -30,6 +34,9 @@ var (
 	ErrInvalidCredentials = errors.New("invalid email or password")
 )
 
+// Session is an admin browser session. Token is set only on the value
+// returned by Authenticate (and renewals); the store keys sessions by the
+// token's SHA-256 digest.
 type Session struct {
 	Token     string
 	Email     string
@@ -42,13 +49,16 @@ type Manager struct {
 	passwordHash string
 	sessionTTL   time.Duration
 	behindTLS    bool
+	credential   string
+	logger       *slog.Logger
 
 	sessionScopes []Scope
 	tokens        []apiToken
 	agents        []agentToken
 
 	mu       sync.RWMutex
-	sessions map[string]Session
+	sessions map[string]Session // keyed by hashToken(token)
+	store    SessionStore
 }
 
 type Options struct {
@@ -64,6 +74,8 @@ type Options struct {
 	// Agents are enrolled asterism-agent tokens ([[agents]]). They carry only
 	// the ingest scope and are accepted only by RequireIngest.
 	Agents []AgentToken
+	// Logger receives session store warnings. Defaults to slog.Default().
+	Logger *slog.Logger
 }
 
 // NewManager initializes the admin credential verifier and in-memory session store.
@@ -74,7 +86,9 @@ func NewManager(opts Options) (*Manager, error) {
 	}
 
 	hash := strings.TrimSpace(opts.PasswordHash)
+	credMaterial := hash
 	if hash == "" {
+		credMaterial = opts.AdminPassword
 		if opts.AdminPassword == "" {
 			return nil, ErrMissingCredentials
 		}
@@ -89,7 +103,7 @@ func NewManager(opts Options) (*Manager, error) {
 
 	ttl := opts.SessionTTL
 	if ttl <= 0 {
-		ttl = 24 * time.Hour
+		ttl = DefaultSessionTTL
 	}
 
 	tokens, err := compileTokens(opts.Tokens)
@@ -105,11 +119,18 @@ func NewManager(opts Options) (*Manager, error) {
 		scopes = []Scope{ScopeRead}
 	}
 
+	logger := opts.Logger
+	if logger == nil {
+		logger = slog.Default()
+	}
+
 	return &Manager{
 		adminEmail:    email,
 		passwordHash:  hash,
 		sessionTTL:    ttl,
 		behindTLS:     opts.BehindTLS,
+		credential:    credentialFingerprint(email, credMaterial),
+		logger:        logger,
 		sessionScopes: slices.Clone(scopes),
 		tokens:        tokens,
 		agents:        agents,
@@ -186,10 +207,14 @@ func (m *Manager) Authenticate(email, password string) (Session, error) {
 		ExpiresAt: now.Add(m.sessionTTL),
 	}
 
+	key := hashToken(sess.Token)
+	stored := sess
+	stored.Token = ""
 	m.mu.Lock()
 	m.pruneLocked(now)
-	m.sessions[sess.Token] = sess
+	m.sessions[key] = stored
 	m.mu.Unlock()
+	m.persist(key, stored)
 
 	return sess, nil
 }
@@ -207,7 +232,7 @@ func (m *Manager) ValidateRequest(r *http.Request) (Session, bool) {
 func (m *Manager) ValidateToken(token string) (Session, bool) {
 	now := time.Now().UTC()
 	m.mu.RLock()
-	sess, ok := m.sessions[token]
+	sess, ok := m.sessions[hashToken(token)]
 	m.mu.RUnlock()
 	if !ok {
 		return Session{}, false
@@ -216,20 +241,25 @@ func (m *Manager) ValidateToken(token string) (Session, bool) {
 		m.Revoke(token)
 		return Session{}, false
 	}
+	sess.Token = token
 	return sess, true
 }
 
-// Revoke deletes a session token.
+// Revoke deletes a session token, including its persisted copy.
 func (m *Manager) Revoke(token string) {
+	key := hashToken(token)
 	m.mu.Lock()
-	delete(m.sessions, token)
+	delete(m.sessions, key)
 	m.mu.Unlock()
+	m.forget(key)
 }
 
+// pruneLocked drops expired sessions from memory; the store prunes its own
+// expired rows on the next start.
 func (m *Manager) pruneLocked(now time.Time) {
-	for tok, sess := range m.sessions {
+	for key, sess := range m.sessions {
 		if now.After(sess.ExpiresAt) {
-			delete(m.sessions, tok)
+			delete(m.sessions, key)
 		}
 	}
 }
@@ -288,16 +318,7 @@ func (m *Manager) handleLogin(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	http.SetCookie(w, &http.Cookie{
-		Name:     sessionCookieName,
-		Value:    sess.Token,
-		Path:     "/",
-		Expires:  sess.ExpiresAt,
-		MaxAge:   int(m.sessionTTL.Seconds()),
-		HttpOnly: true,
-		SameSite: http.SameSiteStrictMode,
-		Secure:   m.behindTLS || r.TLS != nil,
-	})
+	m.setSessionCookie(w, r, sess.Token, sess.ExpiresAt)
 
 	writeJSON(w, http.StatusOK, sessionResponse{
 		Authenticated: true,
@@ -329,6 +350,12 @@ func (m *Manager) handleMe(w http.ResponseWriter, r *http.Request) {
 	if !ok {
 		writeJSON(w, http.StatusOK, sessionResponse{Authenticated: false})
 		return
+	}
+	// The web app calls /me on every load: slide an active session forward
+	// and re-issue the cookie with the new expiry.
+	if renewed, ok := m.renew(sess.Token); ok {
+		sess = renewed
+		m.setSessionCookie(w, r, sess.Token, sess.ExpiresAt)
 	}
 	writeJSON(w, http.StatusOK, sessionResponse{
 		Authenticated: true,

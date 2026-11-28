@@ -1199,7 +1199,12 @@ A monitor with access to `docker.sock` is effectively root. Treat it accordingly
   Tunnel with TLS, or via SSH tunnel / Tailscale. Public binding requires `--unsafe-public`
   plus TLS.
 - **Auth:** first-run setup creates an admin password (argon2id). Web uses `HttpOnly`,
-  `SameSite=Strict`, `Secure` (over TLS) session cookies. CLI/MCP use scoped bearer tokens
+  `SameSite=Strict`, `Secure` (over TLS) session cookies. Sessions expire after
+  `session_ttl_hours` without use (default 720 = 30 days); `/api/auth/me` slides an active
+  session forward once less than half its TTL remains. Sessions persist in the SQLite
+  `sessions` table keyed by the SHA-256 of the cookie value (never the token itself), with an
+  Argon2id fingerprint of the admin credentials, so restarts keep them while a changed email
+  or password discards them. CLI/MCP use scoped bearer tokens
   (`asterism token generate --name <n> --scope read|actions`), displayed once; only the
   SHA-256 digest is stored, in `[[auth.tokens]]` until the M4 SQLite store exists.
 - **Scopes:** `read` (every read RPC) and `actions` (mutating RPCs). The admin session holds
@@ -1513,3 +1518,4 @@ GoReleaser, demo media, public release.
 | D34 | Hub-side alerting in `internal/service/alerting`: a fixed built-in rule catalogue (UI-editable settings, no expression language) evaluated against the service snapshot and event stream, with Alertmanager-style lifecycle (fingerprints, `for`, keep-firing hold, repeat, group wait, silences, flap suppression, startup grace) | One code path for local, ssh, agent and showcase modes; the catalogue covers what single-VPS operators ask for without a PromQL-like language; state in SQLite survives restarts without duplicate notifications | Users need custom expressions, per-rule routing trees, or alert evaluation on the agent while the hub is offline |
 | D35 | SQLite (`modernc.org/sqlite`) at `<data_dir>/asterism.db` with forward-only migrations and protobuf blobs per row, started for alerting ahead of the M4 metric tiers; secrets sealed with AES-256-GCM under `<data_dir>/secret.key` | Pure Go keeps cross-compilation; blobs avoid a migration per field; a key file next to the database is simple to back up and restore with it, and keeps secrets out of plaintext dumps and backups of the database alone | Multi-user accounts or secret rotation need a KMS or per-secret keys |
 | D36 | Notification channels Slack, signed webhook (`asterism.notification.v1`), SMTP, Web Push (`webpush-go`, VAPID in the data dir), Discord and Telegram; settings writes only from an admin browser session; write-only secrets; SSRF guard at dial time with `allow_private_targets` as the only escape hatch | These cover team chat, automation, email and phones without third-party relays; admin-session-only writes stop a leaked API token from redirecting alerts or exfiltrating data; dial-time checks defeat DNS rebinding | Operators need token-driven configuration (infrastructure as code), or a channel type that cannot work over plain HTTPS |
+| D37 | Browser sessions last 30 days idle with sliding renewal and persist in SQLite as SHA-256 token digests bound to an Argon2id credential fingerprint | A 24 h in-memory session signed the admin out on every restart and every day, which pushed people to reuse weak passwords or keep the tab open; digests mean a copied database cannot be replayed, and the fingerprint revokes all sessions when the password changes | Multi-user accounts, or a requirement for an absolute session lifetime or per-session revocation UI |

@@ -7,6 +7,7 @@ import (
 	"os"
 	"path/filepath"
 	"testing"
+	"time"
 
 	asterismv1 "github.com/prabhavalabs/asterism/internal/gen/asterism/v1"
 )
@@ -167,5 +168,36 @@ func TestPushSubscriptionsUpsertByEndpoint(t *testing.T) {
 	}
 	if ok, _ := db.DeletePushSubscription(ctx, "p1", ""); ok {
 		t.Fatal("deleted twice")
+	}
+}
+
+func TestSessionsRoundTrip(t *testing.T) {
+	ctx := context.Background()
+	db := openTemp(t)
+	now := time.Now().UTC().Truncate(time.Millisecond)
+	live := SessionRow{TokenSHA256: "aa", Email: "op@example.com", Credential: "fp", CreatedAt: now, ExpiresAt: now.Add(time.Hour)}
+	dead := SessionRow{TokenSHA256: "bb", Email: "op@example.com", Credential: "fp", CreatedAt: now, ExpiresAt: now.Add(-time.Second)}
+	for _, r := range []SessionRow{live, dead} {
+		if err := db.SaveSession(ctx, r); err != nil {
+			t.Fatal(err)
+		}
+	}
+	// Upsert extends the expiry.
+	live.ExpiresAt = now.Add(2 * time.Hour)
+	if err := db.SaveSession(ctx, live); err != nil {
+		t.Fatal(err)
+	}
+	if err := db.DeleteExpiredSessions(ctx, now); err != nil {
+		t.Fatal(err)
+	}
+	rows, err := db.LoadSessions(ctx)
+	if err != nil || len(rows) != 1 || rows[0] != live {
+		t.Fatalf("sessions = %+v, %v; want [%+v]", rows, err, live)
+	}
+	if err := db.DeleteSession(ctx, "aa"); err != nil {
+		t.Fatal(err)
+	}
+	if rows, _ := db.LoadSessions(ctx); len(rows) != 0 {
+		t.Fatalf("sessions after delete = %+v", rows)
 	}
 }
